@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: viveprop-operaciones
+    runtime: python
+    plan: starter
+    buildCommand: >-
+      cd frontend && npm ci && npm run build &&
+      mkdir -p ../backend/static && cp -r dist/* ../backend/static/ &&
+      cd ../backend && pip install -r requirements.txt && alembic upgrade head
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://viveprop-operaciones.onrender.com
+      - key: ENVIRONMENT
+        value: production

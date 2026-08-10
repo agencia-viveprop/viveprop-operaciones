@@ -1,0 +1,24 @@
+# Secretos / entorno
+.env
+.env.*
+!.env.example
+
+# Datos sensibles (nunca Excel real en el repo)
+*.xlsx
+*.xls
+*.csv
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node / frontend
+node_modules/
+frontend/dist/
+backend/static/
+
+# Editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
