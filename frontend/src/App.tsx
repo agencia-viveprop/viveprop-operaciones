@@ -1,25 +1,44 @@
-import { useQuery } from '@tanstack/react-query'
-import { Center, Loader, Stack, Text, Title } from '@mantine/core'
-
-async function fetchHealth() {
-  const res = await fetch('/api/health')
-  if (!res.ok) throw new Error('backend no disponible')
-  return res.json() as Promise<{ status: string }>
-}
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button, Center, Loader, Stack, Text, Title } from '@mantine/core'
+import { fetchMe, logout } from './api/auth'
+import Login from './pages/Login'
 
 function App() {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['health'],
-    queryFn: fetchHealth,
+  const queryClient = useQueryClient()
+  const { data: usuario, isLoading } = useQuery({
+    queryKey: ['me'],
+    queryFn: fetchMe,
+    retry: false,
   })
+
+  if (isLoading) {
+    return (
+      <Center h="100vh">
+        <Loader />
+      </Center>
+    )
+  }
+
+  if (!usuario) {
+    return <Login />
+  }
 
   return (
     <Center h="100vh">
       <Stack align="center" gap="xs">
-        <Title order={2}>Viveprop Operaciones</Title>
-        {isLoading && <Loader size="sm" />}
-        {isError && <Text c="red">Backend no disponible</Text>}
-        {data && <Text c="dimmed">Backend: {data.status}</Text>}
+        <Title order={2}>Bienvenido, {usuario.nombre}</Title>
+        <Text c="dimmed">
+          {usuario.email} · rol: {usuario.rol}
+        </Text>
+        <Button
+          variant="light"
+          onClick={async () => {
+            await logout()
+            queryClient.setQueryData(['me'], null)
+          }}
+        >
+          Salir
+        </Button>
       </Stack>
     </Center>
   )
