@@ -11,7 +11,7 @@ import {
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core'
-import { IconHome2, IconLogout, IconMoon, IconSun, IconUsers } from '@tabler/icons-react'
+import { IconArrowsExchange, IconHome2, IconLogout, IconMoon, IconSun, IconUsers } from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router-dom'
 import { logout, type Usuario } from '../api/auth'
 
@@ -41,6 +41,20 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Inicio"
               leftSection={<IconHome2 size={18} />}
               active={location.pathname === '/'}
+              variant="filled"
+            />
+          </Stack>
+
+          <Stack gap={4}>
+            <Text size="xs" fw={700} c="dimmed" px="xs">
+              OPERACIONES
+            </Text>
+            <NavLink
+              component={Link}
+              to="/canjes"
+              label="Canjes"
+              leftSection={<IconArrowsExchange size={18} />}
+              active={location.pathname === '/canjes'}
               variant="filled"
             />
           </Stack>

@@ -18,6 +18,11 @@ const brand: MantineColorsTuple = [
 // Colores de estado: fijos, nunca reusados como color de categoria/serie.
 // Se repite el mismo hex en las 10 posiciones para que Mantine los use
 // siempre igual sin importar el shade solicitado.
+// OJO al usarlos en Badge/Button: variant="light" (y "outline"/"dot") calculan
+// fondo y texto a partir de DOS shades distintos de la rampa -- como aqui son
+// todas iguales, fondo y texto quedan del mismo color (texto invisible).
+// Usar siempre variant="filled" (texto blanco calculado por contraste) con
+// estos colores.
 const solid = (hex: string): MantineColorsTuple => [hex, hex, hex, hex, hex, hex, hex, hex, hex, hex]
 
 export const theme = createTheme({

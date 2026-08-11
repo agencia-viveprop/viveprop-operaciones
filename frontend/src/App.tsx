@@ -5,6 +5,7 @@ import { fetchMe } from './api/auth'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import AdminUsuarios from './pages/AdminUsuarios'
+import Canjes from './pages/Canjes'
 import AppShellLayout from './components/AppShellLayout'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
     <AppShellLayout usuario={usuario}>
       <Routes>
         <Route path="/" element={<Home usuario={usuario} />} />
+        <Route path="/canjes" element={<Canjes puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route
           path="/admin/usuarios"
           element={

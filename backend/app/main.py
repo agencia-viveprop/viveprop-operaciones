@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.routers import auth, health, usuarios
+from app.routers import auth, canjes, health, usuarios
 
 app = FastAPI(title="Viveprop Operaciones")
 
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")
+app.include_router(canjes.router, prefix="/api")
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
