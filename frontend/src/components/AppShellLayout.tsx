@@ -1,25 +1,38 @@
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   AppShell,
   Avatar,
   Group,
+  Menu,
   NavLink,
   Stack,
   Text,
   Title,
+  UnstyledButton,
   useComputedColorScheme,
   useMantineColorScheme,
 } from '@mantine/core'
-import { IconArrowsExchange, IconHome2, IconLogout, IconMoon, IconSun, IconUsers } from '@tabler/icons-react'
+import {
+  IconArrowsExchange,
+  IconHome2,
+  IconKey,
+  IconLogout,
+  IconMoon,
+  IconSun,
+  IconUsers,
+} from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router-dom'
 import { logout, type Usuario } from '../api/auth'
+import CambiarClaveModal from './CambiarClaveModal'
 
 export default function AppShellLayout({ usuario, children }: { usuario: Usuario; children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const location = useLocation()
   const { toggleColorScheme } = useMantineColorScheme()
   const computedColorScheme = useComputedColorScheme('light')
+  const [cambiarClaveAbierto, setCambiarClaveAbierto] = useState(false)
 
   return (
     <AppShell navbar={{ width: 260, breakpoint: 'sm' }} padding="md">
@@ -78,35 +91,55 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
 
         <Stack gap="sm">
           <Group justify="space-between" px="xs">
-            <Group gap="xs">
-              <Avatar color="brand" radius="xl" size="sm">
-                {usuario.nombre.charAt(0).toUpperCase()}
-              </Avatar>
-              <div>
-                <Text size="sm" fw={600}>
-                  {usuario.nombre}
-                </Text>
-                <Text size="xs" c="dimmed">
-                  {usuario.rol}
-                </Text>
-              </div>
-            </Group>
+            <Menu position="top-start" width={220} shadow="md">
+              <Menu.Target>
+                <UnstyledButton>
+                  <Group gap="xs">
+                    <Avatar color="brand" radius="xl" size="sm">
+                      {usuario.nombre.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <div>
+                      <Text size="sm" fw={600}>
+                        {usuario.nombre}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {usuario.rol}
+                      </Text>
+                    </div>
+                  </Group>
+                </UnstyledButton>
+              </Menu.Target>
+              <Menu.Dropdown>
+                <Menu.Item leftSection={<IconKey size={16} />} onClick={() => setCambiarClaveAbierto(true)}>
+                  Cambiar mi contraseña
+                </Menu.Item>
+                {usuario.rol === 'admin' && (
+                  <Menu.Item leftSection={<IconUsers size={16} />} component={Link} to="/admin/usuarios">
+                    Administrar usuarios
+                  </Menu.Item>
+                )}
+                <Menu.Divider />
+                <Menu.Item
+                  color="critical"
+                  leftSection={<IconLogout size={16} />}
+                  onClick={async () => {
+                    await logout()
+                    queryClient.setQueryData(['me'], null)
+                  }}
+                >
+                  Salir
+                </Menu.Item>
+              </Menu.Dropdown>
+            </Menu>
             <ActionIcon variant="subtle" onClick={toggleColorScheme} aria-label="Cambiar tema">
               {computedColorScheme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </ActionIcon>
           </Group>
-          <NavLink
-            label="Salir"
-            leftSection={<IconLogout size={18} />}
-            onClick={async () => {
-              await logout()
-              queryClient.setQueryData(['me'], null)
-            }}
-          />
         </Stack>
       </AppShell.Navbar>
 
       <AppShell.Main>{children}</AppShell.Main>
+      <CambiarClaveModal opened={cambiarClaveAbierto} onClose={() => setCambiarClaveAbierto(false)} />
     </AppShell>
   )
 }

@@ -29,3 +29,12 @@ export function login(email: string, password: string): Promise<Usuario> {
 export function logout(): Promise<void> {
   return fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(() => undefined)
 }
+
+export function cambiarClave(claveActual: string, claveNueva: string): Promise<void> {
+  return fetch('/api/auth/cambiar-clave', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ clave_actual: claveActual, clave_nueva: claveNueva }),
+  }).then(parseOrThrow)
+}

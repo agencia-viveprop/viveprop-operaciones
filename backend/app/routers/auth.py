@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.auth import COOKIE_NAME, clear_session_cookie, crear_sesion, get_current_user, set_session_cookie
 from app.db import get_db
 from app.models.usuario import Sesion, Usuario
-from app.security import verify_password
+from app.security import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -59,3 +59,18 @@ def logout(response: Response, db: Session = Depends(get_db), session_id: str | 
 @router.get("/me", response_model=UsuarioOut)
 def me(usuario: Usuario = Depends(get_current_user)):
     return usuario
+
+
+class CambiarClaveRequest(BaseModel):
+    clave_actual: str
+    clave_nueva: str
+
+
+@router.post("/cambiar-clave")
+def cambiar_clave(payload: CambiarClaveRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    if not verify_password(usuario.password_hash, payload.clave_actual):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="La contraseña actual no es correcta")
+
+    usuario.password_hash = hash_password(payload.clave_nueva)
+    db.commit()
+    return {"ok": True}
