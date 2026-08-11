@@ -1,10 +1,12 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Center, Loader, Stack, Text, Title } from '@mantine/core'
-import { fetchMe, logout } from './api/auth'
+import { useQuery } from '@tanstack/react-query'
+import { Center, Loader, Text } from '@mantine/core'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { fetchMe } from './api/auth'
 import Login from './pages/Login'
+import Home from './pages/Home'
+import AdminUsuarios from './pages/AdminUsuarios'
 
 function App() {
-  const queryClient = useQueryClient()
   const { data: usuario, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: fetchMe,
@@ -24,23 +26,22 @@ function App() {
   }
 
   return (
-    <Center h="100vh">
-      <Stack align="center" gap="xs">
-        <Title order={2}>Bienvenido, {usuario.nombre}</Title>
-        <Text c="dimmed">
-          {usuario.email} · rol: {usuario.rol}
-        </Text>
-        <Button
-          variant="light"
-          onClick={async () => {
-            await logout()
-            queryClient.setQueryData(['me'], null)
-          }}
-        >
-          Salir
-        </Button>
-      </Stack>
-    </Center>
+    <Routes>
+      <Route path="/" element={<Home usuario={usuario} />} />
+      <Route
+        path="/admin/usuarios"
+        element={
+          usuario.rol === 'admin' ? (
+            <AdminUsuarios />
+          ) : (
+            <Center h="100vh">
+              <Text c="red">No tienes permiso para ver esta página.</Text>
+            </Center>
+          )
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
