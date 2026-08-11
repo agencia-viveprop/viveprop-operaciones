@@ -29,6 +29,7 @@ class UsuarioCreate(BaseModel):
 
 
 class UsuarioUpdate(BaseModel):
+    email: EmailStr | None = None
     nombre: str | None = None
     rol: RolUsuario | None = None
     activo: bool | None = None
@@ -63,6 +64,10 @@ def actualizar(usuario_id: int, payload: UsuarioUpdate, db: Session = Depends(ge
     if usuario is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
+    if payload.email is not None and payload.email != usuario.email:
+        if db.scalar(select(Usuario).where(Usuario.email == payload.email)) is not None:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya tiene una cuenta")
+        usuario.email = payload.email
     if payload.nombre is not None:
         usuario.nombre = payload.nombre
     if payload.rol is not None:

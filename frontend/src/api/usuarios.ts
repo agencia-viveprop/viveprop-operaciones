@@ -29,7 +29,7 @@ export function crearUsuario(payload: { email: string; nombre: string; password:
   }).then(parseOrThrow)
 }
 
-export function actualizarUsuario(id: number, payload: Partial<{ nombre: string; rol: RolUsuario; activo: boolean; password: string }>) {
+export function actualizarUsuario(id: number, payload: Partial<{ email: string; nombre: string; rol: RolUsuario; activo: boolean; password: string }>) {
   return fetch(`/api/admin/usuarios/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

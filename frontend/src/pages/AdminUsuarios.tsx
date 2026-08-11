@@ -49,6 +49,8 @@ export default function AdminUsuarios() {
         <Button onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>
       </Group>
 
+      {actualizar.isError && <Alert color="critical" variant="filled">{(actualizar.error as Error).message}</Alert>}
+
       <Table striped withTableBorder>
         <Table.Thead>
           <Table.Tr>
@@ -62,7 +64,16 @@ export default function AdminUsuarios() {
           {!isLoading &&
             usuarios?.map((u) => (
               <Table.Tr key={u.id}>
-                <Table.Td>{u.email}</Table.Td>
+                <Table.Td>
+                  <TextInput
+                    defaultValue={u.email}
+                    onBlur={(e) => {
+                      const nuevo = e.currentTarget.value.trim()
+                      if (nuevo && nuevo !== u.email) actualizar.mutate({ id: u.id, payload: { email: nuevo } })
+                    }}
+                    w={220}
+                  />
+                </Table.Td>
                 <Table.Td>{u.nombre}</Table.Td>
                 <Table.Td>
                   <Select
