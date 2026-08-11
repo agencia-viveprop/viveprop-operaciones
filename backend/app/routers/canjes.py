@@ -12,6 +12,7 @@ from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import MovimientoError, crear_movimiento_canje
+from app.services.reportes_canjes import ResumenCanjes, obtener_resumen_canjes
 
 router = APIRouter(prefix="/canjes", tags=["canjes"])
 
@@ -86,6 +87,11 @@ class CanjeUpdate(BaseModel):
     comision_dbrokers: float | None = None
     comision_dbrokers_moneda: MonedaTipo | None = None
     notas: str | None = None
+
+
+@router.get("/reportes/resumen", response_model=ResumenCanjes)
+def reportes_resumen(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    return obtener_resumen_canjes(db)
 
 
 @router.get("", response_model=list[CanjeOut])
