@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
   Button,
+  FileButton,
   Group,
+  List,
   Modal,
   NumberInput,
   Select,
@@ -19,10 +21,12 @@ import {
 import {
   actualizarCanje,
   crearCanje,
+  importarCanjes,
   listarCanjes,
   type Canje,
   type CanjeEstado,
   type CanjeEtapa,
+  type ImportarResumen,
 } from '../api/canjes'
 
 const ETAPA_LABELS: Record<CanjeEtapa, string> = {
@@ -79,6 +83,26 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
   const [form, setForm] = useState(vacio())
+
+  const [importAbierto, setImportAbierto] = useState(false)
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const [resumenImport, setResumenImport] = useState<ImportarResumen | null>(null)
+  const resetArchivoRef = useRef<() => void>(null)
+
+  const importar = useMutation({
+    mutationFn: () => importarCanjes(archivo!),
+    onSuccess: (resumen) => {
+      setResumenImport(resumen)
+      queryClient.invalidateQueries({ queryKey: ['canjes'] })
+    },
+  })
+
+  function cerrarImportModal() {
+    setImportAbierto(false)
+    setArchivo(null)
+    setResumenImport(null)
+    resetArchivoRef.current?.()
+  }
 
   const guardar = useMutation({
     mutationFn: () => {
@@ -141,7 +165,14 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
     <Stack gap="md">
       <Group justify="space-between">
         <Title order={2}>Canjes</Title>
-        {puedeEditar && <Button onClick={abrirNuevo}>Nuevo canje</Button>}
+        {puedeEditar && (
+          <Group>
+            <Button variant="light" onClick={() => setImportAbierto(true)}>
+              Importar Canjes
+            </Button>
+            <Button onClick={abrirNuevo}>Nuevo canje</Button>
+          </Group>
+        )}
       </Group>
 
       <Group>
@@ -310,6 +341,37 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             </Button>
           </Stack>
         </form>
+      </Modal>
+
+      <Modal opened={importAbierto} onClose={cerrarImportModal} title="Importar Canjes">
+        <Stack gap="sm">
+          <Text size="sm" c="dimmed">
+            Sube el .xlsx exportado de la query contra la base de Dataprop. Se agregan las solicitudes nuevas y se
+            actualizan las que aún no se están gestionando en la app; las que ya tienen movimientos no se tocan.
+          </Text>
+          <FileButton resetRef={resetArchivoRef} onChange={setArchivo} accept=".xlsx,.xlsm">
+            {(props) => <Button {...props} variant="light">{archivo ? archivo.name : 'Seleccionar archivo'}</Button>}
+          </FileButton>
+          {importar.isError && <Alert color="red">{(importar.error as Error).message}</Alert>}
+          {resumenImport && (
+            <Alert color={resumenImport.errores.length ? 'warning' : 'good'} variant="filled" title="Resultado">
+              <Text size="sm">
+                {resumenImport.nuevas} nuevas · {resumenImport.actualizadas} actualizadas · {resumenImport.ignoradas} ignoradas
+                (ya gestionadas) · {resumenImport.errores.length} con error
+              </Text>
+              {resumenImport.errores.length > 0 && (
+                <List size="xs" mt="xs">
+                  {resumenImport.errores.slice(0, 20).map((e, i) => (
+                    <List.Item key={i}>{e}</List.Item>
+                  ))}
+                </List>
+              )}
+            </Alert>
+          )}
+          <Button disabled={!archivo} loading={importar.isPending} onClick={() => importar.mutate()}>
+            Subir e importar
+          </Button>
+        </Stack>
       </Modal>
     </Stack>
   )

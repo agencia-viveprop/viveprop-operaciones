@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
 from app.models.usuario import RolUsuario, Usuario
+from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 
 router = APIRouter(prefix="/canjes", tags=["canjes"])
 
@@ -142,3 +143,19 @@ def actualizar(
     db.commit()
     db.refresh(canje)
     return canje
+
+
+@router.post("/importar", response_model=ImportarCanjesResumen)
+async def importar(
+    archivo: UploadFile,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    if not archivo.filename or not archivo.filename.lower().endswith((".xlsx", ".xlsm")):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El archivo debe ser un .xlsx")
+
+    contenido = await archivo.read()
+    try:
+        return importar_canjes(db, contenido)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

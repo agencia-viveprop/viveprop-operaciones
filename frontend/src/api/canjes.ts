@@ -60,3 +60,20 @@ export function actualizarCanje(id: number, payload: Record<string, unknown>): P
     body: JSON.stringify(payload),
   }).then(parseOrThrow)
 }
+
+export type ImportarResumen = {
+  nuevas: number
+  actualizadas: number
+  ignoradas: number
+  errores: string[]
+}
+
+export function importarCanjes(archivo: File): Promise<ImportarResumen> {
+  const formData = new FormData()
+  formData.append('archivo', archivo)
+  return fetch('/api/canjes/importar', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(parseOrThrow)
+}
