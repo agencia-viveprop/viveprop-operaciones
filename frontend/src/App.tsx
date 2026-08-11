@@ -5,6 +5,7 @@ import { fetchMe } from './api/auth'
 import Login from './pages/Login'
 import Home from './pages/Home'
 import AdminUsuarios from './pages/AdminUsuarios'
+import AppShellLayout from './components/AppShellLayout'
 
 function App() {
   const { data: usuario, isLoading } = useQuery({
@@ -26,22 +27,24 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={<Home usuario={usuario} />} />
-      <Route
-        path="/admin/usuarios"
-        element={
-          usuario.rol === 'admin' ? (
-            <AdminUsuarios />
-          ) : (
-            <Center h="100vh">
-              <Text c="red">No tienes permiso para ver esta página.</Text>
-            </Center>
-          )
-        }
-      />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <AppShellLayout usuario={usuario}>
+      <Routes>
+        <Route path="/" element={<Home usuario={usuario} />} />
+        <Route
+          path="/admin/usuarios"
+          element={
+            usuario.rol === 'admin' ? (
+              <AdminUsuarios />
+            ) : (
+              <Center h="70vh">
+                <Text c="red">No tienes permiso para ver esta página.</Text>
+              </Center>
+            )
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppShellLayout>
   )
 }
 
