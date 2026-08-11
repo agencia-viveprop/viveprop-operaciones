@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -18,6 +19,7 @@ import {
   Textarea,
   Title,
 } from '@mantine/core'
+import { IconClockHour4, IconPencil } from '@tabler/icons-react'
 import {
   actualizarCanje,
   crearCanje,
@@ -28,6 +30,7 @@ import {
   type CanjeEtapa,
   type ImportarResumen,
 } from '../api/canjes'
+import SeguimientoModal from '../components/SeguimientoModal'
 
 const ETAPA_LABELS: Record<CanjeEtapa, string> = {
   SIN_ETAPA: 'Sin etapa',
@@ -83,6 +86,8 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<number | null>(null)
   const [form, setForm] = useState(vacio())
+
+  const [seguimientoId, setSeguimientoId] = useState<number | null>(null)
 
   const [importAbierto, setImportAbierto] = useState(false)
   const [archivo, setArchivo] = useState<File | null>(null)
@@ -209,12 +214,13 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             <Table.Th>Operación</Table.Th>
             <Table.Th>Estado</Table.Th>
             <Table.Th>Etapa</Table.Th>
+            <Table.Th>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {!isLoading &&
             canjes?.map((c) => (
-              <Table.Tr key={c.id} onClick={() => puedeEditar && abrirEditar(c)} style={{ cursor: puedeEditar ? 'pointer' : 'default' }}>
+              <Table.Tr key={c.id}>
                 <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
                 <Table.Td>{c.corredor_solicitante_nombre}</Table.Td>
                 <Table.Td>{c.comuna}</Table.Td>
@@ -225,6 +231,18 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                   </Badge>
                 </Table.Td>
                 <Table.Td>{ETAPA_LABELS[c.etapa]}</Table.Td>
+                <Table.Td>
+                  <Group gap="xs">
+                    <ActionIcon variant="subtle" onClick={() => setSeguimientoId(c.id)} aria-label="Seguimiento">
+                      <IconClockHour4 size={18} />
+                    </ActionIcon>
+                    {puedeEditar && (
+                      <ActionIcon variant="subtle" onClick={() => abrirEditar(c)} aria-label="Editar">
+                        <IconPencil size={18} />
+                      </ActionIcon>
+                    )}
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
         </Table.Tbody>
@@ -373,6 +391,13 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           </Button>
         </Stack>
       </Modal>
+
+      <SeguimientoModal
+        canjeId={seguimientoId}
+        opened={seguimientoId !== null}
+        onClose={() => setSeguimientoId(null)}
+        puedeEditar={puedeEditar}
+      />
     </Stack>
   )
 }

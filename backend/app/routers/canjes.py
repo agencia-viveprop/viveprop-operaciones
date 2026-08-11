@@ -8,8 +8,10 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
+from app.services.movimientos import MovimientoError, crear_movimiento_canje
 
 router = APIRouter(prefix="/canjes", tags=["canjes"])
 
@@ -159,3 +161,61 @@ async def importar(
         return importar_canjes(db, contenido)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+class MovimientoOut(BaseModel):
+    id: int
+    tipo_movimiento: str
+    tipo_nombre: str
+    etapa_resultante: str | None
+    fecha: datetime
+    autor_nombre: str | None
+    comentario: str | None
+
+
+class MovimientoCreate(BaseModel):
+    tipo_movimiento: str
+    comentario: str | None = None
+    fecha: datetime | None = None
+
+
+def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
+    tipo = db.get(TipoMovimiento, m.tipo_movimiento)
+    autor = db.get(Usuario, m.autor_id) if m.autor_id else None
+    return MovimientoOut(
+        id=m.id,
+        tipo_movimiento=m.tipo_movimiento,
+        tipo_nombre=tipo.nombre if tipo else m.tipo_movimiento,
+        etapa_resultante=m.etapa_resultante,
+        fecha=m.fecha,
+        autor_nombre=autor.nombre if autor else None,
+        comentario=m.comentario,
+    )
+
+
+@router.get("/{canje_id}/movimientos", response_model=list[MovimientoOut])
+def listar_movimientos(canje_id: int, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    if db.get(Canje, canje_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Canje no encontrado")
+    movimientos = db.scalars(
+        select(Movimiento)
+        .where(Movimiento.entity_type == EntityType.canje, Movimiento.entity_id == canje_id)
+        .order_by(Movimiento.fecha.desc())
+    ).all()
+    return [_a_movimiento_out(db, m) for m in movimientos]
+
+
+@router.post("/{canje_id}/movimientos", response_model=MovimientoOut, status_code=status.HTTP_201_CREATED)
+def crear_movimiento(
+    canje_id: int,
+    payload: MovimientoCreate,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    try:
+        movimiento = crear_movimiento_canje(
+            db, canje_id, payload.tipo_movimiento, usuario.id, payload.comentario, payload.fecha
+        )
+    except MovimientoError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return _a_movimiento_out(db, movimiento)
