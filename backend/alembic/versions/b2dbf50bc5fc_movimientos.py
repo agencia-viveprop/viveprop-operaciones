@@ -66,7 +66,7 @@ def upgrade() -> None:
     tabla = sa.table(
         "tipos_movimiento",
         sa.column("codigo", sa.String),
-        sa.column("entity_type", sa.String),
+        sa.column("entity_type", entity_type),
         sa.column("nombre", sa.String),
         sa.column("etapa_resultante", sa.String),
         sa.column("orden", sa.Integer),
