@@ -38,8 +38,8 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
               />
-              {mutation.isError && <Alert color="red">{(mutation.error as Error).message}</Alert>}
-              <Button type="submit" loading={mutation.isPending} fullWidth>
+              {mutation.isError && <Alert color="critical" variant="filled">{(mutation.error as Error).message}</Alert>}
+              <Button type="submit" color="accent" loading={mutation.isPending} fullWidth>
                 Ingresar
               </Button>
             </Stack>

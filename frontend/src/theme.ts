@@ -1,46 +1,120 @@
 import { createTheme, type MantineColorsTuple } from '@mantine/core'
 
-// Rampa de 10 tonos derivada de #3b3b98 (indice 6 = color exacto de marca),
-// extraido por muestreo de pixeles del logo real (frontend/public/logo.png,
-// entregado por el usuario) -- es el color dominante del icono y de la
-// palabra "prop" del wordmark. Calza con el morado que Viveprop ya usa en
-// su otra plataforma (--brand:#3D3EA8), asi que confirma que esa familia de
-// color era la correcta desde el Sprint A4. Revalidado con el script de
-// accesibilidad del skill de dataviz junto a los colores de estado: sin
-// choques (el unico fail que queda es preexistente entre warning/serious y
-// critical/good, sin relacion con este color).
+// Paleta oficial entregada por el usuario (hex exactos, no aproximados).
+
+// Primario/marca: #3D3EA8, con "oscuro"/"medio"/"claro"/"pálido" ubicados en
+// su posicion real de luminosidad (medida, no asumida por el nombre --
+// "claro" resulto ser mas claro que "palido"). index6 = el color de marca
+// exacto (calza con el shade que usa Mantine por defecto en modo claro).
 const brand: MantineColorsTuple = [
-  '#e5e5f5',
-  '#c8c8ea',
-  '#9f9fda',
-  '#7777ca',
-  '#4f4fbb',
-  '#3c3c9a',
-  '#3b3b98',
-  '#282867',
-  '#1d1d49',
-  '#131330',
+  '#f8f8fc',
+  '#EDEDF9', // primario claro (fondos suaves)
+  '#DDDDF5', // primario palido
+  '#adade1',
+  '#7c7dcf',
+  '#5557BC', // primario medio
+  '#3D3EA8', // primario (marca)
+  '#2C2D88', // primario oscuro (hover/estados)
+  '#21215a',
+  '#131334',
 ]
 
-// Segundo color real del logo (wordmark "vive"), muestreado del mismo PNG.
-// Disponible para cuando se necesite un acento secundario (ej. categorias
-// del futuro dashboard) -- no forma parte de la paleta tematica de Mantine.
-export const LOGO_ACCENT_COLOR = '#fd5968'
+// Acento (CTA, badges, botones destacados): #F4545A, con su version clara
+// #FEF0F0 dada explicitamente. OJO: este coral y el rojo "critical" quedan
+// visualmente parecidos entre si (confirmado con el validador de
+// accesibilidad, ΔE 9.2 en vision normal, bajo el piso de 15) -- son los
+// hex exactos que se pidieron, no se ajustaron. Mitigado porque en esta app
+// el color nunca va solo: siempre acompañado de texto/etiqueta (botones y
+// badges con palabra visible, nunca un punto de color aislado). Si en algun
+// momento aparecen uno junto al otro en la misma vista y se ve confuso,
+// vale la pena revisar.
+const accent: MantineColorsTuple = [
+  '#fef5f6',
+  '#FEF0F0', // acento claro
+  '#fbc5c8',
+  '#f99fa3',
+  '#f6797e',
+  '#f5666b',
+  '#F4545A', // acento (CTA/badges/botones destacados)
+  '#f00f18',
+  '#ad0b11',
+  '#73070b',
+]
 
-// Colores de estado: fijos, nunca reusados como color de categoria/serie.
-// Se repite el mismo hex en las 10 posiciones para que Mantine los use
-// siempre igual sin importar el shade solicitado.
-// OJO al usarlos en Badge/Button: variant="light" (y "outline"/"dot") calculan
-// fondo y texto a partir de DOS shades distintos de la rampa -- como aqui son
-// todas iguales, fondo y texto quedan del mismo color (texto invisible).
-// Usar siempre variant="filled" (texto blanco calculado por contraste) con
-// estos colores.
-const solid = (hex: string): MantineColorsTuple => [hex, hex, hex, hex, hex, hex, hex, hex, hex, hex]
+// Estados secundarios: solo se dio el tono principal de cada uno: se
+// generaron los 9 tonos restantes de cada rampa (incluida la version
+// "light" de fondo que se pidio para cada uno) interpolando en el mismo
+// matiz/saturacion -- no son hex dictados, a diferencia de brand/accent.
+const info: MantineColorsTuple = [
+  '#ebfbfe',
+  '#cef4fd',
+  '#9de9fb',
+  '#6dddf8',
+  '#0ab9e3',
+  '#09a5ca',
+  '#0891B2', // teal
+  '#06748e',
+  '#05576b',
+  '#033a47',
+]
+const good: MantineColorsTuple = [
+  '#ebfef8',
+  '#cefdef',
+  '#9cfcde',
+  '#6bface',
+  '#07c78c',
+  '#06af7a',
+  '#059669', // verde
+  '#047854',
+  '#035a3f',
+  '#023c2a',
+]
+const warning: MantineColorsTuple = [
+  '#fef5eb',
+  '#fee7cd',
+  '#fccf9c',
+  '#fbb86a',
+  '#f99119',
+  '#f28507',
+  '#D97706', // ambar
+  '#ae5f05',
+  '#824704',
+  '#573002',
+]
+const critical: MantineColorsTuple = [
+  '#fceded',
+  '#f8d3d3',
+  '#f1a7a7',
+  '#ea7b7b',
+  '#e35252',
+  '#e03c3c',
+  '#DC2626', // rojo
+  '#b21d1d',
+  '#851515',
+  '#590e0e',
+]
+
+// Escala de grises: los valores dados (g50 #F9FAFB, g900 #111827) son
+// exactamente la escala "gray" de Tailwind CSS -- se completan los pasos
+// intermedios con esos mismos valores estandar en vez de inventar otros.
+const gray: MantineColorsTuple = [
+  '#F9FAFB',
+  '#F3F4F6',
+  '#E5E7EB',
+  '#D1D5DB',
+  '#9CA3AF',
+  '#6B7280',
+  '#4B5563',
+  '#374151',
+  '#1F2937',
+  '#111827',
+]
 
 export const theme = createTheme({
   primaryColor: 'brand',
-  primaryShade: { light: 6, dark: 4 },
-  fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  primaryShade: { light: 6, dark: 5 },
+  fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif',
+  headings: { fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif' },
   defaultRadius: 'md',
   radius: {
     xs: '4px',
@@ -51,9 +125,11 @@ export const theme = createTheme({
   },
   colors: {
     brand,
-    good: solid('#0ca30c'),
-    warning: solid('#fab219'),
-    serious: solid('#ec835a'),
-    critical: solid('#d03b3b'),
+    accent,
+    info,
+    good,
+    warning,
+    critical,
+    gray,
   },
 })

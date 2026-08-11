@@ -42,7 +42,7 @@ export default function CambiarClaveModal({ opened, onClose }: { opened: boolean
             error={noCoinciden ? 'No coincide con la contraseña nueva' : undefined}
           />
           {mutation.isError && <Alert color="critical" variant="filled">{(mutation.error as Error).message}</Alert>}
-          <Button type="submit" loading={mutation.isPending} disabled={noCoinciden}>
+          <Button type="submit" color="accent" loading={mutation.isPending} disabled={noCoinciden}>
             Guardar
           </Button>
         </Stack>

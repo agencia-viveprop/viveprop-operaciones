@@ -43,7 +43,7 @@ export default function AdminUsuarios() {
 
   return (
     <Stack p="xl" gap="md">
-      <PageHeader title="Usuarios" action={<Button onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>} />
+      <PageHeader title="Usuarios" action={<Button color="accent" onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>} />
 
       {actualizar.isError && <Alert color="critical" variant="filled">{(actualizar.error as Error).message}</Alert>}
 
@@ -123,8 +123,8 @@ export default function AdminUsuarios() {
               value={form.rol}
               onChange={(value) => value && setForm({ ...form, rol: value as RolUsuario })}
             />
-            {crear.isError && <Alert color="red">{(crear.error as Error).message}</Alert>}
-            <Button type="submit" loading={crear.isPending}>
+            {crear.isError && <Alert color="critical" variant="filled">{(crear.error as Error).message}</Alert>}
+            <Button type="submit" color="accent" loading={crear.isPending}>
               Crear
             </Button>
           </Stack>

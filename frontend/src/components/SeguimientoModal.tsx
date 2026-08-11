@@ -94,7 +94,7 @@ export default function SeguimientoModal({
               onChange={(e) => setComentario(e.currentTarget.value)}
             />
             {crear.isError && <Alert color="critical" variant="filled">{(crear.error as Error).message}</Alert>}
-            <Button disabled={!tipoSeleccionado} loading={crear.isPending} onClick={() => crear.mutate()}>
+            <Button color="accent" disabled={!tipoSeleccionado} loading={crear.isPending} onClick={() => crear.mutate()}>
               Registrar movimiento
             </Button>
           </>

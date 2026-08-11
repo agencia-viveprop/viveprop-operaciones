@@ -176,7 +176,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               <Button variant="light" onClick={() => setImportAbierto(true)}>
                 Importar Canjes
               </Button>
-              <Button onClick={abrirNuevo}>Nuevo canje</Button>
+              <Button color="accent" onClick={abrirNuevo}>Nuevo canje</Button>
             </Group>
           )
         }
@@ -228,7 +228,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>
-                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="filled">
+                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
                     {c.estado}
                   </Badge>
                 </Table.Td>
@@ -355,8 +355,8 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               </Group>
             </SimpleGrid>
             <Textarea label="Notas" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.currentTarget.value })} />
-            {guardar.isError && <Alert color="red">{(guardar.error as Error).message}</Alert>}
-            <Button type="submit" loading={guardar.isPending}>
+            {guardar.isError && <Alert color="critical" variant="filled">{(guardar.error as Error).message}</Alert>}
+            <Button type="submit" color="accent" loading={guardar.isPending}>
               Guardar
             </Button>
           </Stack>
@@ -372,7 +372,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           <FileButton resetRef={resetArchivoRef} onChange={setArchivo} accept=".xlsx,.xlsm">
             {(props) => <Button {...props} variant="light">{archivo ? archivo.name : 'Seleccionar archivo'}</Button>}
           </FileButton>
-          {importar.isError && <Alert color="red">{(importar.error as Error).message}</Alert>}
+          {importar.isError && <Alert color="critical" variant="filled">{(importar.error as Error).message}</Alert>}
           {resumenImport && (
             <Alert color={resumenImport.errores.length ? 'warning' : 'good'} variant="filled" title="Resultado">
               <Text size="sm">
@@ -388,7 +388,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               )}
             </Alert>
           )}
-          <Button disabled={!archivo} loading={importar.isPending} onClick={() => importar.mutate()}>
+          <Button color="accent" disabled={!archivo} loading={importar.isPending} onClick={() => importar.mutate()}>
             Subir e importar
           </Button>
         </Stack>
