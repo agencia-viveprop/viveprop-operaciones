@@ -111,8 +111,14 @@ const gray: MantineColorsTuple = [
 ]
 
 export const theme = createTheme({
-  primaryColor: 'brand',
-  primaryShade: { light: 6, dark: 5 },
+  // El coral es el color que realmente domina como estado activo/interactivo
+  // en la imagen de referencia (pastilla del nav, linea de encabezado,
+  // avatar) -- el indigo aparece ahi solo como UNO de los colores de
+  // categoria en las tarjetas del futuro dashboard (Sprint B4), no como el
+  // color principal de interaccion. Por eso "accent" (coral) es el
+  // primaryColor, no "brand" (indigo).
+  primaryColor: 'accent',
+  primaryShade: { light: 6, dark: 6 },
   fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif',
   headings: { fontFamily: 'Inter, system-ui, -apple-system, "Segoe UI", sans-serif' },
   defaultRadius: 'md',

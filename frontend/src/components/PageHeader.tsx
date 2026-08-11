@@ -15,7 +15,7 @@ export default function PageHeader({
         <Title order={2}>{title}</Title>
         {action}
       </Group>
-      <Box w={36} h={4} bg="brand" style={{ borderRadius: 2 }} />
+      <Box w={36} h={4} bg="accent" style={{ borderRadius: 2 }} />
       {subtitle && (
         <Text size="sm" c="dimmed">
           {subtitle}

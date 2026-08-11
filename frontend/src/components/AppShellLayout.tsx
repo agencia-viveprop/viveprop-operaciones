@@ -93,7 +93,7 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               <Menu.Target>
                 <UnstyledButton>
                   <Group gap="xs">
-                    <Avatar color="brand" radius="xl" size="sm">
+                    <Avatar color="accent" radius="xl" size="sm">
                       {usuario.nombre.charAt(0).toUpperCase()}
                     </Avatar>
                     <div>
