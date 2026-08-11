@@ -1,19 +1,31 @@
 import { createTheme, type MantineColorsTuple } from '@mantine/core'
 
-// Rampa de 10 tonos derivada de #4a3aa7 (indice 6 = color exacto de marca),
-// calzando con el morado que Viveprop ya usa en su otra plataforma (#3D3EA8).
+// Rampa de 10 tonos derivada de #3b3b98 (indice 6 = color exacto de marca),
+// extraido por muestreo de pixeles del logo real (frontend/public/logo.png,
+// entregado por el usuario) -- es el color dominante del icono y de la
+// palabra "prop" del wordmark. Calza con el morado que Viveprop ya usa en
+// su otra plataforma (--brand:#3D3EA8), asi que confirma que esa familia de
+// color era la correcta desde el Sprint A4. Revalidado con el script de
+// accesibilidad del skill de dataviz junto a los colores de estado: sin
+// choques (el unico fail que queda es preexistente entre warning/serious y
+// critical/good, sin relacion con este color).
 const brand: MantineColorsTuple = [
-  '#e7e5f6',
-  '#ccc6eb',
-  '#ada4df',
-  '#8b7ed2',
-  '#6555c4',
-  '#5240b9',
-  '#4a3aa7',
-  '#372b7d',
-  '#28205b',
-  '#191439',
+  '#e5e5f5',
+  '#c8c8ea',
+  '#9f9fda',
+  '#7777ca',
+  '#4f4fbb',
+  '#3c3c9a',
+  '#3b3b98',
+  '#282867',
+  '#1d1d49',
+  '#131330',
 ]
+
+// Segundo color real del logo (wordmark "vive"), muestreado del mismo PNG.
+// Disponible para cuando se necesite un acento secundario (ej. categorias
+// del futuro dashboard) -- no forma parte de la paleta tematica de Mantine.
+export const LOGO_ACCENT_COLOR = '#fd5968'
 
 // Colores de estado: fijos, nunca reusados como color de categoria/serie.
 // Se repite el mismo hex en las 10 posiciones para que Mantine los use

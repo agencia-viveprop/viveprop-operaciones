@@ -9,7 +9,6 @@ import {
   NavLink,
   Stack,
   Text,
-  Title,
   UnstyledButton,
   useComputedColorScheme,
   useMantineColorScheme,
@@ -26,6 +25,7 @@ import {
 import { Link, useLocation } from 'react-router-dom'
 import { logout, type Usuario } from '../api/auth'
 import CambiarClaveModal from './CambiarClaveModal'
+import Logo from './Logo'
 
 export default function AppShellLayout({ usuario, children }: { usuario: Usuario; children: React.ReactNode }) {
   const queryClient = useQueryClient()
@@ -39,9 +39,7 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
       <AppShell.Navbar p="md" style={{ justifyContent: 'space-between', display: 'flex', flexDirection: 'column' }}>
         <Stack gap="lg">
           <Group gap="xs" px="xs">
-            <Title order={4} c="brand">
-              viveprop
-            </Title>
+            <Logo />
           </Group>
 
           <Stack gap={4}>

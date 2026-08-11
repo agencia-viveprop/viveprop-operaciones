@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Button,
-  Group,
   Modal,
   PasswordInput,
   Select,
@@ -11,9 +10,9 @@ import {
   Switch,
   Table,
   TextInput,
-  Title,
 } from '@mantine/core'
 import { actualizarUsuario, crearUsuario, listarUsuarios, type RolUsuario } from '../api/usuarios'
+import PageHeader from '../components/PageHeader'
 
 const ROLES: { value: RolUsuario; label: string }[] = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -44,10 +43,7 @@ export default function AdminUsuarios() {
 
   return (
     <Stack p="xl" gap="md">
-      <Group justify="space-between">
-        <Title order={2}>Usuarios</Title>
-        <Button onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>
-      </Group>
+      <PageHeader title="Usuarios" action={<Button onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>} />
 
       {actualizar.isError && <Alert color="critical" variant="filled">{(actualizar.error as Error).message}</Alert>}
 

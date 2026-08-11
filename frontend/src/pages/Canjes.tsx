@@ -17,7 +17,6 @@ import {
   Text,
   TextInput,
   Textarea,
-  Title,
 } from '@mantine/core'
 import { IconClockHour4, IconPencil } from '@tabler/icons-react'
 import {
@@ -31,6 +30,7 @@ import {
   type ImportarResumen,
 } from '../api/canjes'
 import SeguimientoModal from '../components/SeguimientoModal'
+import PageHeader from '../components/PageHeader'
 
 const ETAPA_LABELS: Record<CanjeEtapa, string> = {
   SIN_ETAPA: 'Sin etapa',
@@ -168,17 +168,19 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <Title order={2}>Canjes</Title>
-        {puedeEditar && (
-          <Group>
-            <Button variant="light" onClick={() => setImportAbierto(true)}>
-              Importar Canjes
-            </Button>
-            <Button onClick={abrirNuevo}>Nuevo canje</Button>
-          </Group>
-        )}
-      </Group>
+      <PageHeader
+        title="Canjes"
+        action={
+          puedeEditar && (
+            <Group>
+              <Button variant="light" onClick={() => setImportAbierto(true)}>
+                Importar Canjes
+              </Button>
+              <Button onClick={abrirNuevo}>Nuevo canje</Button>
+            </Group>
+          )
+        }
+      />
 
       <Group>
         <Select
