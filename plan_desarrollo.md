@@ -83,7 +83,7 @@ Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se co
 
 `uf_diaria(fecha, valor)` + migración + carga de **1.409 filas desde 2022-11** (no las 17.937 de la hoja: todo lo anterior al primer canje es peso muerto). Servicio de conversión UF↔CLP con fecha de referencia. La hoja `UF` está limpia — 0 huecos en toda la serie.
 
-- **Listo cuando:** 6.088,44 UF al 2025-12-16 devuelve el mismo CLP que la columna AC del Excel.
+- **Listo cuando:** la conversión reproduce la columna AC del Excel al peso en negocios reales. Caso de referencia: 1.080 UF al 2026-01-02 (VVP-4) = 42.914.480,40 CLP.
 
 ### 4 · C3 — Catálogos
 
@@ -135,6 +135,11 @@ Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no e
 
 - **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
 - **Pendiente de consultar:** tasas de rebate de VVP-15/16/17 (los montos están —123.480 / 206.521 / 193.673— pero el % nunca se registró) y los 10 motivos de pérdida, que están vacíos.
+
+**Regla de la UF del negocio, levantada de los datos en el sprint 3.** La columna AB (`Valor_UF al momento del negocio`) usa la UF de `Fecha Valorización` cuando esa columna está poblada, y la de `Fecha_Inicio` cuando está vacía. Verificado exacto en 16 de las 19 filas. Las tres excepciones hay que resolverlas al cargar:
+
+- **VVP-15 y VVP-17 tienen la UF del 2026-08-20**, o sea la del día en que se editó la planilla, no la de su negocio (les correspondería 39.751,00 y 40.040,43). Su valor en CLP y sus comisiones están calculados con una UF inflada.
+- **VVP-3 PROMESA tiene 39.707,30, que no existe en la serie.** El valor más cercano es el del 2025-12-26 (39.708,77). Su `Fecha Valorización` dice 2026-12-26, con el año probablemente mal escrito.
 
 ### 11 · D6 — Pipeline de negocios
 

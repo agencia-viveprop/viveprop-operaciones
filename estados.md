@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 
-**Última actualización:** 2026-08-20 (sprint 1 listo)
+**Última actualización:** 2026-08-20 (sprints 1 y 3 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 1 |
+| Listos | 2 |
 | En curso | 0 |
-| Pendientes | 21 |
+| Pendientes | 20 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. El sprint 1 quedó **Listo**. El siguiente en el orden es el 2 (G2 · Despliegue en Render), pendiente de autorización.
+**Sprint actual:** ninguno. Listos el 1 y el 3. El 2 (Render) está **esperando el diagnóstico del 503** desde la consola de Render. El siguiente autorizable sin bloqueos es el 4 (C3 · Catálogos).
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 1 | 12 | **8,3%** |
-| Plan completo | 1 | 22 | 4,5% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 10 | 31 | 32% |
+| **Camino crítico** (1, 3–13) | 2 | 12 | **16,7%** |
+| Plan completo | 2 | 22 | 9,1% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 11 | 31 | 35% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
-| **C** · Cimientos | 1 | 4 | 25% | 1, 3, 4, 5 |
+| **C** · Cimientos | 2 | 4 | 50% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 0 | 6 | 0% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **8 sprints** hasta la pantalla de Negocios (9) y
-**12** hasta su dashboard (13). Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) y
+**11** hasta su dashboard (13). Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -64,8 +64,8 @@ Distancia a los hitos visibles: **8 sprints** hasta la pantalla de Negocios (9) 
 | # | Sprint | Estado | Fecha | Commit | Notas |
 |---|---|---|---|---|---|
 | 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
-| 2 | G2 · Despliegue en Render | Pendiente | — | — | |
-| 3 | C2 · Tabla UF y conversión | Pendiente | — | — | |
+| 2 | G2 · Despliegue en Render | Pendiente | — | — | Render devuelve 503. Requiere diagnóstico del usuario antes de arrancar. |
+| 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
 | 4 | C3 · Catálogos | Pendiente | — | — | |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
 | 6 | D1 · Esquema de negocios | Pendiente | — | — | |
@@ -116,6 +116,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-20 · Sprint 3 (C2) — Listo
+
+**Modelo.** Tabla `uf_diaria(fecha PK, valor NUMERIC(12,2), actualizado_en)` y migración `a1c4e7d92b30`, aplicada a `dev`. **No está en producción todavía** — entra cuando se despliegue. `fecha` como clave primaria es lo que hace que la carga mensual sea un upsert y que subir meses solapados no duplique.
+
+**Datos.** 1.409 filas cargadas desde 2022-11-01 hasta 2026-09-09, vía `app/scripts/cargar_uf.py`, que lee la hoja `UF` del Excel y hace upsert con `ON CONFLICT`.
+
+**Servicio.** `app/services/uf.py` con `valor_uf`, `uf_a_clp`, `clp_a_uf`, `rango` y `dias_de_colchon`. Ver `D-016`: ninguna conversión sin fecha, y `Decimal` en todo el camino.
+
+**Criterio de listo cumplido, y corregido.** El criterio que estaba escrito en el plan (6.088,44 UF al 2025-12-16) era **incorrecto**: VVP-3 PROMESA usa una UF que no existe en la serie. Se reemplazó por VVP-4, que sí es verificable. La conversión reproduce la columna AC del Excel al peso en cuatro negocios reales: VVP-4 (42.914.480,40), VVP-1 (132.739.562,16), VVP-2 (104.100.248,323) y VVP-19 en arriendo (1.096.945,74). Ida y vuelta sin pérdida.
+
+**Tests.** 12 nuevos, total **19 pasando**. Los montos esperados no son inventados: son la columna AC de negocios reales.
+
+**Hallazgo para el sprint 10.** Levantando el criterio apareció la regla de la columna AB: usa la UF de `Fecha Valorización` si está poblada, si no la de `Fecha_Inicio`. Exacta en 16 de 19 filas. Las 3 excepciones quedaron documentadas en el plan — VVP-15 y VVP-17 tienen la UF del día en que se editó la planilla, y VVP-3 PROMESA una que no existe en la serie.
 
 ### 2026-08-20 · Sprint 1 (C1) — Listo
 

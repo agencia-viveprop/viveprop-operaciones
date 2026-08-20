@@ -3,3 +3,4 @@
 from app.models.usuario import Sesion, Usuario  # noqa: F401
 from app.models.canje import Canje  # noqa: F401
 from app.models.movimiento import Movimiento, TipoMovimiento  # noqa: F401
+from app.models.uf import UFDiaria  # noqa: F401

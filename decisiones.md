@@ -28,6 +28,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-013](#d-013) | 2026-08-20 | `negocios.id` entero autoincremental, `VVP-N` como columna aparte | 6 |
 | [D-014](#d-014) | 2026-08-20 | Códigos de `tipos_movimiento` de negocio con prefijo | 11 |
 | [D-015](#d-015) | 2026-08-20 | La documentación se actualiza en el mismo commit que el cambio | Todos |
+| [D-016](#d-016) | 2026-08-20 | Ninguna conversión UF↔CLP sin fecha, y Decimal en todo el camino | 3 |
 
 ---
 
@@ -213,3 +214,20 @@ Qué se revisa en cada cierre de trabajo:
 | `README.md` | Cuando cambia cómo se instala, configura o ejecuta el proyecto. |
 
 **Motivo.** Documentar después es documentar peor: al momento del cambio están frescos los detalles que importan —qué se verificó, qué se descartó, qué quedó fuera— y son justamente los que se pierden si se posterga.
+
+---
+
+## D-016 · Ninguna conversión UF↔CLP sin fecha, y Decimal en todo el camino
+
+**Contexto.** Implementando el sprint 3 había que decidir la firma del servicio de conversión y el tipo numérico.
+
+**Decisión.** Dos reglas en `app/services/uf.py`:
+
+1. **Toda conversión exige una fecha de referencia.** No existe una función que convierta UF a pesos "al valor de hoy" por defecto.
+2. **Se usa `Decimal` de punta a punta**, nunca `float`.
+
+**Motivo.** Lo primero, porque un monto en UF sin la fecha a la que se valorizó no se puede llevar a pesos de forma reproducible, y la reportería comparativa de `D-004` necesita exactamente reproducir el valor de un período pasado. Un default silencioso a "hoy" produciría números que cambian solos entre una consulta y la siguiente.
+
+Lo segundo es aritmética: con `float`, 1080 × 39.735,63 no da exacto, y las comisiones dejarían de cuadrar al peso contra el Excel. Verificado en 4 negocios reales: VVP-4, VVP-1, VVP-2 y VVP-19, los cuatro reproduciendo la columna AC exactamente.
+
+**Consecuencia.** `dias_de_colchon` devuelve negativo cuando la serie está vencida, lo que le da al sprint 5 la señal para distinguir el aviso (3 días o menos, `D-008`) de la alerta (serie vencida).

@@ -1,13 +1,14 @@
 """Fixtures de test.
 
-La base de test es SQLite en memoria y se crea SOLO la tabla `canjes`: es la
-unica que necesita el importador, y asi se evita `sesiones`, que usa el tipo
-UUID del dialecto de Postgres y no tiene equivalente en SQLite.
+La base de test es SQLite en memoria y se crean solo las tablas compatibles
+(`canjes`, `uf_diaria`): asi se evita `sesiones`, que usa el tipo UUID del
+dialecto de Postgres y no tiene equivalente en SQLite.
 
 Importante: nunca se usa el engine de `app.db` -- ese apunta a Neon, y un test
 jamas debe escribir ahi.
 """
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 from io import BytesIO
 
 import openpyxl
@@ -16,6 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.models.canje import Canje
+from app.models.uf import UFDiaria
 from app.services.importar_canjes import COLUMNAS_REQUERIDAS
 
 
@@ -23,8 +25,26 @@ from app.services.importar_canjes import COLUMNAS_REQUERIDAS
 def db():
     engine = create_engine("sqlite://")
     Canje.__table__.create(engine)
+    UFDiaria.__table__.create(engine)
     with Session(engine) as sesion:
         yield sesion
+
+
+# Valores reales de la serie, tomados de la hoja UF. Son los que usan los
+# negocios historicos, asi que sirven para verificar contra la columna AC.
+UF_REALES = {
+    date(2025, 12, 10): Decimal("39647.42"),
+    date(2026, 1, 2): Decimal("39735.63"),
+    date(2026, 6, 1): Decimal("40627.62"),
+    date(2026, 8, 20): Decimal("40859.28"),
+}
+
+
+@pytest.fixture
+def uf_cargada(db):
+    db.add_all([UFDiaria(fecha=f, valor=v) for f, v in UF_REALES.items()])
+    db.commit()
+    return db
 
 
 def _fila_base(id_canje: int) -> dict:
