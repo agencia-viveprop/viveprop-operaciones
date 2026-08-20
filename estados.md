@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 
-**Última actualización:** 2026-08-20
+**Última actualización:** 2026-08-20 (sprint 1 listo)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 0 |
+| Listos | 1 |
 | En curso | 0 |
-| Pendientes | 22 |
-| Bloqueados | 1 *(sprint 1, esperando la rama `dev` en Neon)* |
+| Pendientes | 21 |
+| Bloqueados | 0 |
 
-**Sprint actual:** ninguno. El plan está aprobado en su estructura y esperando autorización para arrancar.
+**Sprint actual:** ninguno. El sprint 1 quedó **Listo**. El siguiente en el orden es el 2 (G2 · Despliegue en Render), pendiente de autorización.
 
 ---
 
@@ -38,7 +38,7 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 
 | # | Sprint | Estado | Fecha | Commit | Notas |
 |---|---|---|---|---|---|
-| 1 | C1 · Ambiente dev y red de seguridad | Pendiente | — | — | Requiere la rama `dev` en Neon (acción del usuario). |
+| 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
 | 2 | G2 · Despliegue en Render | Pendiente | — | — | |
 | 3 | C2 · Tabla UF y conversión | Pendiente | — | — | |
 | 4 | C3 · Catálogos | Pendiente | — | — | |
@@ -91,6 +91,28 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-20 · Sprint 1 (C1) — Listo
+
+**Ambiente.** `backend/.env` apunta a la rama `dev` y la app arranca contra ella: verificado que `engine.url.host` es `ep-summer-brook-ay3dg8nw-pooler`, backend en 8000 respondiendo `{"status":"ok"}`, `/api/canjes` devolviendo 401 sin sesión, frontend en 5173. `alembic upgrade head` contra `dev` es no-op: ya estaba en `b2dbf50bc5fc`.
+
+**Tests.** `pytest>=8.3.3` en `requirements.txt` (instalado 9.1.1), `pytest.ini` con `pythonpath = .`, y `backend/tests/` con `conftest.py` más `test_importar_canjes.py`. **7 tests, todos pasando.** Corren contra SQLite en memoria creando solo la tabla `canjes` — se evita `sesiones`, que usa el UUID del dialecto de Postgres, y nunca se toca el engine de `app.db`, así que un test no puede escribir en Neon.
+
+Los casos cubren: mapeo de campos en alta, actualización al reimportar, respeto de `gestionado_en_app`, falta de columna requerida, una fila inválida que no frena a las demás, y etapa vacía cayendo en `SIN_ETAPA`. El más importante es `test_la_importacion_no_toca_estado_ni_etapa`: fija la regla de que estado y etapa los gobierna la app y no el archivo, que hasta ahora solo existía como comentario en el código.
+
+**Repo.** `.tmp_screenshots/` y los dos `.jpeg` de la raíz salieron del control de versiones con `git rm --cached` — siguen en disco. Agregados al `.gitignore` como `.tmp_screenshots/` y `/*.jpeg` con ancla de raíz, para no afectar assets legítimos del frontend. Nota: los ~420 KB ya commiteados siguen en el historial; sacarlos de ahí requeriría reescribirlo y no se hizo.
+
+**README.** Documentado cómo correr los tests y la trampa del string de conexión de Neon (hay que reemplazar `postgresql://` por `postgresql+psycopg://`, porque el proyecto usa psycopg 3).
+
+### 2026-08-20 · Sprint 1 (C1) — desbloqueado, sin iniciar
+
+Rama `dev` creada en Neon (`br-proud-sky-aykcfakh`, host `ep-summer-brook-ay3dg8nw-pooler`, Postgres 18.6). Por copy-on-write heredó los datos de producción: 297 canjes, 14 tipos de movimiento, 2 usuarios, 0 movimientos. Alembic quedó en `b2dbf50bc5fc`, la misma versión que producción — no hay migraciones por aplicar.
+
+Eso resuelve de hecho la decisión pendiente del sprint 1: `dev` quedó **con los datos reales heredados**, no solo con el esquema.
+
+`backend/.env` ahora apunta a `dev`. Al pegar el string de Neon había quedado el esquema duplicado (`postgresql+psycopg:postgresql://`), que SQLAlchemy no podía parsear; corregido a `postgresql+psycopg://` y conexión verificada. Respaldo del archivo previo en `backend/.env.antes-de-fix` (ignorado por git). El `.env` ya no contiene el string de producción, que sigue vivo en las variables de entorno de Render.
+
+Ningún sprint iniciado. Sin código escrito.
 
 ### 2026-08-20 · Planificación — plan aprobado en estructura
 

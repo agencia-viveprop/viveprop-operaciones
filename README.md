@@ -30,6 +30,20 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
+**Tests:**
+
+```bash
+cd backend
+pytest
+```
+
+Los tests corren contra SQLite en memoria, nunca contra Neon. `DATABASE_URL` debe
+apuntar a la rama `dev` de Neon para desarrollo -- la de `production` solo vive en
+las variables de entorno de Render.
+
+Ojo con el string de conexion: Neon entrega `postgresql://...` y SQLAlchemy necesita
+el driver, asi que hay que reemplazar ese prefijo por `postgresql+psycopg://`.
+
 **Frontend:**
 
 ```bash

@@ -22,3 +22,12 @@ backend/static/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Capturas temporales de verificacion (se generan al probar, no son fuente)
+.tmp_screenshots/
+
+# Imagenes de referencia sueltas en la raiz (branding, mockups). Solo la raiz:
+# los assets legitimos del frontend viven en frontend/ y no se tocan.
+/*.jpeg
+/*.jpg
+
