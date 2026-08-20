@@ -33,7 +33,14 @@ ETAPA_LABELS = {
 
 def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
     total = db.scalar(select(func.count()).select_from(Canje)) or 0
-    activos = db.scalar(select(func.count()).select_from(Canje).where(Canje.estado == CanjeEstado.ACTIVO)) or 0
+    activos = (
+        db.scalar(
+            select(func.count())
+            .select_from(Canje)
+            .where(Canje.estado == CanjeEstado.ACTIVO, Canje.etapa != CanjeEtapa.CERRADO)
+        )
+        or 0
+    )
     cancelados = db.scalar(select(func.count()).select_from(Canje).where(Canje.estado == CanjeEstado.CANCELADO)) or 0
     tasa_activos_pct = round((activos / total * 100), 1) if total else 0.0
 
