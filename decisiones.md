@@ -25,6 +25,8 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-010](#d-010) | 2026-08-20 | Seguridad del acceso diferida | — |
 | [D-011](#d-011) | 2026-08-20 | Sin rol super admin ni guardas de autodesactivación | — |
 | [D-012](#d-012) | 2026-08-20 | Orden de ejecución: negocios antes que gestión de canjes | Todos |
+| [D-013](#d-013) | 2026-08-20 | `negocios.id` entero autoincremental, `VVP-N` como columna aparte | 6 |
+| [D-014](#d-014) | 2026-08-20 | Códigos de `tipos_movimiento` de negocio con prefijo | 11 |
 
 ---
 
@@ -167,3 +169,27 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 **Motivo.** No es por importancia sino por dependencias: canjes ya tiene registro y dashboard funcionando hoy, mientras negocios no tiene nada, y además negocios bloquea la reportería al directorio, que sin él no dice nada sobre dinero. Los sprints 19–21 son el único bloque sin dependencias y se pueden adelantar completos, sin costo para el resto.
 
 **Excepción dentro del orden:** los sprints 12 y 13 (base de cálculo y dashboard) van antes de la carga masiva (14 y 15), porque con 19 negocios cargados y el alta manual funcionando desde el sprint 9, ver el tablero rinde más que automatizar una carga sin volumen.
+
+**Aclaración.** El registro de canjes ya está en producción desde los sprints B1–B4; no hay nada que construir ahí. Lo que queda pendiente de canjes es solo la **gestión** (seguimiento operativo, semáforo, bandeja diaria), y eso es lo que va al final. No se "termina canjes y después se empieza negocios": negocios se construye completo primero.
+
+---
+
+## D-013 · `negocios.id` entero autoincremental, `VVP-N` como columna aparte
+
+**Contexto.** `movimientos.entity_id` es `bigint` y no puede tener foreign key porque apunta a dos tablas distintas (diseño polimórfico). El identificador de negocio en el Excel es texto: `VVP-3`, `VVP-3 PROMESA`.
+
+**Decisión.** La clave primaria de `negocios` es un entero autoincremental. El identificador `VVP-N` va en una columna `codigo` con índice único, separada del PK.
+
+**Motivo.** Es una restricción dura del esquema existente: si el PK fuera texto, negocios no podría usar la tabla `movimientos`, que es justamente el activo que se está reaprovechando. Verificado contra la base: `entity_id` es `bigint`.
+
+---
+
+## D-014 · Códigos de `tipos_movimiento` de negocio con prefijo
+
+**Contexto.** `tipos_movimiento.codigo` es la clave primaria global, no compuesta con `entity_type`. Ya existen los códigos `CIERRE`, `CANCELACION` y `COMENTARIO_GENERAL` para `entity_type=canje`, y los tres son plausibles también como movimientos de negocio. Al sembrar los tipos de negocio habría colisión de clave.
+
+**Decisión.** Los códigos de negocio llevan prefijo: `NEG_CIERRE`, `NEG_CANCELACION`, etc.
+
+**Motivo.** La alternativa era cambiar el PK a compuesto `(entity_type, codigo)`, conceptualmente más limpio, pero obliga a migrar la foreign key de `movimientos` y a reescribir las 14 filas existentes. Riesgo de migración innecesario a cambio de elegancia.
+
+**Descartado:** PK compuesto `(entity_type, codigo)`.

@@ -71,6 +71,7 @@ Rama `dev` en Neon separada de `production` — hoy el `.env` local escribe en l
 
 - **Listo cuando:** `pytest` corre verde y el `.env` local apunta a `dev`.
 - **Requiere del usuario:** crear la rama en la consola de Neon y entregar el connection string, o una API key. *Única dependencia externa de todo el plan.*
+- **Decisión al crearla:** la rama de Neon es copy-on-write, así que heredaría los 297 canjes reales, con nombres y correos de corredores de verdad. Cómodo para desarrollar y para probar contra casos reales, pero implica datos personales en un ambiente de desarrollo. La alternativa es una rama solo con esquema y datos sintéticos.
 
 ### 2 · G2 — Despliegue en Render
 
@@ -103,6 +104,10 @@ Botón que descarga la plantilla (`FECHA`, `VALOR`). Carga con **upsert por fech
 - `negocios` con `padre_id` autorreferencial. El padre lleva propiedad, contrapartes, alianza, modelo y valor; cada hijo lleva su %, su comisión, sus fechas y sus estados. El doble conteo queda imposible por construcción.
 - `negocio_obligaciones` — facturación y pago por parte, en vez de 6 columnas aplanadas.
 
+**Restricción del esquema existente (D-013).** El PK de `negocios` debe ser un entero autoincremental, y `VVP-N` va en una columna `codigo` con índice único. `movimientos.entity_id` es `bigint`, así que un PK de texto dejaría a negocios fuera de la línea de tiempo compartida.
+
+**Validación a replicar.** `movimientos.entity_id` no tiene ni puede tener foreign key (es polimórfico). La verificación de que la entidad exista antes de insertar vive en la capa de servicio — `crear_movimiento_canje` ya lo hace, y hay que replicarlo para negocios.
+
 - **Listo cuando:** la migración sube y baja limpia contra `dev`.
 
 ### 7 · D2 — Motor de comisiones
@@ -134,6 +139,8 @@ Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no e
 ### 11 · D6 — Pipeline de negocios
 
 Sembrar `tipos_movimiento` para `entity_type=negocio` (E1–E7 con su responsable) y activar el avance por etapa. Reusa la infraestructura de movimientos que ya existe: sin código nuevo de seguimiento.
+
+**Restricción del esquema existente (D-014).** Los códigos van con prefijo (`NEG_CIERRE`, `NEG_CANCELACION`). `tipos_movimiento.codigo` es PK global, no compuesta con `entity_type`, y ya existen `CIERRE`, `CANCELACION` y `COMENTARIO_GENERAL` para canjes.
 
 - **Listo cuando:** avanzar un negocio de etapa queda registrado en su línea de tiempo con autor y fecha.
 
@@ -203,6 +210,7 @@ Ninguna bloquea el arranque.
 
 | Sprint | Pregunta |
 |---|---|
+| 1 (C1) | La rama `dev` se crea con los datos reales heredados o solo con el esquema. |
 | 7 (D2) | En arriendo, `% Broker` se calcula sobre la comisión total o sobre el arriendo mensual. |
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | Qué quiere ver el directorio. |
