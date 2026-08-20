@@ -27,6 +27,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-012](#d-012) | 2026-08-20 | Orden de ejecución: negocios antes que gestión de canjes | Todos |
 | [D-013](#d-013) | 2026-08-20 | `negocios.id` entero autoincremental, `VVP-N` como columna aparte | 6 |
 | [D-014](#d-014) | 2026-08-20 | Códigos de `tipos_movimiento` de negocio con prefijo | 11 |
+| [D-015](#d-015) | 2026-08-20 | La documentación se actualiza en el mismo commit que el cambio | Todos |
 
 ---
 
@@ -193,3 +194,22 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 **Motivo.** La alternativa era cambiar el PK a compuesto `(entity_type, codigo)`, conceptualmente más limpio, pero obliga a migrar la foreign key de `movimientos` y a reescribir las 14 filas existentes. Riesgo de migración innecesario a cambio de elegancia.
 
 **Descartado:** PK compuesto `(entity_type, codigo)`.
+
+---
+
+## D-015 · La documentación se actualiza en el mismo commit que el cambio
+
+**Contexto.** Los tres archivos de este directorio son el mecanismo de control del proyecto: Felipe revisa y decide leyéndolos. Si quedan desfasados respecto al código, pierden su función y el estado real hay que reconstruirlo a mano.
+
+**Decisión.** Regla general: **cada vez que se hace o modifica algo, se actualizan los `.md` que correspondan**, sin que haya que pedirlo. Van en el mismo commit que el cambio que documentan, no en uno aparte.
+
+Qué se revisa en cada cierre de trabajo:
+
+| Archivo | Cuándo se toca |
+|---|---|
+| `estados.md` | Siempre que un sprint avanza o cambia de estado: la fila, los contadores del resumen, y una entrada nueva de bitácora con lo verificado. |
+| `decisiones.md` | Siempre que se toma una decisión de diseño, incluidas las que surgen a mitad de la ejecución. Con contexto, decisión, motivo y lo descartado. |
+| `plan_desarrollo.md` | Cuando cambia el alcance, el orden, una restricción de diseño o una decisión pendiente de un sprint. |
+| `README.md` | Cuando cambia cómo se instala, configura o ejecuta el proyecto. |
+
+**Motivo.** Documentar después es documentar peor: al momento del cambio están frescos los detalles que importan —qué se verificó, qué se descartó, qué quedó fuera— y son justamente los que se pierden si se posterga.
