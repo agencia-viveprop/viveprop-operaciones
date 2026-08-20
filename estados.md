@@ -21,6 +21,31 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md).
 
 ---
 
+## Avance en porcentaje
+
+Cuenta sprints, no esfuerzo: el sprint 7 (motor de comisiones) pesa mucho más que
+el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
+
+| Lectura | Listos | Total | % |
+|---|---:|---:|---:|
+| **Camino crítico** (1, 3–13) | 1 | 12 | **8,3%** |
+| Plan completo | 1 | 22 | 4,5% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 10 | 31 | 32% |
+
+| Serie | Listos | Total | % | Sprints |
+|---|---:|---:|---:|---|
+| **C** · Cimientos | 1 | 4 | 25% | 1, 3, 4, 5 |
+| **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
+| **D** · Negocios | 0 | 6 | 0% | 6–11 |
+| **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
+| **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
+| **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
+
+Distancia a los hitos visibles: **8 sprints** hasta la pantalla de Negocios (9) y
+**12** hasta su dashboard (13). Entre el 2 y el 8 no hay cambios visibles en la app.
+
+---
+
 ## Estados posibles
 
 | Estado | Significado |
