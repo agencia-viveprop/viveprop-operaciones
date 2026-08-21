@@ -33,6 +33,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-018](#d-018) | 2026-08-21 | La fórmula de comisiones de Concentradores, y los nombres del modelo | 7 |
 | [D-020](#d-020) | 2026-08-21 | Dos tablas, `negocios` + `negocio_hitos`, en vez de autorreferencia | 6 |
 | [D-021](#d-021) | 2026-08-21 | Catálogos: tabla genérica, `etapas` aparte, `modelo_negocio` como enum | 4 |
+| [D-022](#d-022) | 2026-08-21 | El `% Broker` se aplica sobre la base en los tres modelos, arriendo incluido | 7 |
 
 ---
 
@@ -352,3 +353,19 @@ Además desaparecen los estados imposibles: en una sola tabla, la mitad de las c
 3. **`modelo_negocio` como enum, no como catálogo.** Son tres, y cada uno tiene una fórmula de comisión distinta escrita en código: la de Concentradores (`D-018`) no se parece a la de Primario. Si alguien agregara un cuarto modelo desde un mantenedor, el motor no sabría calcularlo y fallaría en silencio. El enum obliga a que agregar un modelo sea un cambio de código con su test.
 
 **Costo aceptado.** La tabla genérica no tiene claves foráneas por tipo, así que nada a nivel de base impide que un negocio apunte a un catálogo del tipo equivocado. Se acepta a cambio de no mantener seis tablas para listas de 3 a 12 filas que casi no cambian; la validación queda en la capa de servicio.
+
+---
+
+## D-022 · El `% Broker` se aplica sobre la base en los tres modelos, arriendo incluido
+
+**Contexto.** En arriendo era indistinguible si el `% Broker` se calculaba sobre la comisión total o sobre el monto del arriendo, porque cuando las partes pagan 50% y 50% la Comisión Total resulta igual a la base y las dos lecturas dan el mismo número. Divergirían el día que un arriendo no se pague 50/50.
+
+**Decisión.** Felipe confirmó el 2026-08-21 que **funciona igual que en ventas**: el `% Broker` se aplica sobre la base, no sobre la comisión.
+
+```
+Comision Broker = base x pct_broker      en los tres modelos
+```
+
+**Motivo.** Es la fórmula documentada en `REGLAS CALCULO` y la que ya se verificó en venta. Que sea uniforme en los tres modelos elimina la última rama condicional del motor de comisiones.
+
+**Consecuencia.** El sprint 7 **no tiene decisiones pendientes**. No hace falta dejar un test marcado como se había planeado: la fórmula es una sola.

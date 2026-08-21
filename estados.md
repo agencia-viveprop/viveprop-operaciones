@@ -69,7 +69,7 @@ Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) 
 | 4 | C3 · Catálogos | Pendiente | — | — | Especificación aprobada en `D-021`. Listo para autorizar. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
 | 6 | D1 · Esquema de negocios | Pendiente | — | — | Especificación aprobada en `D-020`. Listo para autorizar. |
-| 7 | D2 · Motor de comisiones | Pendiente | — | — | Fórmula de Concentradores resuelta en `D-018`. Queda el `% Broker` en arriendo. |
+| 7 | D2 · Motor de comisiones | Pendiente | — | — | **Sin decisiones pendientes.** `D-018` y `D-022`. |
 | 8 | D3 · CRUD backend | Pendiente | — | — | |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
 | 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Solo queda pendiente los 10 motivos de pérdida. |
@@ -116,6 +116,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · D-022 — el motor de comisiones queda sin decisiones pendientes
+
+Felipe confirmó que el `% Broker` en arriendo funciona igual que en ventas: se aplica sobre la base, no sobre la comisión. Eso cierra la última ambigüedad del motor y elimina una rama condicional — la fórmula es `base × pct_broker` en los tres modelos.
+
+Ya no hace falta dejar el test marcado que se había planeado para el sprint 7.
+
+Queda una sola cosa pendiente de Felipe en todo el plan de negocios: los 10 motivos de pérdida, para el sprint 10. Más el 503 de Render, que afecta al sprint 2.
 
 ### 2026-08-21 · D0 aprobado — sprints 4 y 6 desbloqueados
 
