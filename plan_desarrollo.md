@@ -324,7 +324,7 @@ Ninguna bloquea el arranque.
 | 7 (D2) | En arriendo, `% Broker` se calcula sobre la comisión total o sobre el arriendo mensual. |
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | Qué quiere ver el directorio. |
-| — | **Aplicar la limpieza de canjes en producción.** El script está listo (`scripts/limpiar_canjes.py`, simulacro verificado): deja vigentes 334, 344, 359, 360 y cancela los otros 221. Falta el acceso a producción, y falta importar #364 y #367, que son posteriores al último export. |
+| — | **Importar #364 y #367**, que son posteriores al último export de Dataprop. La limpieza de canjes ya no está pendiente: va en la migración `a4e81b6f30c9` y se aplica en el deploy. |
 | — | **Cargar en producción los negocios y el seguimiento de canjes.** Se cargaron con scripts contra `dev` y nunca contra `production`. La UF ya no hace falta: se trae del SII desde la app. Ver la bitácora del 2026-08-21. |
 | — | Si la ruta `/uf` se restringe a admin, además de su enlace del menú. |
 

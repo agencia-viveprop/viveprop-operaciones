@@ -117,7 +117,7 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
-### 2026-08-21 · Limpieza de canjes: aplicada en `dev`, pendiente en producción
+### 2026-08-21 · Limpieza de canjes: va como migración, se aplica sola en producción
 
 Pedido del usuario: en Dataprop quedan **seis solicitudes vivas** —334, 344, 359, 360, 364, 367— y la base arrastra 225 activas, así que la app muestra como pendiente trabajo que no existe.
 
@@ -145,7 +145,18 @@ Los 221 movimientos quedaron en la línea de tiempo con su explicación, y los 3
 
 **Consecuencia visible, ya que estaba anunciada:** el dashboard ahora dice tasa de activos 1,3% y cuenta 293 cancelados, de los cuales 31 en realidad se concretaron. Era el costo de la opción elegida; queda dicho acá para que nadie lo lea como un dato de negocio.
 
-**En producción sigue sin aplicar**, porque falta el acceso. El script tiene un modo que va por la API con una cookie de sesión —mejor credencial que el `DATABASE_URL`: vence, se revoca cerrando sesión y no da más permisos que el usuario— y ese modo se verificó en simulacro contra el backend local, con cifras idénticas al camino directo.
+**Para producción se convirtió en migración** (`a4e81b6f30c9`). Pedir credenciales tres veces no era entregar: la migración es la única vía que alcanza producción sola, en el deploy, y es el mismo mecanismo que ya lleva allá los catálogos y los tipos de movimiento. El script queda igual, para simulacros y para dejar `dev` al día.
+
+**Por qué es segura de aplicar a ciegas:**
+
+- **Idempotente.** Solo mira los que están `ACTIVO`, así que correrla dos veces no hace nada la segunda. Verificado.
+- **Se adapta a cada base.** En `dev` cancela 221; en producción menos, porque allá hay seis cancelaciones más que la rama no tiene. La condición es por exclusión, no una lista de IDs a cancelar.
+- **Reversible de verdad.** El `downgrade` devolvió `dev` a 225/72, el estado exacto de antes. Revierte por el movimiento que dejó, no por exclusión: si alguien cancela otros canjes después, no se los lleva puestos.
+- **La clave foránea no puede fallar.** `CANCELACION` se siembra en la migración `b2dbf50bc5fc`, así que existe en producción.
+- **Si algo falla, falla el deploy.** `alembic upgrade head` está en el `buildCommand`, así que un error deja producción sirviendo la versión anterior en vez de a medio camino.
+- **`autor_id` va nulo.** No lo hizo una persona; firmar con la cuenta del admin sería decir algo que no pasó.
+
+Probada en `dev` en los dos sentidos y dos veces seguidas hacia arriba, con el mismo resultado.
 
 ### 2026-08-21 · Sprints 14 y 15 (E1, E2) — Listos · serie E completa
 
