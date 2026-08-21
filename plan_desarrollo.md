@@ -33,7 +33,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 3 | 6 | D1 · Esquema de negocios | ✅ **Listo** |
 | 4 | 7 | D2 · Motor de comisiones | ✅ **Listo** |
 | 5 | 8 | D3 · CRUD backend | Alta y edición por API, comisión calculada al guardar |
-| 6 | 10 | D5 · Carga de los 19 históricos | Datos reales adentro, cuadrando al peso |
+| 6 | 10 | D5 · Carga de los 19 históricos | ✅ **Listo** |
 | 7 | 9 | D4 · Pantalla Negocios | **Primer hito visible**, con datos reales |
 | 8 | 11 | D6 · Pipeline de negocios | Avance por etapas E1–E7 con historial |
 | 9 | 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido, en CLP |
@@ -150,9 +150,15 @@ Listado con filtros (estado, modelo, alianza, etapa) + ficha con sus hitos + for
 
 ### 10 · D5 — Carga de los 19 históricos
 
-Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no existe como fila en el Excel.
+✅ **Listo** **el 2026-08-21.** `app/scripts/cargar_negocios.py`. **18 negocios, 19 hitos, 13 propiedades y 114 obligaciones** en `dev`, con el padre `VVP-3` creado, que no existía como fila.
 
-- **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
+**Migra fiel, no recalcula.** Los montos que quedan en la base son los del Excel. Recalcular cambiaría en silencio los números de siete negocios cerrados con plata ya facturada. El motor sí se ejecuta, pero solo para comparar, y la carga imprime un informe con cada diferencia — así se autoverifica.
+
+**Resultado: una sola diferencia en los 19 negocios**, el `comision_total` de VVP-2 (`D-026`). Todo lo demás reproduce el Excel al peso.
+
+Los totales verificados contra los números conocidos: ganado 8.087.862, pipeline 1.824.272, potencial perdido 4.751.491, y 523.674 de rebate acumulado.
+
+La UF se preserva de la columna AB en vez de buscarla en la serie: la de VVP-3 PROMESA (39.707,30) no existe en ninguna fecha, así que recalcularla habría cambiado su valorización.
 - **Sin pendientes de consultar.** Los 10 motivos de pérdida quedan vacíos por decisión (`D-023`): el campo es opcional y no se completan los históricos.
 
 **Base de comisión, verificado sobre las 19 filas (ver D-017).** 17 siguen la regla —comisión sobre `valor × UF`— y **2 no**. Al cargar hay que decidir qué se hace con esas dos:

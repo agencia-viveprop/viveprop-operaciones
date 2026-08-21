@@ -456,8 +456,12 @@ El reparto se resuelve con una rama explícita por modelo:
 
 La Comisión Total se bajó a mano por el ajuste de costo de crédito que menciona la observación de la fila, pero **el reparto siguió calculado sobre la base original**. Broker y ViveProp juntos reclaman 903.803 más de lo que entró.
 
+**Precisado al cargar los históricos (sprint 10).** La comparación del motor contra el Excel en los 19 negocios devolvió **una sola diferencia**: `comision_total` de VVP-2. Todo lo demás de esa fila —broker, VP bruta, equipo, real VP— es consistente con la base calculada de 104.100.248,32. Así que el ajuste no fue un cambio de base: **se bajó únicamente el total**, y ningún otro monto se tocó.
+
 **Decisión.** No se fuerza el motor para reproducirlo. El caso queda como `xfail` estricto en `tests/test_comisiones.py`, con el motivo escrito: si algún día se corrige y el test empieza a pasar, pytest avisa en vez de quedar silenciosamente verde. Y hay un test dedicado, `test_vvp2_esta_descuadrado_en_el_origen`, que deja constancia del monto exacto y de que el broker se calculó sobre la base original.
 
-**Pendiente para el sprint 10.** Al cargar hay que decidir quién absorbió los 903.803: si el corredor aliado tomó parte del ajuste y la planilla no se actualizó, o si ViveProp lo absorbió completo. De eso depende con qué números entra VVP-2 a la base.
+**Resuelto el modo de carga, no el fondo.** VVP-2 entró a la base con los números del Excel tal como están, marcado en el informe de carga. Corregir contabilidad histórica es decisión de Felipe con los datos en pantalla, y el endpoint de edición del sprint 8 ya permite hacerlo.
+
+**Sigue pendiente:** quién absorbió los 903.803, si el corredor aliado tomó parte del ajuste o si ViveProp lo absorbió completo.
 
 **Nota sobre `D-017`.** El caso confirma que el valor manual existe como necesidad —Felipe lo ratificó—, pero VVP-2 tal como está registrado no lo implementa de forma consistente: se overrideó el total sin rehacer el reparto. El diseño de `valor_clp_manual` sigue siendo el correcto; lo que no sirve es tomar VVP-2 como su ejemplo limpio.

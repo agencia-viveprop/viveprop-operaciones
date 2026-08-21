@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7 y 8 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8 y 10 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 6 |
+| Listos | 7 |
 | En curso | 0 |
-| Pendientes | 16 |
+| Pendientes | 15 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7 y 8. Sin bloqueos. El siguiente en el orden aprobado es el **10 (D5 · Carga de los 19 históricos)**, y ahí hay dos cosas que preguntarle a Felipe: el descuadre de VVP-2 (`D-026`) y los motivos de pérdida.
+**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8 y 10. Sin bloqueos. El siguiente es el **9 (D4 · Pantalla Negocios)**, el primer hito visible, y ya hay 18 negocios reales en `dev` para que nazca mirando datos de verdad.
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 6 | 12 | **50,0%** |
-| Plan completo | 6 | 22 | 27,3% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 15 | 31 | 48% |
+| **Camino crítico** (1, 3–13) | 7 | 12 | **58,3%** |
+| Plan completo | 7 | 22 | 31,8% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 16 | 31 | 52% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 3 | 6 | 50% | 6–11 |
+| **D** · Negocios | 4 | 6 | 67% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **2 sprints** hasta la pantalla de Negocios (va después
-de la carga histórica) y **4** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **el siguiente sprint** es la pantalla de Negocios, y
+**3** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -72,7 +72,7 @@ de la carga histórica) y **4** hasta su dashboard, en el orden aprobado el 2026
 | 7 | D2 · Motor de comisiones | **Listo** | 2026-08-21 | — | 34 tests. 18 de 19 históricos al peso; VVP-2 descuadrado en el origen (`D-026`). |
 | 8 | D3 · CRUD backend | **Listo** | 2026-08-21 | — | 5 endpoints, 18 tests. Verificado punta a punta contra `dev`. |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
-| 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Solo queda pendiente los 10 motivos de pérdida. |
+| 10 | D5 · Carga de los 19 históricos | **Listo** | 2026-08-21 | — | 18 negocios, 19 hitos, 13 propiedades, 114 obligaciones. Una sola diferencia: VVP-2. |
 | 11 | D6 · Pipeline de negocios | Pendiente | — | — | |
 | 12 | F1 · Base de cálculo | Pendiente | — | — | |
 | 13 | F2 · Dashboard de negocios | Pendiente | — | — | Segundo hito visible. |
@@ -116,6 +116,36 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 10 (D5) — Listo
+
+**Los datos reales están en `dev`**: 18 negocios, 19 hitos, 13 propiedades y 114 obligaciones. El padre `VVP-3` se creó en la carga, porque no existe como fila en el Excel; sus dos hitos quedaron como PROMESA y ESCRITURA.
+
+**El cargador migra fiel, no recalcula.** Los montos que quedan en la base son los del Excel. Recalcular habría cambiado en silencio los números de siete negocios cerrados con plata ya facturada. El motor se ejecuta igual, pero solo para comparar, y la carga imprime un informe con cada diferencia: así se autoverifica en vez de pedir fe.
+
+**Resultado: una sola diferencia en los 19 negocios.** El `comision_total` de VVP-2, exactamente los 903.802,93 conocidos. Los otros 132 montos reproducen el Excel al peso.
+
+Eso **precisa `D-026`**: el ajuste de VVP-2 no fue un cambio de base. Broker, VP bruta, equipo y real VP son todos consistentes con la base calculada de 104.100.248,32. Se bajó únicamente el total.
+
+**Verificado contra los números conocidos del análisis inicial:**
+
+| | Hitos | Comisión real VP |
+|---|---:|---:|
+| Ganado | 7 | 8.087.862 |
+| Pipeline | 2 | 1.824.272 |
+| Potencial perdido | 10 | 4.751.491 |
+| Rebate de concentrador | | 523.674 |
+
+**La UF se preserva de la columna AB** en vez de buscarla en la serie. La de VVP-3 PROMESA (39.707,30) no corresponde a ninguna fecha, así que recalcularla habría cambiado su valorización.
+
+**El patrón de reintentos quedó visible**, que era el punto de tener tabla `propiedades`:
+
+- `Mario Kreutzberger 1520 u.316-A` — **3 intentos**: VVP-4 perdido, VVP-13 perdido, VVP-16 **cerrado**
+- `San Diego 1473 u.513` — 2: VVP-9 perdido, VVP-15 activo
+- `Diag. Sta. Elena 2605 u.110` — 2, ambos perdidos
+- `Av. Sta. Rosa 5741 u.1309-A` — 2, ambos perdidos
+
+En el Excel eso no se podía ver.
 
 ### 2026-08-21 · Sprint 8 (D3) — Listo
 
