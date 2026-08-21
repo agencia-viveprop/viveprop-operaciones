@@ -207,20 +207,17 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         />
       </Group>
 
-      {/* Nueve columnas con nombres de hasta 30 caracteres no caben en una
-          pantalla normal, y acortar los datos no es opcion: el nombre completo
-          del corredor es justamente lo que se quiere ver.
-          Entonces: letra chica, sin quiebre de linea, y una barra de
-          desplazamiento horizontal SIEMPRE visible, para que se sepa que la
-          tabla sigue hacia la derecha en vez de tener que descubrirlo. */}
+      {/* Los dos corredores van en una sola columna, uno sobre otro, que es lo
+          que hace que la tabla quepa sin desplazamiento horizontal. Los nombres
+          van completos: acortarlos era resolver el problema equivocado.
+          Cada fila ocupa dos lineas, y ese es el precio elegido. */}
       <div className="tabla-scroll-x">
       <Table striped withTableBorder highlightOnHover fz="xs" className="tabla-una-linea">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>N°</Table.Th>
             <Table.Th>Fecha</Table.Th>
-            <Table.Th>Corredor solicitante</Table.Th>
-            <Table.Th>Corredor propietario</Table.Th>
+            <Table.Th>Corredores</Table.Th>
             <Table.Th>Comuna</Table.Th>
             <Table.Th>Operación</Table.Th>
             <Table.Th>Estado</Table.Th>
@@ -234,8 +231,22 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               <Table.Tr key={c.id}>
                 <Table.Td fw={600} ff="monospace">{c.id}</Table.Td>
                 <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
-                <Table.Td>{c.corredor_solicitante_nombre}</Table.Td>
-                <Table.Td>{c.corredor_propietario_nombre}</Table.Td>
+                <Table.Td>
+                  {/* La etiqueta va en cada linea: la posicion sola no alcanza
+                      para saber cual es cual al escanear la tabla. */}
+                  <Group gap={6} wrap="nowrap">
+                    <Text size="xs" c="dimmed" w={30} ta="right">
+                      Sol.
+                    </Text>
+                    <Text size="xs">{c.corredor_solicitante_nombre ?? '—'}</Text>
+                  </Group>
+                  <Group gap={6} wrap="nowrap">
+                    <Text size="xs" c="dimmed" w={30} ta="right">
+                      Prop.
+                    </Text>
+                    <Text size="xs">{c.corredor_propietario_nombre ?? '—'}</Text>
+                  </Group>
+                </Table.Td>
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>

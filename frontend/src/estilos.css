@@ -31,16 +31,18 @@
   text-overflow: clip;
 }
 
-/* Contenedor de tabla con barra de desplazamiento horizontal SIEMPRE visible.
+/* Contenedor de tabla con desplazamiento horizontal cuando hace falta.
  *
- * `overflow-x: scroll` y no `auto`: con `auto` la barra aparece y desaparece, y
- * cuando no está no hay nada que indique que la tabla sigue hacia la derecha.
+ * Era `scroll` para tener la barra siempre visible, cuando la tabla no cabía.
+ * Ahora que los dos corredores van en una columna sí cabe, así que vuelve a
+ * `auto`: una barra permanente bajo una tabla que entra completa es ruido.
+ * Sigue estando para ventanas angostas y teléfonos.
  *
  * La tabla adentro usa `min-width: max-content` para que no se comprima: se
  * queda del ancho que su contenido pide y el contenedor la desplaza.
  */
 .tabla-scroll-x {
-  overflow-x: scroll;
+  overflow-x: auto;
   overflow-y: hidden;
   /* Firefox */
   scrollbar-width: thin;
