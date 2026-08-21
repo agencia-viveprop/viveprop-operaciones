@@ -47,6 +47,9 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-033](#d-033) | 2026-08-21 | La cookie de sesión es `secure` por defecto, no por configuración | 2 |
 | [D-034](#d-034) | 2026-08-21 | Un `/api/...` sin router es 404, no la SPA | 2 |
 | [D-035](#d-035) | 2026-08-21 | El health check de Render no toca la base | 2 |
+| [D-036](#d-036) | 2026-08-21 | La UF se baja del SII, verificado contra 617 fechas | 23 |
+| [D-037](#d-037) | 2026-08-21 | La descarga corre en el propio servicio, no en un Cron Job | 23 |
+| [D-038](#d-038) | 2026-08-21 | Cargar UF es solo de admin; consultar su estado, de todos | 23 |
 
 ---
 
@@ -622,3 +625,58 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **El de diagnóstico existe por un caso concreto:** el 503 del 2026-08-20, donde no había forma rápida de distinguir "se cayó el servicio" de "se cayó la base". Con `/api/health/db` la respuesta es una consulta.
 
 **No devuelve el mensaje de la excepción**, solo su tipo. El detalle de una falla de conexión trae el host y a veces el usuario de la base, y este endpoint no pide sesión.
+
+---
+
+## D-036 · La UF se baja del SII, verificado contra 617 fechas
+
+**Contexto.** La serie se cargaba a mano con una plantilla, una vez al mes. El usuario pidió automatizarla y nombró tres fuentes posibles: `mindicador.cl`, el Banco Central y el SII.
+
+**Se probaron las tres antes de escribir una línea de código.**
+
+| Fuente | Resultado |
+|---|---|
+| **SII** | Responde. Una página HTML por año, con la serie completa. |
+| `mindicador.cl` | No respondió: timeout en el puerto 443, dos intentos. |
+| **Banco Central** | Responde, pero redirige a una página de error sin credenciales. |
+
+**Decisión.** El SII.
+
+**El motivo es que se pudo verificar.** Se parsearon las páginas de 2025 y 2026 y se compararon contra la serie que ya estaba en Neon —que viene del Excel, o sea un origen independiente— con este resultado: **617 fechas en común, 0 diferencias.** No una muestra: todas. Dos orígenes que no se hablan entre sí coinciden al centavo.
+
+**Lo que se descartó y por qué.** `mindicador.cl` entrega JSON, que es bastante más robusto que parsear HTML, pero no se pudo verificar desde acá y además es un servicio gratuito de un tercero sin compromiso de disponibilidad. El Banco Central **es** la fuente de origen y tiene API de verdad; el costo es crear una cuenta y guardar usuario y clave. Queda anotado como el camino de mejora si el parseo del SII se vuelve frágil.
+
+**El riesgo asumido es explícito:** parsear HTML se rompe si cambian la página. Se mitiga de dos formas. El parser **falla ruidoso** —si no encuentra la tabla, o si entiende menos de 20 fechas, levanta excepción en vez de cargar poco— y **si falla no se escribe nada**, la misma regla de la carga manual. Y la carga manual se queda: es la salida cuando esto se caiga.
+
+---
+
+## D-037 · La descarga corre en el propio servicio, no en un Cron Job
+
+**Contexto.** Había que ejecutar la descarga periódicamente. En Render, un Cron Job es un servicio aparte que se cobra aparte.
+
+**Decisión.** Una tarea `asyncio` dentro del web service que ya está corriendo, que despierta una vez al día. Arranca y se corta con el ciclo de vida de la app.
+
+**Motivo.** No agrega infraestructura ni costo para algo que el SII publica una vez al mes. Y es seguro repetirla: la escritura es un upsert por fecha, así que correrla dos veces —o desde dos instancias— da el mismo resultado.
+
+**No pide la página todos los días para nada.** Solo descarga cuando quedan menos de 20 días de serie por delante. El SII publica hasta el 9 del mes siguiente, así que con ese umbral el chequeo encuentra el mes nuevo poco después de que aparece.
+
+**Nunca tumba la aplicación.** Si el SII no responde o cambió el formato, la tarea lo registra y sigue durmiendo. La UF ya cargada alcanza para valorizar y la plantilla sigue estando.
+
+**Dos cosas que salieron mal al construirla, las dos silenciosas:**
+
+1. **Corría muda.** El primer arranque no dejó ninguna línea en el log, porque uvicorn configura handlers solo para sus propios loggers y el `log.info` nuestro se descartaba. Un proceso automático sin evidencia de haber ocurrido es el mismo problema de `D-033`. Se configura el logging en el arranque.
+2. **Se habría levantado en cada test.** `TestClient` como context manager corre el lifespan de verdad, así que la suite habría salido a internet y escrito en Neon. Hay un interruptor `tareas_de_fondo` que el conftest apaga, y que además permite apagarla en producción por variable de entorno sin tocar código.
+
+**El caso que la habría hecho fallar a los once meses.** Las páginas del SII son una por año, y la del siguiente devuelve 404 hasta que la publican. En la segunda mitad de diciembre la UF de enero vive en la página del año que viene, así que en diciembre se consultan los dos años y ese 404 no es un error. En enero se consulta también el año anterior: si esto no corrió unos días sobre el cambio de año, diciembre quedaría con un hueco, y **un hueco en el medio de la serie no lo avisa nadie** — el aviso de vencimiento mira la última fecha, no los agujeros.
+
+---
+
+## D-038 · Cargar UF es solo de admin; consultar su estado, de todos
+
+**Contexto.** El usuario pidió mover Unidad de Fomento al grupo ADMIN del menú. Ese grupo se dibuja solo si el rol es admin, así que el enlace desaparecía para gerencia y operaciones — pero la ruta seguía alcanzable escribiendo la URL, y operaciones podía cargar.
+
+**Decisión.** Se restringen las dos cosas: la ruta `/uf` en el frontend y las escrituras en el backend (`plantilla`, `importar`, `actualizar-desde-sii`) exigen rol admin.
+
+**`GET /uf/estado` queda abierto a cualquier usuario con sesión.** Lo consulta el aviso que aparece en la página de Negocios y en su dashboard: sin UF vigente no se puede valorizar, y quien opera necesita saberlo aunque no pueda arreglarlo. Restringirlo dejaría a operaciones sin entender por qué no puede dar de alta un negocio.
+
+**El riesgo que se aceptó.** Deja al admin como único punto de rescate humano: si la serie vence y no está, no se puede valorizar nada. Se le preguntó al usuario justamente eso y eligió restringir. Pesa mucho menos ahora que la serie se actualiza sola (`D-037`), que era la condición que hacía razonable la decisión.

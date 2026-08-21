@@ -1,3 +1,6 @@
+import asyncio
+import contextlib
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, status
@@ -17,8 +20,42 @@ from app.routers import (
     uf,
     usuarios,
 )
+from app.tareas import ciclo_uf
 
-app = FastAPI(title="Viveprop Operaciones")
+
+@contextlib.asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Arranca las tareas de fondo y las corta al apagar.
+
+    Se arrancan acá y no en un servicio aparte -- ver `app/tareas.py`. El
+    `except CancelledError` es para que el apagado sea limpio: sin eso, cortar
+    el proceso deja un traceback en el log que parece un error y no lo es.
+    """
+    # Sin esto la tarea de fondo corre muda: uvicorn configura handlers solo
+    # para sus propios loggers, asi que un `log.info` nuestro se descarta y la
+    # actualizacion automatica no deja rastro de haber ocurrido. Sus loggers
+    # tienen `propagate=False`, asi que esto no duplica sus lineas.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    if not settings.tareas_de_fondo:
+        # Los tests la apagan: levantan la app de verdad con `TestClient`, y una
+        # tarea que sale al SII y a Neon no tiene nada que hacer en un test.
+        yield
+        return
+
+    tarea = asyncio.create_task(ciclo_uf())
+    try:
+        yield
+    finally:
+        tarea.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await tarea
+
+
+app = FastAPI(title="Viveprop Operaciones", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

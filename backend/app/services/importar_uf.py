@@ -234,14 +234,30 @@ def cargar_desde_xlsx(db: Session, contenido: bytes) -> ResumenCargaUF:
     if not filas:
         return resumen
 
+    return guardar_serie(db, filas)
+
+
+def guardar_serie(db: Session, filas: dict[date, Decimal]) -> ResumenCargaUF:
+    """Upsert por fecha, informando cuantas son nuevas, cambiadas y iguales.
+
+    Vive aparte porque tiene dos usuarios: la carga manual de la plantilla y la
+    descarga automatica desde el SII. Que los dos caminos escriban con el mismo
+    codigo es lo que hace que la automatizacion no pueda dejar la serie en un
+    estado que la carga manual no produciria.
+
+    Se usa el ORM y no `ON CONFLICT` de Postgres a proposito: son 45 filas al
+    mes, el rendimiento es irrelevante, y asi este calculo se puede testear
+    contra la base en memoria. El upsert lo da `merge`, que inserta o actualiza
+    segun la clave primaria.
+    """
+    resumen = ResumenCargaUF()
+    if not filas:
+        return resumen
+
     existentes = {
         f.fecha: f.valor
         for f in db.query(UFDiaria).filter(UFDiaria.fecha.in_(list(filas))).all()
     }
-    # Se usa el ORM y no `ON CONFLICT` de Postgres a proposito: son 45 filas al
-    # mes, el rendimiento es irrelevante, y asi este calculo se puede testear
-    # contra la base en memoria. El upsert lo da `merge`, que inserta o actualiza
-    # segun la clave primaria.
     hubo = False
     for fecha, valor in sorted(filas.items()):
         anterior = existentes.get(fecha)

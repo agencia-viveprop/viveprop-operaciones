@@ -53,3 +53,19 @@ export function importarUF(archivo: File): Promise<ResumenCargaUF> {
     body: datos,
   }).then(parseOrThrow)
 }
+
+export type ResumenSII = {
+  anios: number[]
+  fechas_leidas: number
+  carga: ResumenCargaUF
+  ultima: string | null
+}
+
+/** Trae la serie que publica el SII. La automática corre sola una vez al día;
+ *  esto es para no esperarla cuando el SII acaba de publicar el mes. */
+export function actualizarUFDesdeSII(): Promise<ResumenSII> {
+  return fetch('/api/uf/actualizar-desde-sii', {
+    method: 'POST',
+    credentials: 'include',
+  }).then(parseOrThrow)
+}

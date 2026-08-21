@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     session_secret: str = "dev-secret-change-me"
     environment: str = "development"
     allowed_origins: str = "http://localhost:5173"
+    # Las tareas periodicas del proceso (hoy: la descarga de UF desde el SII).
+    # Se puede apagar por variable de entorno sin tocar codigo, y los tests la
+    # apagan para no salir a la red.
+    tareas_de_fondo: bool = True
 
     @property
     def allowed_origins_list(self) -> list[str]:

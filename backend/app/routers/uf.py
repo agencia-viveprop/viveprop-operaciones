@@ -13,6 +13,7 @@ from app.services.importar_uf import (
     estado_serie,
     generar_plantilla,
 )
+from app.services.uf_sii import ResumenSII, SIINoDisponible, actualizar_desde_sii
 
 router = APIRouter(prefix="/uf", tags=["uf"])
 
@@ -36,7 +37,7 @@ def obtener_estado(db: Session = Depends(get_db), usuario: Usuario = Depends(get
 @router.get("/plantilla")
 def descargar_plantilla(
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+    usuario: Usuario = Depends(require_role(RolUsuario.admin)),
 ):
     """El .xlsx con las fechas que faltan ya escritas y el valor en blanco."""
     contenido = generar_plantilla(db, _hoy())
@@ -52,7 +53,7 @@ def descargar_plantilla(
 async def importar(
     archivo: UploadFile,
     db: Session = Depends(get_db),
-    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+    usuario: Usuario = Depends(require_role(RolUsuario.admin)),
 ):
     if not archivo.filename or not archivo.filename.lower().endswith((".xlsx", ".xlsm")):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "El archivo debe ser un .xlsx")
@@ -62,3 +63,23 @@ async def importar(
         return cargar_desde_xlsx(db, contenido)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+
+
+@router.post("/actualizar-desde-sii", response_model=ResumenSII)
+def actualizar_desde_sii_endpoint(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.admin)),
+):
+    """Trae la serie que publica el SII y la guarda.
+
+    Existe además de la tarea de fondo para no tener que esperar el tick: el
+    caso típico es que el SII acabe de publicar el mes y alguien lo necesite ya.
+
+    Un 502 y no un 500 cuando el SII no responde: la falla es de un tercero, no
+    nuestra, y quien lo lea tiene que poder distinguirlo para saber que la salida
+    es cargar la plantilla a mano.
+    """
+    try:
+        return actualizar_desde_sii(db, _hoy())
+    except SIINoDisponible as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc

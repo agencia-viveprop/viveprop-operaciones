@@ -50,6 +50,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
 | 21 | 21 | B7 · Migrar el seguimiento histórico | ✅ **Listo** |
 | 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
+| 23 | 23 | C5 · UF automática desde el SII | ✅ **Listo** se actualiza sola, sin carga manual |
 
 **Dos cambios de orden respecto de v4**, aprobados el 2026-08-21:
 
@@ -95,6 +96,18 @@ Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se co
 **Falta, y depende de ti:** el dominio propio `operaciones.viveprop.com`. Hay que agregarlo en Render (Settings → Custom Domains), crear el registro DNS que Render indique, y **después** actualizar `ALLOWED_ORIGINS` en `render.yaml` para que incluya el dominio nuevo. Sin ese último paso el CORS lo rechaza.
 
 - **Listo cuando:** la app responde en el dominio propio y la cookie sigue siendo `secure` aunque falte la variable de entorno. ✅ La segunda mitad está; falta la primera.
+
+### 23 · C5 — UF automática desde el SII ✅ Listo
+
+Pedido del usuario el 2026-08-21: dejar la UF cargada sola, sin tener que subir la plantilla cada mes.
+
+**Fuente: el SII** (`D-036`). Se verificó contra la serie que ya estaba en Neon —que viene del Excel, o sea un origen independiente— y coincidió en **617 fechas de 617, al centavo**. `mindicador.cl` no respondió en dos intentos; el Banco Central es la fuente de origen y tiene API JSON, pero exige registrarse.
+
+**Corre sola una vez al día dentro del mismo servicio** (`D-037`), no en un Cron Job de Render, que sería un servicio aparte cobrado aparte para algo que se publica una vez al mes. Descarga solo cuando quedan menos de 20 días de serie. Hay además un botón para no esperar el tick.
+
+**La carga manual se queda como respaldo.** Si el SII cambia su página, el parser falla ruidoso y esa sigue siendo la salida. Los dos caminos escriben con el mismo upsert.
+
+- **Listo cuando:** la serie se extiende sin que nadie suba un archivo. ✅ Verificado en vivo: la tarea se disparó sola a los 30 segundos del arranque, bajó la página del SII y dejó el resultado en el log. 27 tests, ninguno sale a internet.
 
 ### 3 · C2 — Tabla UF y conversión
 
@@ -304,7 +317,7 @@ Ninguna bloquea el arranque.
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | Qué quiere ver el directorio. |
 | — | Si la ruta `/uf` se restringe a admin, además de su enlace del menú. |
-| — | Si la carga de UF se automatiza desde el SII (fuente verificada: 617 fechas sin diferencias). |
+
 
 ## Diferido por decisión del usuario
 

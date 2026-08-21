@@ -15,12 +15,14 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { IconDownload, IconUpload } from '@tabler/icons-react'
+import { IconCloudDownload, IconDownload, IconUpload } from '@tabler/icons-react'
 import {
+  actualizarUFDesdeSII,
   descargarPlantillaUF,
   importarUF,
   obtenerEstadoUF,
   type ResumenCargaUF,
+  type ResumenSII,
 } from '../api/uf'
 import PageHeader from '../components/PageHeader'
 import { fecha } from '../components/negociosFormato'
@@ -39,11 +41,19 @@ const ETIQUETA_NIVEL: Record<string, string> = {
   vacia: 'Sin cargar',
 }
 
-export default function UF({ puedeEditar }: { puedeEditar: boolean }) {
+export default function UF() {
   const queryClient = useQueryClient()
   const [archivo, setArchivo] = useState<File | null>(null)
   const [resumen, setResumen] = useState<ResumenCargaUF | null>(null)
+  const [resumenSII, setResumenSII] = useState<ResumenSII | null>(null)
   const resetRef = useRef<() => void>(null)
+
+  /** La UF cambia lo que se puede valorizar, así que los negocios también. */
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['estado-uf'] })
+    queryClient.invalidateQueries({ queryKey: ['negocios'] })
+    queryClient.invalidateQueries({ queryKey: ['resumen-negocios'] })
+  }
 
   const { data: estado, isLoading } = useQuery({
     queryKey: ['estado-uf'],
@@ -58,10 +68,15 @@ export default function UF({ puedeEditar }: { puedeEditar: boolean }) {
       setResumen(r)
       setArchivo(null)
       resetRef.current?.()
-      queryClient.invalidateQueries({ queryKey: ['estado-uf'] })
-      // La UF cambia lo que se puede valorizar, así que los negocios también.
-      queryClient.invalidateQueries({ queryKey: ['negocios'] })
-      queryClient.invalidateQueries({ queryKey: ['resumen-negocios'] })
+      refrescar()
+    },
+  })
+
+  const desdeSII = useMutation({
+    mutationFn: actualizarUFDesdeSII,
+    onSuccess: (r) => {
+      setResumenSII(r)
+      refrescar()
     },
   })
 
@@ -77,7 +92,7 @@ export default function UF({ puedeEditar }: { puedeEditar: boolean }) {
     <Stack gap="lg">
       <PageHeader
         title="Unidad de Fomento"
-        subtitle="La serie se carga a mano una vez al mes. La UF se publica del día 10 al 9 del siguiente, así que siempre hay un tramo por delante."
+        subtitle="La serie se actualiza sola desde el SII una vez al día. La UF se publica del día 10 al 9 del siguiente, así que siempre hay un tramo por delante."
       />
 
       {estado && (
@@ -131,15 +146,59 @@ export default function UF({ puedeEditar }: { puedeEditar: boolean }) {
         </>
       )}
 
-      {puedeEditar && (
-        <Paper withBorder radius="md" p="md">
+      <Paper withBorder radius="md" p="md">
+        <Title order={5} mb={4}>
+          Traer del SII
+        </Title>
+        <Text size="sm" c="dimmed" mb="md">
+          Corre solo una vez al día cuando quedan menos de 20 días de serie. Este botón es
+          para no esperarlo, cuando el SII acaba de publicar el mes. Traer lo mismo dos
+          veces no cambia nada.
+        </Text>
+
+        <Button
+          color="accent"
+          leftSection={<IconCloudDownload size={16} />}
+          loading={desdeSII.isPending}
+          onClick={() => desdeSII.mutate()}
+        >
+          Actualizar desde el SII
+        </Button>
+
+        {desdeSII.isError && (
+          <Alert color="critical" variant="light" mt="md" title="El SII no respondió">
+            <Text size="sm">{(desdeSII.error as Error).message}</Text>
+            <Text size="sm" mt="xs">
+              No se cargó nada. La salida es descargar la plantilla y cargarla a mano, más
+              abajo.
+            </Text>
+          </Alert>
+        )}
+
+        {resumenSII && (
+          <Alert color="good" variant="light" mt="md" title="Listo">
+            <Text size="sm">
+              {resumenSII.fechas_leidas} fechas leídas del SII ({resumenSII.anios.join(', ')}) ·{' '}
+              {resumenSII.carga.nuevas} nuevas · {resumenSII.carga.actualizadas} actualizadas ·{' '}
+              {resumenSII.carga.sin_cambio} sin cambio
+            </Text>
+            {resumenSII.carga.nuevas === 0 && resumenSII.carga.actualizadas === 0 && (
+              <Text size="sm" c="dimmed" mt={4}>
+                El SII no tiene nada más nuevo que lo que ya estaba cargado.
+              </Text>
+            )}
+          </Alert>
+        )}
+      </Paper>
+
+      <Paper withBorder radius="md" p="md">
           <Title order={5} mb={4}>
-            Cargar el nuevo tramo
+            Cargar a mano
           </Title>
           <Text size="sm" c="dimmed" mb="md">
-            La plantilla trae las fechas que faltan ya escritas: solo hay que rellenar los
-            valores y subirla. Cargar un archivo que se solapa con lo que ya está no duplica
-            nada.
+            El respaldo, para cuando el SII no está disponible o cambió su página. La
+            plantilla trae las fechas que faltan ya escritas: solo hay que rellenar los
+            valores y subirla.
           </Text>
 
           <Group>
@@ -221,8 +280,7 @@ export default function UF({ puedeEditar }: { puedeEditar: boolean }) {
               )}
             </Alert>
           )}
-        </Paper>
-      )}
+      </Paper>
     </Stack>
   )
 }

@@ -41,7 +41,18 @@ function App() {
         <Route path="/negocios" element={<Negocios puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
         <Route path="/reportes/semanal" element={<ReporteSemanal />} />
-        <Route path="/uf" element={<UF puedeEditar={usuario.rol !== 'gerencia'} />} />
+        <Route
+          path="/uf"
+          element={
+            usuario.rol === 'admin' ? (
+              <UF />
+            ) : (
+              <Center h="70vh">
+                <Text c="red">No tienes permiso para ver esta página.</Text>
+              </Center>
+            )
+          }
+        />
         <Route
           path="/admin/usuarios"
           element={

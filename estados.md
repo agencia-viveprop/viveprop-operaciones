@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (16 listos + G2 en curso; el sprint de despliegue destapó tres defectos que ya estaban en producción)
+**Última actualización:** 2026-08-21 (17 listos + G2 en curso; la UF ya no se carga a mano)
 
 ---
 
@@ -11,8 +11,8 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 
 | | Cantidad |
 |---|---|
-| Sprints del plan | 22 |
-| Listos | 16 |
+| Sprints del plan | 23 |
+| Listos | 17 |
 | En curso | 1 |
 | Pendientes | 5 |
 | Bloqueados | 0 |
@@ -29,12 +29,12 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 16 | 22 | 72,7% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 25 | 31 | 80,6% |
+| Plan completo | 17 | 23 | 73,9% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 26 | 32 | 81,3% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
-| **C** · Cimientos | 4 | 4 | **100%** | 1, 3, 4, 5 |
+| **C** · Cimientos | 5 | 5 | **100%** | 1, 3, 4, 5, 23 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 3 | 5 | 60% | 12, 13, 16–18 |
@@ -84,6 +84,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
 | 21 | B7 · Migrar el seguimiento histórico | **Listo** | 2026-08-21 | — | 384 movimientos en 112 canjes. La bandeja pasó a 146 + 48. |
 | 22 | G1 · Recuperación de contraseña | Pendiente | — | — | Disparador: antes de crear la tercera cuenta de usuario. |
+| 23 | C5 · UF automática desde el SII | **Listo** | 2026-08-21 | — | Fuente verificada en 617 fechas (`D-036`). Tarea de fondo diaria (`D-037`). 27 tests. |
 
 ---
 
@@ -116,11 +117,30 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Sprint 23 (C5) — Listo · la UF se carga sola
+
+**Ya no hay que subir la plantilla cada mes.** Una tarea dentro del propio web service chequea una vez al día si a la serie le quedan menos de 20 días por delante y, si es así, baja lo que el SII publica.
+
+**Por qué el SII y no las otras dos** (`D-036`). Se probaron las tres antes de escribir código. El SII se verificó contra la serie que ya estaba en Neon —que viene del Excel, un origen independiente— y coincidió en **617 fechas de 617, al centavo**, entre 2025 y 2026. `mindicador.cl` no respondió en dos intentos desde acá. El Banco Central es la fuente de origen y tiene API JSON de verdad, más robusta que parsear HTML, pero exige registrarse y guardar credenciales; queda anotado como el camino de mejora si esto se vuelve frágil.
+
+**El detalle que habría fallado en once meses.** Las páginas del SII son una por año y la del año siguiente devuelve 404 hasta que la publican. En la segunda mitad de diciembre los valores de enero viven en la página del año que viene, así que en diciembre se piden los dos años y el 404 no es un error. Y en enero se pide también el año anterior, porque si esto no corrió unos días sobre el cambio de año diciembre quedaría con un hueco — y un hueco en el medio de la serie no lo avisa nadie: el aviso de vencimiento mira la última fecha, no los agujeros.
+
+**Dos cosas que se arreglaron mientras se construía:**
+
+- **La tarea corría muda.** El primer arranque no dejó ninguna línea en el log: uvicorn configura handlers solo para sus propios loggers, así que el `log.info` nuestro se descartaba. Un proceso automático sin evidencia de haber ocurrido es el mismo problema silencioso de `D-033`. Se configura el logging en el arranque.
+- **La tarea se habría levantado en los tests.** `TestClient` como context manager corre el lifespan de verdad, así que cada test habría salido a internet y escrito en Neon. Hay un interruptor (`tareas_de_fondo`) que el conftest apaga.
+
+**Verificado en vivo, no solo por test:** se reinició el backend y la tarea se disparó sola a los 30 segundos, bajó la página del SII con un 200 y registró "0 nuevas, 0 actualizadas, serie hasta 2026-09-09" — nada nuevo porque la serie ya estaba completa, que es la respuesta correcta.
+
+27 tests nuevos, 247 en total. **Ninguno sale a internet**: corren contra un recorte real de la página del SII guardado en `tests/datos/`.
+
+**La carga manual se queda como respaldo**, y los dos caminos escriben con el mismo upsert (`guardar_serie`), así que la automatización no puede dejar la serie en un estado que la carga a mano no produciría.
+
 ### 2026-08-21 · Unidad de Fomento pasa al grupo ADMIN
 
 Pedido del usuario. El enlace estaba en OPERACIONES y ahora está en ADMIN, junto a Usuarios.
 
-**Ojo, esto cambia quién lo ve:** el bloque ADMIN se dibuja solo si `usuario.rol === 'admin'`, así que gerencia y operaciones pierden el enlace. **La ruta `/uf` sigue accesible por URL para operaciones**, que puede editar (`puedeEditar={usuario.rol !== 'gerencia'}`). Mover el menú y restringir el acceso son dos cosas distintas; se hizo solo la primera, que es la que se pidió. Queda preguntado si la ruta también debe quedar solo para admin — con la consecuencia de que si el admin no está, la serie vence y no se puede valorizar ningún negocio.
+**Ojo, esto cambia quién lo ve:** el bloque ADMIN se dibuja solo si `usuario.rol === 'admin'`, así que gerencia y operaciones pierden el enlace. **La ruta `/uf` sigue accesible por URL para operaciones**, que puede editar (`puedeEditar={usuario.rol !== 'gerencia'}`). Mover el menú y restringir el acceso son dos cosas distintas; se hizo solo la primera, que es la que se pidió. **Resuelto el mismo día:** el usuario eligió restringir también la ruta, así que `/uf` es solo admin y las escrituras del backend (`plantilla`, `importar`, `actualizar-desde-sii`) exigen rol admin. `/estado` queda abierto a todos: lo consulta el aviso que ve cualquiera en la página de Negocios. El riesgo de tener un solo punto de rescate humano pesa mucho menos ahora que la serie se actualiza sola (`D-038`).
 
 ### 2026-08-21 · Sprint 2 (G2) — En curso
 

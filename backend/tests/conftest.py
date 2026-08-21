@@ -138,8 +138,14 @@ def cliente(db):
     from fastapi.testclient import TestClient
 
     from app.auth import get_current_user
+    from app.config import settings
     from app.db import get_db
     from app.main import app
+
+    # `TestClient` como context manager corre el lifespan de verdad, y ahi vive
+    # la tarea que descarga la UF del SII. Un test no sale a internet ni escribe
+    # en Neon.
+    settings.tareas_de_fondo = False
 
     # Se persiste, no basta con tenerlo en memoria: `movimientos.autor_id`
     # apunta a `usuarios` y la clave foranea esta activa en los tests.
