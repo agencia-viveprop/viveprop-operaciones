@@ -117,6 +117,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Limpieza de canjes: script listo, sin aplicar
+
+Pedido del usuario: en Dataprop quedan **seis solicitudes vivas** —334, 344, 359, 360, 364, 367— y la base arrastra 225 activas, así que la app muestra como pendiente trabajo que no existe.
+
+**Tres cosas aparecieron al mirar los datos antes de escribir nada:**
+
+1. **#364 y #367 no existen en la base.** El último canje que tenemos es el #360, del 2026-08-10, la fecha del último export de Dataprop. Esos dos son posteriores: hay que importarlos, no marcarlos.
+2. **31 de los que se cancelarían tienen etapa `CERRADO`.** Se advirtió que marcarlos cancelados pierde la distinción entre "se cayó" y "se concluyó", y que la reportería pasaría a decir que nunca se cerró un canje. **La decisión del usuario fue cancelarlos igual.** Se respeta: son los 221 completos. Mitiga el daño que la etapa **no se toca**, así que la información sigue guardada y el cambio es reversible.
+3. **`dev` y producción ya no coinciden.** Según la captura del usuario, producción tiene 78 cancelados y `dev` 72: seis canjes que se cancelaron en Dataprop después de que se creó la rama.
+
+**El script va por el mismo camino que la app**: registrar un movimiento `CANCELACION`, que es lo que pone el estado y marca `gestionado_en_app`. Con eso la línea de tiempo explica el cambio — sin el movimiento, quien abra el canje #150 en seis meses ve CANCELADO sin ninguna razón. Contra la base va en **una sola transacción**, para que no quede media limpieza aplicada.
+
+**La limpieza sobrevive a las importaciones**, y eso no era obvio: el importador de Dataprop nunca toca `estado` ni `etapa`, y además saltea los canjes con `gestionado_en_app`. Subir un `.xlsx` viejo no revive lo cancelado.
+
+**Dos transportes.** Contra la base con `DATABASE_URL`, o contra la API de un despliegue con una cookie de sesión. El segundo existe porque para tocar producción **una cookie es una credencial mejor que el string de conexión**: vence, se revoca cerrando sesión y no da más permisos que los del usuario. El costo es que va canje por canje y se puede cortar a medias, así que saltea los que ya están cancelados y se puede volver a correr.
+
+**No se aplicó en ninguna base.** El usuario pidió producción y no hay acceso todavía. El simulacro se verificó por los dos caminos contra `dev`, con cifras idénticas: 221 a cancelar, 4 quedan vigentes.
+
 ### 2026-08-21 · Sprints 14 y 15 (E1, E2) — Listos · serie E completa
 
 **Carga masiva de negocios**, desde el botón *Carga masiva* de la pantalla de Negocios. Los dos sprints van en un solo modal porque bajar la plantilla y subirla es el mismo trabajo partido en dos; separarlos obliga a buscar dónde estaba el otro.
