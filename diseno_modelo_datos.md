@@ -1,9 +1,10 @@
 # D0 · Diseño del modelo de datos
 
-> **Este documento existe para ser corregido antes de que se escriba una migración.**
-> Cubre los sprints 4 (catálogos) y 6 (esquema de negocios). No hay código asociado.
+> **Especificación aprobada e implementada.** Cubre los sprints 4 (catálogos) y 6
+> (esquema de negocios), ambos listos al 2026-08-21. Se conserva como referencia
+> del diseño y de por qué cada cosa quedó como quedó.
 
-**Última actualización:** 2026-08-21 · Relacionados: [plan_desarrollo.md](plan_desarrollo.md) · [decisiones.md](decisiones.md) · [estados.md](estados.md)
+**Última actualización:** 2026-08-21 (sprints 4 y 6 implementados) · Relacionados: [plan_desarrollo.md](plan_desarrollo.md) · [decisiones.md](decisiones.md) · [estados.md](estados.md)
 
 ---
 
@@ -219,11 +220,13 @@ negocio_obligaciones
   tipo     enum      PAGO_PARTNER_COMERCIAL | FACT_CORREDOR_VP |
                      FACT_CAPTADOR_ALIANZA | PAGO_EQUIPO_VP |
                      FACT_COMISION_TOTAL | PAGO_COMISION_REAL_VP
-  estado   varchar(40)
-  monto    numeric(16,2) null
-  fecha    date null
+  estado_id  int FK -> catalogos.id  null
+  monto      numeric(16,2) null
+  fecha      date null
   UNIQUE (hito_id, tipo)
 ```
+
+**Refinamiento al implementar.** Este documento proponía `estado varchar(40)` guardando el código del catálogo. Se implementó como `estado_id` con clave foránea a `catalogos`, y lo mismo en `propiedades.tipo_propiedad_id` / `estado_propiedad_id` y en `negocio_hitos.motivo_perdida_id`. Es el mismo diseño con integridad referencial de verdad, y deja consistente la forma de referenciar catálogos en todo el esquema: `alianza_id` ya iba a ser una clave foránea.
 
 Van en el hito, no en el negocio: cada liquidación se factura y se paga por separado.
 

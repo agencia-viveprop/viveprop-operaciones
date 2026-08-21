@@ -5,3 +5,9 @@ from app.models.canje import Canje  # noqa: F401
 from app.models.movimiento import Movimiento, TipoMovimiento  # noqa: F401
 from app.models.uf import UFDiaria  # noqa: F401
 from app.models.catalogo import Catalogo, Etapa  # noqa: F401
+from app.models.negocio import (  # noqa: F401
+    Negocio,
+    NegocioHito,
+    NegocioObligacion,
+    Propiedad,
+)

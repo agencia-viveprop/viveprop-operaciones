@@ -1,8 +1,10 @@
 """Fixtures de test.
 
-La base de test es SQLite en memoria y se crean solo las tablas compatibles
-(`canjes`, `uf_diaria`, `catalogos`, `etapas`): asi se evita `sesiones`, que usa
-el tipo UUID del dialecto de Postgres y no tiene equivalente en SQLite.
+La base de test es SQLite en memoria y se crean todas las tablas menos
+`sesiones`, que usa el tipo UUID del dialecto de Postgres y no tiene equivalente.
+
+Las claves foraneas se activan con un PRAGMA: SQLite las ignora por defecto, y
+sin eso los tests de integridad referencial pasarian sin probar nada.
 
 Importante: nunca se usa el engine de `app.db` -- ese apunta a Neon, y un test
 jamas debe escribir ahi.
@@ -13,12 +15,18 @@ from io import BytesIO
 
 import openpyxl
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
 from app.models.canje import Canje
 from app.models.catalogo import Catalogo, Etapa
+from app.models.negocio import (
+    Negocio,
+    NegocioHito,
+    NegocioObligacion,
+    Propiedad,
+)
 from app.models.uf import UFDiaria
 from app.services.importar_canjes import COLUMNAS_REQUERIDAS
 
@@ -33,10 +41,17 @@ def db():
         poolclass=StaticPool,
         connect_args={"check_same_thread": False},
     )
-    Canje.__table__.create(engine)
-    UFDiaria.__table__.create(engine)
-    Catalogo.__table__.create(engine)
-    Etapa.__table__.create(engine)
+
+    @event.listens_for(engine, "connect")
+    def _activar_fk(conexion, _registro):
+        conexion.execute("PRAGMA foreign_keys=ON")
+
+    for tabla in (
+        Canje, UFDiaria, Catalogo, Etapa,
+        Propiedad, Negocio, NegocioHito, NegocioObligacion,
+    ):
+        tabla.__table__.create(engine)
+
     with Session(engine) as sesion:
         yield sesion
 

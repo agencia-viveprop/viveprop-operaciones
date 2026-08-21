@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3 y 4 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4 y 6 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 3 |
+| Listos | 4 |
 | En curso | 0 |
-| Pendientes | 19 |
+| Pendientes | 18 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, el 3 y el 4. Sin bloqueos ni decisiones pendientes. El siguiente en el orden aprobado es el **6 (D1 · Esquema de negocios)**, con especificación cerrada en `D-020`.
+**Sprint actual:** ninguno. Listos el 1, 3, 4 y 6. Sin bloqueos ni decisiones pendientes. El siguiente en el orden aprobado es el **7 (D2 · Motor de comisiones)**, con la fórmula cerrada en `D-018` y `D-022`.
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 3 | 12 | **25,0%** |
-| Plan completo | 3 | 22 | 13,6% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 12 | 31 | 39% |
+| **Camino crítico** (1, 3–13) | 4 | 12 | **33,3%** |
+| Plan completo | 4 | 22 | 18,2% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 13 | 31 | 42% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 0 | 6 | 0% | 6–11 |
+| **D** · Negocios | 1 | 6 | 17% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **4 sprints** hasta la pantalla de Negocios y
-**7** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **3 sprints** hasta la pantalla de Negocios y
+**6** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -68,7 +68,7 @@ Distancia a los hitos visibles: **4 sprints** hasta la pantalla de Negocios y
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
 | 4 | C3 · Catálogos | **Listo** | 2026-08-21 | — | 10 tests. 27 filas sembradas, endpoint con 9 grupos. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
-| 6 | D1 · Esquema de negocios | Pendiente | — | — | Especificación aprobada en `D-020`. Listo para autorizar. |
+| 6 | D1 · Esquema de negocios | **Listo** | 2026-08-21 | — | 4 tablas, 13 tests. Migración reversible verificada. |
 | 7 | D2 · Motor de comisiones | Pendiente | — | — | **Sin decisiones pendientes.** `D-018` y `D-022`. |
 | 8 | D3 · CRUD backend | Pendiente | — | — | |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
@@ -116,6 +116,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 6 (D1) — Listo
+
+**Cuatro tablas nuevas**, migración `d3a91f6c25b8` aplicada a `dev` y verificada reversible: `propiedades` (7 columnas), `negocios` (13), `negocio_hitos` (35) y `negocio_obligaciones` (6). Tres enums de Postgres creados —`modelo_negocio`, `estado_negocio`, `tipo_obligacion`— y `moneda_tipo` reutilizado desde canjes con `create_type=False` para no intentar recrearlo.
+
+**Índices** según `D0`: `codigo` único en negocios, `(modelo, alianza_id)` para el dashboard, `negocio_id`, `(estado, fecha_cierre)` para los tres buckets del sprint 12, y `fecha_cierre` para las series mensuales.
+
+**Decisión de precisión:** las tasas van en `numeric(16,14)`. El histórico trae valores despejados a mano como `0.0252001208200461`, y truncarlos haría que las comisiones no cuadren al peso contra el Excel, que es el criterio del sprint 7.
+
+**Refinamiento respecto de `D0`:** las referencias a catálogos se implementaron como claves foráneas (`estado_id`, `tipo_propiedad_id`, `estado_propiedad_id`, `motivo_perdida_id`) en vez del `varchar` que proponía el documento. Mismo diseño, con integridad referencial real, y consistente con `alianza_id`.
+
+**Tests: 13 nuevos, total 42 pasando.** El que da sentido al sprint es `test_sumar_hitos_no_duplica_el_negocio`: verifica sobre la estructura real, con los números de VVP-3, que sumar comisiones es sumar hitos y que no hay una tercera fila que haya que recordar excluir. Eso era el propósito de `D-002` y `D-020`.
+
+También quedan cubiertos: el orden cronológico de los hitos, que un negocio simple es un negocio con un hito de nombre nulo, la unicidad de `codigo` y de la propiedad, el patrón de reintento con tres negocios sobre la misma unidad, una obligación por tipo y por hito, el borrado en cascada, y la base de comisión de `D-017` con el manual ganándole al calculado usando los números reales de VVP-2.
+
+**Infraestructura de test:** se activaron las claves foráneas en SQLite con `PRAGMA foreign_keys=ON`. Sin eso SQLite las ignora, y los tests de integridad referencial habrían pasado sin probar nada.
 
 ### 2026-08-21 · Sprint 4 (C3) — Listo
 
