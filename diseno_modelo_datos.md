@@ -11,7 +11,7 @@
 
 `D-017` cambió tres campos del modelo, la fuente de la base de comisión y el diseño de 19 tests. Apareció a tiempo porque estábamos conversando el diseño en vez de construyéndolo. Este documento busca que el resto de esas correcciones aparezcan ahora y no después de una migración.
 
-Al final hay una tabla de preguntas con su estado. Cuatro de las seis quedaron resueltas; las dos abiertas son aprobaciones de diseño (secciones 1 y 3).
+**Las seis preguntas quedaron resueltas el 2026-08-21.** Este documento pasa de propuesta a especificación aprobada: es lo que se implementa en los sprints 4 y 6.
 
 ---
 
@@ -19,7 +19,7 @@ Al final hay una tabla de preguntas con su estado. Cuatro de las seis quedaron r
 
 `CONFIG` define seis listas: alianzas (8), modelos de negocio (3), etapas E1–E7 con responsable, estados de facturación (12), tipos de propiedad y tipos de operación.
 
-### Opción A — Una tabla genérica *(recomendada)*
+### Opción A — Una tabla genérica *(aprobada, D-021)*
 
 ```
 catalogos
@@ -83,7 +83,7 @@ Una sola tabla `negocios` con `padre_id` nullable apuntando a sí misma. Es lo q
 
 **En contra:** la mitad de las columnas quedan sin sentido según el rol. Un padre no tiene comisión; un hijo no tiene alianza propia. Nada en la base impide llenar las dos. Y toda consulta de reportería tiene que recordar filtrar por hojas para no doblar montos.
 
-### Opción B — Dos tablas *(recomendada)*
+### Opción B — Dos tablas *(aprobada, D-020)*
 
 ```
 negocios                            negocio_hitos
@@ -109,7 +109,7 @@ negocios                            negocio_hitos
 
 Sobre `movimientos`: apunta al **negocio**, no al hito. El pipeline E1 a E7 es del negocio; el hito es una liquidación dentro de él. `D-013` sigue aplicando: `negocios.id` es entero y `codigo` va aparte con índice único.
 
-**Esto modifica `D-013`**, que hablaba de `padre_id` autorreferencial. Si apruebas la Opción B hay que actualizarlo.
+**Modifica `D-013`**, que hablaba de `padre_id` autorreferencial. Ya actualizado: ver `D-020`.
 
 ---
 
@@ -191,7 +191,7 @@ Verificado al peso en las 13 filas para total, broker, VP bruta y la identidad. 
 | `% Broker Comprador` (AI) | `pct_broker` |
 | `% VP Comprador` (AK) | `pct_vp` |
 
-**Única pieza a confirmar:** el rebate del 12% se calcula sobre `base × AD`, o sea sobre la comisión que el concentrador le cobra al vendedor. Los números lo dicen, pero es lectura del dato, no conocimiento del acuerdo.
+**Confirmado por Felipe:** el rebate del 12% se calcula sobre `base × AD`, la comisión que el concentrador le cobra al vendedor.
 
 **Corrección:** este documento reportaba antes que la Comisión Broker de VVP-4 salía de 0,008. Sale de 0,012, que es exactamente `% broker comprador`. La lectura anterior era un error.
 
@@ -242,13 +242,13 @@ En los datos, `No Aplica - Negocio Caído` aparece en los 10 perdidos y en las 6
 
 | # | Pregunta | Estado |
 |---|---|---|
-| 1 | ¿Cómo se reparte la comisión en Assetplan? | **Resuelta** sobre los datos. Queda confirmar que el rebate se calcula sobre `base × AD`. |
-| 2 | ¿Catálogos en tabla genérica, `etapas` aparte, `modelo_negocio` como enum? | Presentada, esperando aprobación |
-| 3 | ¿Dos tablas en vez de autorreferencia? Modifica `D-013`. | Presentada, esperando aprobación |
-| 4 | ¿`motivo_valor_manual` obligatorio? | **Resuelta: no.** Opcional |
-| 5 | ¿`pct_equipo` manda la práctica? | **Resuelta: 10%**, pero editable a futuro |
-| 6 | VVP-16: ¿cobro parcial o error? | **Resuelta: ninguno.** Su `AD = 0,04` significa que el concentrador cobró 4% al vendedor, por eso el rebate es el doble. Todo cuadra. |
+| 1 | ¿Cómo se reparte la comisión en Assetplan? | **Cerrada.** Fórmula en `D-018`, confirmada por Felipe |
+| 2 | ¿Catálogos en tabla genérica, `etapas` aparte, `modelo_negocio` como enum? | **Aprobada** — `D-021` |
+| 3 | ¿Dos tablas en vez de autorreferencia? | **Aprobada** — `D-020`, modifica `D-013` |
+| 4 | ¿`motivo_valor_manual` obligatorio? | **Cerrada: no** — `D-019` |
+| 5 | ¿`pct_equipo` manda la práctica? | **Cerrada: 10%**, editable por hito — `D-019` |
+| 6 | VVP-16: ¿cobro parcial o error? | **Cerrada: ninguno.** Su tasa de concentrador es 4% en vez de 2% |
 
-**Tally corregido:** 18 de las 19 filas siguen la regla. El único negocio con base externa es VVP-2.
+**Tally:** 18 de las 19 filas siguen la regla. El único con base externa es VVP-2.
 
-**Rebate del concentrador:** 12%, registrado en la columna AG. No era una pregunta.
+**No queda ninguna pregunta abierta.** Los sprints 4 y 6 se pueden implementar contra esta especificación.

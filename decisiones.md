@@ -31,6 +31,8 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-016](#d-016) | 2026-08-20 | Ninguna conversión UF↔CLP sin fecha, y Decimal en todo el camino | 3 |
 | [D-017](#d-017) | 2026-08-20 | El valor en pesos se puede ingresar a mano y es la base de comisión | 6, 7, 10 |
 | [D-018](#d-018) | 2026-08-21 | La fórmula de comisiones de Concentradores, y los nombres del modelo | 7 |
+| [D-020](#d-020) | 2026-08-21 | Dos tablas, `negocios` + `negocio_hitos`, en vez de autorreferencia | 6 |
+| [D-021](#d-021) | 2026-08-21 | Catálogos: tabla genérica, `etapas` aparte, `modelo_negocio` como enum | 4 |
 
 ---
 
@@ -186,6 +188,8 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 
 **Motivo.** Es una restricción dura del esquema existente: si el PK fuera texto, negocios no podría usar la tabla `movimientos`, que es justamente el activo que se está reaprovechando. Verificado contra la base: `entity_id` es `bigint`.
 
+> **Modificada el 2026-08-21 por [D-020](#d-020).** La parte del PK entero y del `codigo` aparte **sigue vigente**. Lo que cambia es la estructura padre/hijo: en vez de `padre_id` autorreferencial van dos tablas, `negocios` y `negocio_hitos`.
+
 ---
 
 ## D-014 · Códigos de `tipos_movimiento` de negocio con prefijo
@@ -297,7 +301,7 @@ Y **se renombran los campos en el modelo**, porque los nombres del Excel ya caus
 
 **Motivo.** Verificado al peso en las 13 filas de Concentradores para total, broker, VP bruta y la identidad. El rebate calza en los 3 negocios cerrados; en los 10 perdidos la tasa está registrada y el monto es 0, que es el comportamiento correcto — sin negocio no hay rebate.
 
-**Pendiente de confirmar con Felipe:** que el 12% se calcula sobre la comisión que el concentrador cobra al vendedor. Los números lo dicen, pero es lectura del dato y no conocimiento del acuerdo.
+**Confirmado por Felipe el 2026-08-21:** el 12% se calcula sobre la comisión que el concentrador cobra al vendedor. Era lectura del dato y quedó ratificada como el acuerdo real.
 
 **Correcciones que arrastra.** Durante la sesión se reportaron tres cosas falsas sobre estos datos, todas por leer la columna equivocada:
 
@@ -315,3 +319,36 @@ Y **se renombran los campos en el modelo**, porque los nombres del Excel ya caus
 
 - **`pct_equipo` = 10%**, como en la práctica, no el 30–40% de los ejemplos de `REGLAS CALCULO`, que quedaron viejos. Pero va como **campo editable por hito**, no como constante, porque debe poder cambiar a futuro.
 - **`motivo_valor_manual` es opcional**, no obligatorio. Se había propuesto exigirlo; Felipe prefiere no agregar esa fricción al ingreso.
+
+---
+
+## D-020 · Dos tablas, `negocios` + `negocio_hitos`, en vez de autorreferencia
+
+**Contexto.** `D-002` cerró que un negocio con hitos es padre e hijos, y `D-013` asumió que eso se implementaba con `padre_id` autorreferencial. Al detallar el esquema en `D0` apareció que hay dos formas con consecuencias distintas.
+
+**Decisión.** Dos tablas. `negocios` lleva lo que es del negocio — código, propiedad, alianza, modelo, contrapartes. `negocio_hitos` lleva lo que es de cada liquidación — nombre del hito, fechas, estado, etapa, valorización y comisiones. Aprobado por Felipe el 2026-08-21.
+
+**Motivo.** `D-002` se tomó para hacer el doble conteo **imposible**, y la autorreferencia solo lo hace **evitable**: obliga a que toda consulta de reportería recuerde filtrar las hojas, y si alguien lo olvida el total sale doble sin que nada avise. Con dos tablas, sumar comisiones es siempre `SUM(negocio_hitos)`.
+
+Además desaparecen los estados imposibles: en una sola tabla, la mitad de las columnas quedan sin sentido según el rol de la fila y nada impide llenarlas. Y los 17 negocios simples son un negocio con un hito, sin caso especial ni rama en el código.
+
+**Consecuencias.**
+
+- `movimientos` apunta al **negocio**, no al hito: el pipeline E1–E7 es del negocio, el hito es una liquidación dentro de él.
+- `negocio_obligaciones` cuelga del **hito**: cada liquidación se factura y se paga por separado.
+- La valorización de `D-017` vive en el hito, porque VVP-3 PROMESA y VVP-3 ESCRITURA tienen bases distintas.
+- **Modifica `D-013`** en la parte de `padre_id`. Sigue vigente que `negocios.id` es entero y que `codigo` (`VVP-N`) va aparte con índice único, porque `movimientos.entity_id` es `bigint`.
+
+---
+
+## D-021 · Catálogos: tabla genérica, `etapas` aparte, `modelo_negocio` como enum
+
+**Contexto.** `CONFIG` define seis listas. La pregunta era si van seis tablas chicas con claves foráneas reales o una sola tabla genérica.
+
+**Decisión.** Aprobado por Felipe el 2026-08-21, en tres partes:
+
+1. **Tabla genérica `catalogos(tipo, codigo, nombre, orden, activo, metadatos)`** con `UNIQUE (tipo, codigo)` para las cuatro listas planas: alianzas, estados de facturación, tipos de propiedad y tipos de operación. Un mantenedor, un endpoint, y agregar un catálogo nuevo no requiere migración.
+2. **`etapas` como tabla propia**, porque tiene estructura real —código, nombre, responsable, orden— y la consulta el motor de pipeline, no solo un desplegable.
+3. **`modelo_negocio` como enum, no como catálogo.** Son tres, y cada uno tiene una fórmula de comisión distinta escrita en código: la de Concentradores (`D-018`) no se parece a la de Primario. Si alguien agregara un cuarto modelo desde un mantenedor, el motor no sabría calcularlo y fallaría en silencio. El enum obliga a que agregar un modelo sea un cambio de código con su test.
+
+**Costo aceptado.** La tabla genérica no tiene claves foráneas por tipo, así que nada a nivel de base impide que un negocio apunte a un catálogo del tipo equivocado. Se acepta a cambio de no mantener seis tablas para listas de 3 a 12 filas que casi no cambian; la validación queda en la capa de servicio.

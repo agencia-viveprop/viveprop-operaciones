@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1 y 3 listos; D0 en revisión)
+**Última actualización:** 2026-08-21 (sprints 1 y 3 listos; D0 aprobado)
 
 ---
 
@@ -17,7 +17,7 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | Pendientes | 20 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1 y el 3. El 2 (Render) está **esperando el diagnóstico del 503** desde la consola de Render. El siguiente autorizable sin bloqueos es el 4 (C3 · Catálogos).
+**Sprint actual:** ninguno. Listos el 1 y el 3. `D0` aprobado, así que los sprints 4 y 6 tienen especificación cerrada y esperan solo autorización. El 2 (Render) sigue **esperando el diagnóstico del 503**.
 
 ---
 
@@ -66,13 +66,13 @@ Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) 
 | 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
 | 2 | G2 · Despliegue en Render | Pendiente | — | — | Render devuelve 503. Requiere diagnóstico del usuario antes de arrancar. |
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
-| 4 | C3 · Catálogos | Pendiente | — | — | |
+| 4 | C3 · Catálogos | Pendiente | — | — | Especificación aprobada en `D-021`. Listo para autorizar. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
-| 6 | D1 · Esquema de negocios | Pendiente | — | — | |
-| 7 | D2 · Motor de comisiones | Pendiente | — | — | Decisión pendiente: `% Broker` en arriendo. |
+| 6 | D1 · Esquema de negocios | Pendiente | — | — | Especificación aprobada en `D-020`. Listo para autorizar. |
+| 7 | D2 · Motor de comisiones | Pendiente | — | — | Fórmula de Concentradores resuelta en `D-018`. Queda el `% Broker` en arriendo. |
 | 8 | D3 · CRUD backend | Pendiente | — | — | |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
-| 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Decisión pendiente: tasas de rebate y motivos de pérdida. |
+| 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Solo queda pendiente los 10 motivos de pérdida. |
 | 11 | D6 · Pipeline de negocios | Pendiente | — | — | |
 | 12 | F1 · Base de cálculo | Pendiente | — | — | |
 | 13 | F2 · Dashboard de negocios | Pendiente | — | — | Segundo hito visible. |
@@ -116,6 +116,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · D0 aprobado — sprints 4 y 6 desbloqueados
+
+Felipe confirmó las tres preguntas que quedaban. `D0` pasa de propuesta a especificación aprobada.
+
+- **Fórmula de Concentradores confirmada** (`D-018`): el rebate del 12% se calcula sobre la comisión que el concentrador le cobra al vendedor. Era lectura del dato y quedó ratificada como el acuerdo real.
+- **Catálogos aprobados** (`D-021`): tabla genérica para las cuatro listas planas, `etapas` como tabla propia, `modelo_negocio` como enum.
+- **Dos tablas aprobadas** (`D-020`): `negocios` + `negocio_hitos` en vez de `padre_id` autorreferencial. **Modifica `D-013`**, que queda vigente solo en la parte del PK entero y el `codigo` aparte.
+
+Cero preguntas abiertas en el modelo de datos. El único bloqueo que queda en todo el plan es el 503 de Render, que afecta al sprint 2.
 
 ### 2026-08-21 · Diseño — resuelta la fórmula de Concentradores (D-018, D-019)
 
