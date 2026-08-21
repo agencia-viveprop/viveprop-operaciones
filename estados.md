@@ -117,7 +117,7 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
-### 2026-08-21 · Limpieza de canjes: script listo, sin aplicar
+### 2026-08-21 · Limpieza de canjes: aplicada en `dev`, pendiente en producción
 
 Pedido del usuario: en Dataprop quedan **seis solicitudes vivas** —334, 344, 359, 360, 364, 367— y la base arrastra 225 activas, así que la app muestra como pendiente trabajo que no existe.
 
@@ -133,7 +133,19 @@ Pedido del usuario: en Dataprop quedan **seis solicitudes vivas** —334, 344, 3
 
 **Dos transportes.** Contra la base con `DATABASE_URL`, o contra la API de un despliegue con una cookie de sesión. El segundo existe porque para tocar producción **una cookie es una credencial mejor que el string de conexión**: vence, se revoca cerrando sesión y no da más permisos que los del usuario. El costo es que va canje por canje y se puede cortar a medias, así que saltea los que ya están cancelados y se puede volver a correr.
 
-**No se aplicó en ninguna base.** El usuario pidió producción y no hay acceso todavía. El simulacro se verificó por los dos caminos contra `dev`, con cifras idénticas: 221 a cancelar, 4 quedan vigentes.
+**Aplicada en `dev`**: 221 canjes cancelados, quedan activos exactamente 334, 344, 359 y 360. Verificado en los tres lugares donde se ve:
+
+| Dónde | Antes | Después |
+|---|---|---|
+| Estados | 225 activo / 72 cancelado | **4 activo / 293 cancelado** |
+| Bandeja "Qué me toca hoy" | 146 sin gestión + 48 crítico | **4 filas**, los cuatro vigentes |
+| Dashboard de canjes | tasa activos 63,3% | tasa activos 1,3% |
+
+Los 221 movimientos quedaron en la línea de tiempo con su explicación, y los 31 con etapa `CERRADO` conservan su etapa: siguen siendo `CERRADO` + `CANCELADO`, así que la información de que se concretaron no se perdió y el cambio se puede revertir buscando esos movimientos.
+
+**Consecuencia visible, ya que estaba anunciada:** el dashboard ahora dice tasa de activos 1,3% y cuenta 293 cancelados, de los cuales 31 en realidad se concretaron. Era el costo de la opción elegida; queda dicho acá para que nadie lo lea como un dato de negocio.
+
+**En producción sigue sin aplicar**, porque falta el acceso. El script tiene un modo que va por la API con una cookie de sesión —mejor credencial que el `DATABASE_URL`: vence, se revoca cerrando sesión y no da más permisos que el usuario— y ese modo se verificó en simulacro contra el backend local, con cifras idénticas al camino directo.
 
 ### 2026-08-21 · Sprints 14 y 15 (E1, E2) — Listos · serie E completa
 
