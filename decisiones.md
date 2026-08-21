@@ -39,6 +39,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-025](#d-025) | 2026-08-21 | Dos correcciones a `REGLAS CALCULO`, verificadas en los datos | 7 |
 | [D-026](#d-026) | 2026-08-21 | VVP-2 está descuadrado en el origen | 10 |
 | [D-027](#d-027) | 2026-08-21 | `etapa` es del negocio; `estado` se queda en el hito | 11 |
+| [D-028](#d-028) | 2026-08-21 | La paleta de los gráficos se valida con un script, no a ojo | 13 |
 
 ---
 
@@ -483,3 +484,28 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Consecuencia en el servicio.** `crear_movimiento_negocio` mueve la etapa del negocio vía `etapa_resultante` del tipo, y los desenlaces (`NEG_PERDIDA`, `NEG_DESISTIMIENTO`) cambian el estado **solo de las liquidaciones que siguen abiertas**. Una promesa ya cerrada no se vuelve perdida porque la escritura se cayó.
 
 **Códigos con prefijo `NEG_`** según `D-014`, verificado: cero colisiones con los 14 tipos de canje.
+
+---
+
+## D-028 · La paleta de los gráficos se valida con un script, no a ojo
+
+**Contexto.** El dashboard de negocios necesitaba color para gráficos, y `theme.ts` ya define las rampas oficiales del proyecto. La pregunta era qué pasos de esas rampas usar.
+
+**Decisión.** Los colores se eligen corriendo un validador que comprueba banda de luminosidad, piso de croma, separación bajo daltonismo, piso de visión normal y contraste contra la superficie. Nada se elige por criterio visual.
+
+**Resultado, con las rampas del proyecto:**
+
+| Uso | Claro | Oscuro |
+|---|---|---|
+| Serie única de los gráficos | `brand-6` `#3D3EA8` | `brand-4` `#7c7dcf` |
+| Tiles de los tres buckets | `good` `#059669`, `brand-6` `#3D3EA8`, `critical` `#DC2626` | los mismos |
+
+**Tres cosas que el validador encontró y que no se habrían visto a ojo:**
+
+1. **`brand-3` `#adade1` no sirve como color de dato**: falla el piso de croma, o sea que se lee como gris. Los tonos claros de la rampa de marca se construyeron como fondos, no como series.
+2. **El modo oscuro no puede ser un volteo del claro.** Ningún par de la rampa de marca pasa contra la superficie oscura, así que el paso oscuro se eligió aparte y se validó contra su propia superficie.
+3. **La tríada verde / teal / rojo era casi ilegible.** Verde `#059669` y teal `#0891B2` quedan a **ΔE 2,8 en tritanopía** — prácticamente el mismo color. Reemplazar el teal por el indigo de marca sube el peor caso a **18,8**.
+
+**Consecuencia de forma.** El gráfico mensual iba a tener dos series —comisión total y real VP— pero ningún par de la rampa pasaba en modo oscuro. Eso obligó a revisar la forma, y la conclusión fue mejor: **el trabajo de ese gráfico es una sola medida en el tiempo**, cuánto se quedó ViveProp. La comisión total es contexto, no una serie de igual peso, así que va al tooltip y a la tabla. Una serie sola no necesita leyenda ni paleta categórica.
+
+**Regla que queda.** Antes de agregar color a un gráfico nuevo, se corre el validador sobre los pasos candidatos de `theme.ts`. Si un par no pasa, primero se revisa si la forma es la correcta.

@@ -37,7 +37,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 7 | 9 | D4 · Pantalla Negocios | ✅ **Listo** **primer hito visible** |
 | 8 | 11 | D6 · Pipeline de negocios | ✅ **Listo** |
 | 9 | 12 | F1 · Base de cálculo | ✅ **Listo** |
-| 10 | 13 | F2 · Dashboard de negocios | **Segundo hito visible** |
+| 10 | 13 | F2 · Dashboard de negocios | ✅ **Listo** **segundo hito visible** |
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
 | 12 | 5 | C4 · Plantilla y carga manual de UF | Carga mensual autónoma. **Ver fecha límite abajo** |
 | 13 | 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure`, `<title>` |
@@ -201,7 +201,13 @@ Los tres buckets dan exactamente los números verificados: **8.087.862 / 1.824.2
 
 ### 13 · F2 — Dashboard de negocios
 
-Comisión real VP por mes, por alianza, por modelo, por etapa. Rebate de concentrador como línea propia — 523.674 acumulados, 6,5% sobre lo cerrado, margen que no se reparte con el corredor aliado.
+✅ **Listo** **el 2026-08-21.** `pages/DashboardNegocios.tsx`, consumiendo el resumen del sprint 12.
+
+- **Tres tiles** para los tres buckets, cada uno con su etiqueta y su número: la identidad nunca depende solo del color. El rebate va como leyenda dentro del tile que le corresponde, porque es parte de esa comisión real.
+- **Gráfico mensual de una sola serie**: comisión real VP por mes de cierre. Sin leyenda, porque el título dice qué se mide. La comisión total va en el tooltip, y abajo la misma información como tabla.
+- **Barras horizontales** por alianza, por modelo y del pipeline por etapa, con el monto como etiqueta directa en cada fila.
+- Aviso si hay liquidaciones sin valorizar, para que no desaparezcan del cuadro.
+- **La paleta se validó con un script** (`D-028`), no a ojo. Encontró tres problemas que no se habrían visto, incluido que la tríada verde/teal/rojo quedaba a ΔE 2,8 en tritanopía.
 
 ### 14 · E1 — Plantilla de negocios
 

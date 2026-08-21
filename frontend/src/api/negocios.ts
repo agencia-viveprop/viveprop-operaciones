@@ -174,3 +174,40 @@ export function crearMovimiento(
 ): Promise<Movimiento> {
   return json(`/api/negocios/${negocioId}/movimientos`, 'POST', payload)
 }
+
+// ------------------------------------------------------------------ reportería
+
+export type Bucket = {
+  hitos: number
+  negocios: number
+  valor_base: number
+  comision_total: number
+  comision_real_vp: number
+  rebate_concentrador: number
+}
+
+export type Corte = {
+  etiqueta: string
+  hitos: number
+  comision_total: number
+  comision_real_vp: number
+}
+
+/**
+ * Los tres buckets vienen separados a propósito y no hay un campo `total`:
+ * sumar ganado, pipeline y perdido da un número que no significa nada (D-006).
+ */
+export type ResumenNegocios = {
+  ganado: Bucket
+  pipeline: Bucket
+  potencial_perdido: Bucket
+  ganado_por_mes: Corte[]
+  ganado_por_alianza: Corte[]
+  ganado_por_modelo: Corte[]
+  pipeline_por_etapa: Corte[]
+  hitos_sin_valorizar: number
+}
+
+export function obtenerResumenNegocios(): Promise<ResumenNegocios> {
+  return fetch('/api/negocios/reportes/resumen', { credentials: 'include' }).then(parseOrThrow)
+}

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (10 sprints listos; falta el 13 para cerrar el camino crítico)
+**Última actualización:** 2026-08-21 (11 sprints listos; **camino crítico cerrado**)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 10 |
+| Listos | 11 |
 | En curso | 0 |
-| Pendientes | 12 |
+| Pendientes | 11 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Diez sprints listos. **Queda uno para cerrar el camino crítico**: el 13 (F2 · Dashboard de negocios), el segundo hito visible.
+**Sprint actual:** ninguno. Once sprints listos y **el camino crítico está cerrado**: negocios queda registrable, gestionable e informable. Lo que sigue son bloques independientes: carga masiva (14–15), reportería avanzada (16–18), gestión de canjes (19–21) y contraseñas (22). También queda el sprint 5, con fecha límite el 9 de septiembre.
 
 ---
 
@@ -28,20 +28,20 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 10 | 12 | **83,3%** |
-| Plan completo | 10 | 22 | 45,5% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 19 | 31 | 61% |
+| **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
+| Plan completo | 11 | 22 | 50,0% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 20 | 31 | 65% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
-| **F** · Reportería | 1 | 5 | 20% | 12, 13, 16–18 |
+| **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Primer hito visible alcanzado y serie D completa. Queda **1 sprint** hasta el dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+**Los dos hitos visibles están alcanzados** y el camino crítico cerrado, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -74,7 +74,7 @@ Primer hito visible alcanzado y serie D completa. Queda **1 sprint** hasta el da
 | 10 | D5 · Carga de los 19 históricos | **Listo** | 2026-08-21 | — | 18 negocios, 19 hitos, 13 propiedades, 114 obligaciones. Una sola diferencia: VVP-2. |
 | 11 | D6 · Pipeline de negocios | **Listo** | 2026-08-21 | — | 10 tipos, línea de tiempo en la ficha. `etapa` movida al negocio (`D-027`). |
 | 12 | F1 · Base de cálculo | **Listo** | 2026-08-21 | — | Tres buckets separados por construcción. 13 tests. |
-| 13 | F2 · Dashboard de negocios | Pendiente | — | — | Segundo hito visible. |
+| 13 | F2 · Dashboard de negocios | **Listo** | 2026-08-21 | — | Paleta validada con script (`D-028`). **Segundo hito visible.** |
 | 14 | E1 · Plantilla de negocios | Pendiente | — | — | |
 | 15 | E2 · Importador de negocios | Pendiente | — | — | |
 | 16 | F3 · Reporte semanal | Pendiente | — | — | |
@@ -115,6 +115,32 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 13 (F2) — Listo · camino crítico cerrado
+
+**El dashboard de negocios funciona**, consumiendo el resumen del sprint 12. Con esto el camino crítico está completo: negocios queda registrable, gestionable e informable.
+
+**Qué muestra:**
+
+- Tres tiles para los tres buckets, cada uno con etiqueta y número, así que la identidad nunca depende solo del color. El rebate va como leyenda dentro del tile que le corresponde, porque es parte de esa comisión real.
+- Gráfico mensual de **una sola serie**: comisión real VP por mes de cierre. Sin leyenda, porque el título dice qué se mide. La comisión total va al tooltip, y abajo la misma información como tabla.
+- Barras horizontales por alianza, por modelo y del pipeline por etapa, con el monto como etiqueta directa en cada fila.
+- Aviso si hay liquidaciones sin valorizar.
+- Una nota al pie que recuerda por qué el potencial no concretado se conserva y por qué no se suma con lo ganado.
+
+**La paleta se validó con un script** (`D-028`), sobre las rampas de `theme.ts`. Encontró tres cosas que no se habrían visto a ojo:
+
+1. `brand-3` `#adade1` **no sirve como color de dato**: falla el piso de croma y se lee como gris. Los tonos claros de esa rampa se hicieron para fondos.
+2. **El modo oscuro no puede ser un volteo del claro.** Ningún par de la rampa pasa contra la superficie oscura, así que el paso oscuro se eligió y validó aparte.
+3. **La tríada verde / teal / rojo era casi ilegible**: verde y teal a **ΔE 2,8 en tritanopía**. Con el indigo de marca en lugar del teal, el peor caso sube a **18,8**.
+
+**Eso cambió la forma del gráfico, para mejor.** Iba a tener dos series —total y real VP— pero ningún par pasaba en oscuro. Al revisarlo quedó claro que el trabajo de ese gráfico es una sola medida en el tiempo; la comisión total es contexto, no una serie de igual peso.
+
+**Componente nuevo:** `BarrasMontos.tsx`, porque el `BarList` existente cuenta unidades y no pesos, y no valía la pena tocar el que usa el dashboard de canjes.
+
+**Lo que no pude verificar:** no tengo credenciales para entrar a la app, así que **no revisé el resultado renderizado**. La guía de visualización pide mirarlo por colisiones de etiquetas, geometría y desbordes. Typecheck, lint y build están limpios, y los datos que consume están verificados, pero el aspecto visual lo tiene que mirar Felipe.
+
+**Nota operativa:** el reloader de uvicorn se quedó pegado y estuvo sirviendo código de dos sprints antes durante un rato. Al matarlo quedó un socket huérfano en el puerto 8000 sostenido por un proceso hijo que `Get-Process` no mapeaba; hubo que buscarlo por línea de comando. Vale saberlo si vuelve a pasar.
 
 ### 2026-08-21 · Sprint 12 (F1) — Listo
 

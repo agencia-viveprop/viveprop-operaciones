@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import AdminUsuarios from './pages/AdminUsuarios'
 import Canjes from './pages/Canjes'
 import Negocios from './pages/Negocios'
+import DashboardNegocios from './pages/DashboardNegocios'
 import AppShellLayout from './components/AppShellLayout'
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
         <Route path="/" element={<Home usuario={usuario} />} />
         <Route path="/canjes" element={<Canjes puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios" element={<Negocios puedeEditar={usuario.rol !== 'gerencia'} />} />
+        <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
         <Route
           path="/admin/usuarios"
           element={
