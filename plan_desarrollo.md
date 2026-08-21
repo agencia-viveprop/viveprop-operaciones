@@ -107,7 +107,9 @@ Pedido del usuario el 2026-08-21: dejar la UF cargada sola, sin tener que subir 
 
 **La carga manual se queda como respaldo.** Si el SII cambia su página, el parser falla ruidoso y esa sigue siendo la salida. Los dos caminos escriben con el mismo upsert.
 
-- **Listo cuando:** la serie se extiende sin que nadie suba un archivo. ✅ Verificado en vivo: la tarea se disparó sola a los 30 segundos del arranque, bajó la página del SII y dejó el resultado en el log. 27 tests, ninguno sale a internet.
+**Y la historia también se trae del SII.** Botón "Traer toda la historia" (`POST /uf/cargar-historia`), que baja un año completo por página desde 2022. Sirve para una serie que arranca tarde, como la de producción: la actualización diaria solo cubre el año en curso, así que por sí sola nunca llenaría los años anteriores.
+
+- **Listo cuando:** la serie se extiende sin que nadie suba un archivo. ✅ Verificado en vivo: la tarea se disparó sola a los 30 segundos del arranque, bajó la página del SII y dejó el resultado en el log. 37 tests, ninguno sale a internet.
 
 ### 3 · C2 — Tabla UF y conversión
 
@@ -316,7 +318,7 @@ Ninguna bloquea el arranque.
 | 7 (D2) | En arriendo, `% Broker` se calcula sobre la comisión total o sobre el arriendo mensual. |
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | Qué quiere ver el directorio. |
-| — | **Cargar los datos históricos en producción.** UF, negocios y seguimiento de canjes se cargaron con scripts contra `dev`; los scripts nunca corrieron contra `production`. Ver la bitácora del 2026-08-21. |
+| — | **Cargar en producción los negocios y el seguimiento de canjes.** Se cargaron con scripts contra `dev` y nunca contra `production`. La UF ya no hace falta: se trae del SII desde la app. Ver la bitácora del 2026-08-21. |
 | — | Si la ruta `/uf` se restringe a admin, además de su enlace del menú. |
 
 

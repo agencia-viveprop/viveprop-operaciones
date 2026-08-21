@@ -54,11 +54,19 @@ _NUMERO = re.compile(r"[\d.]+,\d+")
 MINIMO_FECHAS = 20
 
 
+# El primer canje es de noviembre de 2022, así que nada anterior sirve para
+# valorizar nada. Misma razón por la que la carga inicial trajo 1.409 filas y no
+# las 17.937 que tenía la hoja del Excel.
+ANIO_MINIMO = 2022
+
+
 class ResumenSII(BaseModel):
     anios: list[int]
     fechas_leidas: int
     carga: ResumenCargaUF
     ultima: date | None
+    # Solo lo llena la carga de historia: los años que el SII no tenía.
+    anios_sin_pagina: list[int] = []
 
 
 class SIINoDisponible(Exception):
@@ -169,4 +177,60 @@ def actualizar_desde_sii(db: Session, hoy: date, descargador=descargar) -> Resum
         fechas_leidas=len(serie),
         carga=carga,
         ultima=max(serie) if serie else None,
+    )
+
+
+def cargar_historia(
+    db: Session,
+    hoy: date,
+    desde_anio: int = ANIO_MINIMO,
+    hasta_anio: int | None = None,
+    descargador=descargar,
+) -> ResumenSII:
+    """Trae varios años de una vez, para rellenar una serie que arranca tarde.
+
+    Existe por un caso concreto: la tabla de UF de producción estaba vacía y la
+    actualización diaria solo cubre el año en curso, así que habría quedado con
+    2026 y sin 2022-2025 -- suficiente para valorizar hoy, inútil para un
+    negocio con fecha del año pasado.
+
+    **No la corre la tarea de fondo.** Bajar cinco años es una operación
+    deliberada, no algo que un tick diario deba hacer en silencio.
+
+    Un año sin página no aborta el resto: se informa en `anios_sin_pagina`. Pero
+    si no se pudo leer **ninguno**, eso sí es un error -- distinguirlo importa,
+    porque "el SII no publicó 2027" y "el SII está caído" se arreglan distinto.
+    """
+    hasta_anio = hasta_anio or hoy.year
+    if desde_anio < ANIO_MINIMO:
+        raise ValueError(f"No hay nada que traer antes de {ANIO_MINIMO}.")
+    if hasta_anio < desde_anio:
+        raise ValueError(f"El año final ({hasta_anio}) es anterior al inicial ({desde_anio}).")
+
+    serie: dict[date, Decimal] = {}
+    leidos: list[int] = []
+    sin_pagina: list[int] = []
+
+    for anio in range(desde_anio, hasta_anio + 1):
+        html = descargador(anio)
+        if html is None:
+            sin_pagina.append(anio)
+            continue
+        serie.update(parsear(html, anio))
+        leidos.append(anio)
+
+    if not leidos:
+        raise SIINoDisponible(
+            f"El SII no tiene publicada ninguna página entre {desde_anio} y {hasta_anio}."
+        )
+
+    # Igual que la actualización diaria: el parseo entero termina antes de que se
+    # toque la base, así que un año roto no deja media historia cargada.
+    carga = guardar_serie(db, serie)
+    return ResumenSII(
+        anios=leidos,
+        fechas_leidas=len(serie),
+        carga=carga,
+        ultima=max(serie) if serie else None,
+        anios_sin_pagina=sin_pagina,
     )

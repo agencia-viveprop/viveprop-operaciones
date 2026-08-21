@@ -21,10 +21,12 @@ from sqlalchemy import select
 
 from app.models.uf import UFDiaria
 from app.services.uf_sii import (
+    ANIO_MINIMO,
     MINIMO_FECHAS,
     SIINoDisponible,
     actualizar_desde_sii,
     anios_a_consultar,
+    cargar_historia,
     parsear,
 )
 
@@ -306,3 +308,112 @@ def _resumen_vacio():
     from app.services.uf_sii import ResumenSII
 
     return ResumenSII(anios=[2026], fechas_leidas=0, carga=ResumenCargaUF(), ultima=None)
+
+
+# ------------------------------------------------------ carga de historia
+#
+# Existe por el caso de produccion: la tabla estaba vacia y la actualizacion
+# diaria solo cubre el anio en curso, asi que habria quedado con 2026 y sin
+# 2022-2025 -- alcanza para valorizar hoy, no para un negocio del anio pasado.
+
+
+@pytest.fixture
+def descargador_varios_anios(html_sii):
+    """Devuelve la misma pagina para 2022..2026 y 404 para el resto.
+
+    Sirve igual para verificar el recorrido de anios: cada anio se parsea con su
+    propio numero, asi que las fechas resultantes son distintas aunque el HTML
+    sea el mismo.
+    """
+    def _descargar(anio: int):
+        return html_sii if 2022 <= anio <= 2026 else None
+    return _descargar
+
+
+def test_la_historia_recorre_todos_los_anios(db, descargador_varios_anios):
+    resumen = cargar_historia(db, HOY, descargador=descargador_varios_anios)
+
+    assert resumen.anios == [2022, 2023, 2024, 2025, 2026]
+    assert resumen.anios_sin_pagina == []
+    # 252 fechas por anio, cada una con su propio anio: no se pisan entre si.
+    assert resumen.fechas_leidas == 252 * 5
+    assert resumen.carga.nuevas == 252 * 5
+
+
+def test_trae_anios_completos_incluido_lo_previo_al_primer_canje(db, descargador_varios_anios):
+    """La carga original arrancaba en 2022-11 y dejaba fuera enero a octubre.
+
+    Traer el anio entero es mas simple que un corte a mitad de anio y evita que
+    un negocio con fecha de mediados de 2022 se quede sin poder valorizarse.
+    """
+    cargar_historia(db, HOY, descargador=descargador_varios_anios)
+
+    guardadas = db.execute(select(UFDiaria.fecha)).scalars().all()
+    assert date(2022, 1, 2) in guardadas
+    assert min(guardadas).year == ANIO_MINIMO
+
+
+def test_un_anio_sin_pagina_no_aborta_el_resto(db, html_sii):
+    """2024 caido no puede impedir que se carguen los otros cuatro."""
+    def _descargar(anio):
+        return None if anio == 2024 else html_sii
+
+    resumen = cargar_historia(db, HOY, descargador=_descargar)
+
+    assert resumen.anios == [2022, 2023, 2025, 2026]
+    assert resumen.anios_sin_pagina == [2024]
+    assert resumen.carga.nuevas == 252 * 4
+
+
+def test_si_no_se_pudo_leer_ningun_anio_es_un_error(db):
+    """Distinto de "el SII no publico 2027": esto se arregla distinto."""
+    with pytest.raises(SIINoDisponible, match="ninguna"):
+        cargar_historia(db, HOY, descargador=lambda _a: None)
+
+
+def test_un_anio_roto_no_deja_media_historia_cargada(db, html_sii):
+    """El parseo entero termina antes de que se toque la base."""
+    def _descargar(anio):
+        return html_sii if anio < 2025 else "<html>otra cosa</html>"
+
+    with pytest.raises(SIINoDisponible):
+        cargar_historia(db, HOY, descargador=_descargar)
+
+    assert db.execute(select(UFDiaria)).first() is None
+
+
+@pytest.mark.parametrize("desde, hasta, trozo", [
+    (2021, None, str(ANIO_MINIMO)),
+    (2026, 2025, "anterior"),
+])
+def test_rechaza_rangos_imposibles(db, desde, hasta, trozo, descargador_varios_anios):
+    with pytest.raises(ValueError, match=trozo):
+        cargar_historia(db, HOY, desde, hasta, descargador=descargador_varios_anios)
+
+
+def test_la_historia_tambien_es_idempotente(db, descargador_varios_anios):
+    cargar_historia(db, HOY, descargador=descargador_varios_anios)
+    segunda = cargar_historia(db, HOY, descargador=descargador_varios_anios)
+
+    assert (segunda.carga.nuevas, segunda.carga.actualizadas) == (0, 0)
+    assert segunda.carga.sin_cambio == 252 * 5
+
+
+def test_el_endpoint_de_historia_responde(cliente, monkeypatch, descargador_varios_anios):
+    import app.routers.uf as router
+
+    monkeypatch.setattr(
+        router, "cargar_historia",
+        lambda db_, hoy, d=None, h=None: cargar_historia(db_, HOY, descargador=descargador_varios_anios),
+    )
+    r = cliente.post("/api/uf/cargar-historia")
+
+    assert r.status_code == 200
+    assert r.json()["anios"] == [2022, 2023, 2024, 2025, 2026]
+
+
+def test_el_endpoint_de_historia_rechaza_un_anio_muy_viejo(cliente):
+    """Lo ataja la validacion de FastAPI, antes de llegar al servicio."""
+    r = cliente.post("/api/uf/cargar-historia", params={"desde_anio": 1990})
+
+    assert r.status_code == 422

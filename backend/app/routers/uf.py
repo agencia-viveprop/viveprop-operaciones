@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, require_role
@@ -13,7 +13,13 @@ from app.services.importar_uf import (
     estado_serie,
     generar_plantilla,
 )
-from app.services.uf_sii import ResumenSII, SIINoDisponible, actualizar_desde_sii
+from app.services.uf_sii import (
+    ANIO_MINIMO,
+    ResumenSII,
+    SIINoDisponible,
+    actualizar_desde_sii,
+    cargar_historia,
+)
 
 router = APIRouter(prefix="/uf", tags=["uf"])
 
@@ -81,5 +87,29 @@ def actualizar_desde_sii_endpoint(
     """
     try:
         return actualizar_desde_sii(db, _hoy())
+    except SIINoDisponible as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+
+
+@router.post("/cargar-historia", response_model=ResumenSII)
+def cargar_historia_endpoint(
+    desde_anio: int = Query(ANIO_MINIMO, ge=ANIO_MINIMO, description="Primer año a traer."),
+    hasta_anio: int | None = Query(None, description="Último año. Por defecto, el actual."),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.admin)),
+):
+    """Trae varios años del SII de una vez, para rellenar una serie incompleta.
+
+    Separado de la actualización diaria porque son dos operaciones distintas:
+    esta baja cinco páginas y es deliberada, la otra baja una y corre sola.
+
+    Trae **años completos**, así que desde 2022 incluye los meses previos al
+    primer canje. Es más simple que un corte a mitad de año y evita que un
+    negocio con fecha de mediados de 2022 se quede sin poder valorizarse.
+    """
+    try:
+        return cargar_historia(db, _hoy(), desde_anio, hasta_anio)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
     except SIINoDisponible as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc

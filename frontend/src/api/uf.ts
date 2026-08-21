@@ -59,12 +59,21 @@ export type ResumenSII = {
   fechas_leidas: number
   carga: ResumenCargaUF
   ultima: string | null
+  anios_sin_pagina: number[]
 }
 
 /** Trae la serie que publica el SII. La automática corre sola una vez al día;
  *  esto es para no esperarla cuando el SII acaba de publicar el mes. */
 export function actualizarUFDesdeSII(): Promise<ResumenSII> {
   return fetch('/api/uf/actualizar-desde-sii', {
+    method: 'POST',
+    credentials: 'include',
+  }).then(parseOrThrow)
+}
+
+/** Trae varios años de una vez, para rellenar una serie que arranca tarde. */
+export function cargarHistoriaUF(): Promise<ResumenSII> {
+  return fetch('/api/uf/cargar-historia', {
     method: 'POST',
     credentials: 'include',
   }).then(parseOrThrow)

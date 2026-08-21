@@ -73,7 +73,7 @@ Variables de entorno en Render:
 | `SESSION_SECRET` | Declarada pero **el código nunca la lee**. Pendiente de limpiar. |
 | `TAREAS_DE_FONDO` | Opcional. Apaga las tareas periódicas del proceso si se pone en `false`. Hoy la única es la descarga de UF. |
 
-**La UF se actualiza sola.** Una tarea dentro del web service chequea una vez al día si a la serie le quedan menos de 20 días por delante y, si es así, baja lo que publica el SII (`D-036`, `D-037`). La fuente se verificó contra 617 fechas sin una diferencia. La carga manual de la plantilla se queda como respaldo para cuando el SII no esté o cambie su página, y los dos caminos escriben con el mismo upsert. Solo admin puede cargar UF (`D-038`).
+**La UF se actualiza sola.** Una tarea dentro del web service chequea una vez al día si a la serie le quedan menos de 20 días por delante y, si es así, baja lo que publica el SII (`D-036`, `D-037`). La fuente se verificó contra 617 fechas sin una diferencia. Hay además un botón para traer la historia completa, un año por página desde 2022, para una serie que arranque tarde. La carga manual de la plantilla se queda como respaldo para cuando el SII no esté o cambie su página, y los dos caminos escriben con el mismo upsert. Solo admin puede cargar UF (`D-038`).
 
 **Health checks.** Son dos y miden cosas distintas (`D-035`):
 

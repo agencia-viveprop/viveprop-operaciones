@@ -117,6 +117,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Carga de historia de UF desde el SII
+
+**La mitad del hueco de producción se puede cerrar sin credenciales.** El SII tiene una página por año y devuelven 200 para 2022, 2023, 2024, 2025 y 2026, así que la historia completa de UF se puede traer desde la app: botón **"Traer toda la historia"**, `POST /api/uf/cargar-historia`.
+
+Va aparte de la actualización diaria porque son dos operaciones distintas: esta baja cinco páginas y es deliberada, la otra baja una y corre sola. Bajar cinco años no es algo que un tick diario deba hacer en silencio.
+
+**Trae años completos, y eso cambió un número.** Al correrlo contra `dev` aparecieron **304 fechas nuevas**: todo 2022 antes de noviembre, que la carga original del sprint 3 excluyó porque el primer canje es de 2022-11. La serie de `dev` pasó de **1.409 a 1.713 filas**, de 2022-01-01 a 2026-09-09. Se dejó así: un corte a mitad de año es más complejo que traer el año entero, y sin esas fechas un negocio con fecha de mediados de 2022 no se podría valorizar.
+
+**Un año caído no aborta el resto.** Si el SII no tiene 2024, se cargan los otros cuatro y se informa cuál faltó. Pero si no se pudo leer **ninguno**, eso sí es error: "el SII no publicó 2027" y "el SII está caído" se arreglan distinto. Y un año que responde con otro formato aborta todo sin escribir nada, igual que la carga diaria.
+
+10 tests nuevos, 257 en total.
+
+**Lo que sigue faltando en producción:** los 18 negocios y los 384 movimientos de canjes. Esos no tienen fuente externa, así que necesitan o el `DATABASE_URL` de producción o el importador de negocios de los sprints 14-15.
+
 ### 2026-08-21 · Hallazgo: los datos históricos están en `dev`, no en producción
 
 Salió al verificar el deploy. **No es un defecto introducido, es un estado que el despliegue dejó a la vista.**
@@ -127,7 +141,7 @@ Hay dos formas en que los datos llegaron a la base, y solo una alcanza producci�
 |---|---|---|
 | Catálogos, etapas, tipos de movimiento | Sembrados en migraciones | **Sí** — Render corre `alembic upgrade head` en cada deploy |
 | Canjes (297) | Importados antes del plan | **Sí** |
-| UF (1.409 filas, desde 2022-11) | `scripts/cargar_uf.py` contra `dev` | **No** |
+| UF (1.409 filas, desde 2022-11) | `scripts/cargar_uf.py` contra `dev` | **No** — resuelto el mismo día: se puede traer del SII desde la app |
 | Negocios (18 negocios, 19 hitos, 13 propiedades, 114 obligaciones) | `scripts/cargar_negocios.py` contra `dev` | **No** |
 | Seguimiento de canjes (384 movimientos) | `scripts/migrar_seguimiento_canjes.py` contra `dev` | **No** |
 

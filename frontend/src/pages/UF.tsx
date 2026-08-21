@@ -15,9 +15,10 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { IconCloudDownload, IconDownload, IconUpload } from '@tabler/icons-react'
+import { IconCloudDownload, IconDownload, IconHistory, IconUpload } from '@tabler/icons-react'
 import {
   actualizarUFDesdeSII,
+  cargarHistoriaUF,
   descargarPlantillaUF,
   importarUF,
   obtenerEstadoUF,
@@ -74,6 +75,14 @@ export default function UF() {
 
   const desdeSII = useMutation({
     mutationFn: actualizarUFDesdeSII,
+    onSuccess: (r) => {
+      setResumenSII(r)
+      refrescar()
+    },
+  })
+
+  const historia = useMutation({
+    mutationFn: cargarHistoriaUF,
     onSuccess: (r) => {
       setResumenSII(r)
       refrescar()
@@ -156,18 +165,34 @@ export default function UF() {
           veces no cambia nada.
         </Text>
 
-        <Button
-          color="accent"
-          leftSection={<IconCloudDownload size={16} />}
-          loading={desdeSII.isPending}
-          onClick={() => desdeSII.mutate()}
-        >
-          Actualizar desde el SII
-        </Button>
+        <Group>
+          <Button
+            color="accent"
+            leftSection={<IconCloudDownload size={16} />}
+            loading={desdeSII.isPending}
+            onClick={() => desdeSII.mutate()}
+          >
+            Actualizar desde el SII
+          </Button>
 
-        {desdeSII.isError && (
+          <Button
+            variant="light"
+            leftSection={<IconHistory size={16} />}
+            loading={historia.isPending}
+            onClick={() => historia.mutate()}
+          >
+            Traer toda la historia
+          </Button>
+        </Group>
+        <Text size="xs" c="dimmed" mt="xs">
+          "Toda la historia" baja un año completo por página, desde 2022. Sirve cuando la
+          serie arranca tarde: la actualización diaria solo cubre el año en curso, así que
+          por sí sola nunca llenaría los años anteriores.
+        </Text>
+
+        {(desdeSII.isError || historia.isError) && (
           <Alert color="critical" variant="light" mt="md" title="El SII no respondió">
-            <Text size="sm">{(desdeSII.error as Error).message}</Text>
+            <Text size="sm">{((desdeSII.error ?? historia.error) as Error).message}</Text>
             <Text size="sm" mt="xs">
               No se cargó nada. La salida es descargar la plantilla y cargarla a mano, más
               abajo.
@@ -185,6 +210,12 @@ export default function UF() {
             {resumenSII.carga.nuevas === 0 && resumenSII.carga.actualizadas === 0 && (
               <Text size="sm" c="dimmed" mt={4}>
                 El SII no tiene nada más nuevo que lo que ya estaba cargado.
+              </Text>
+            )}
+            {resumenSII.anios_sin_pagina.length > 0 && (
+              <Text size="sm" c="dimmed" mt={4}>
+                El SII no tiene página para {resumenSII.anios_sin_pagina.join(', ')}. El resto
+                se cargó igual.
               </Text>
             )}
           </Alert>
