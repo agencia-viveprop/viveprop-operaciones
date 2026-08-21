@@ -36,7 +36,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 6 | 10 | D5 · Carga de los 19 históricos | ✅ **Listo** |
 | 7 | 9 | D4 · Pantalla Negocios | ✅ **Listo** **primer hito visible** |
 | 8 | 11 | D6 · Pipeline de negocios | ✅ **Listo** |
-| 9 | 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido, en CLP |
+| 9 | 12 | F1 · Base de cálculo | ✅ **Listo** |
 | 10 | 13 | F2 · Dashboard de negocios | **Segundo hito visible** |
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
 | 12 | 5 | C4 · Plantilla y carga manual de UF | Carga mensual autónoma. **Ver fecha límite abajo** |
@@ -185,9 +185,19 @@ La UF se preserva de la columna AB en vez de buscarla en la serie: la de VVP-3 P
 
 ### 12 · F1 — Base de cálculo de reportería
 
-Separación **estructural** en tres buckets —ganado / pipeline / comisión potencial no concretada— y normalización a CLP vía la tabla UF. Es la capa que consumen los sprints 13 a 18, y la que impide que un informe sume cosas que no se suman.
+✅ **Listo** **el 2026-08-21.** `app/services/reportes_negocios.py` más `GET /api/negocios/reportes/resumen`.
 
-- **Listo cuando:** los tres buckets dan los números verificados: **8,09M / 1,82M / 4,75M**.
+Los tres buckets dan exactamente los números verificados: **8.087.862 / 1.824.272 / 4.751.491**.
+
+- **No existe un campo que los sume**, y hay un test que lo verifica. Sumar ganado, pipeline y perdido da un número que no significa nada; si alguien lo quiere, lo suma a mano y sabe lo que hace.
+- `DESISTIDO` va con lo perdido: no entró.
+- **Los negocios se cuentan sin duplicar**: G-2 con dos hitos ganados es un negocio, no dos.
+- El corte por mes usa **`fecha_cierre`**, no la de inicio: lo que importa es cuándo entró la plata. Los cerrados sin fecha caen en "Sin fecha" en vez de desaparecer.
+- Los desgloses por alianza y modelo van **solo sobre lo ganado**. El pipeline se mira por etapa, que es donde está detenido.
+- **Los hitos sin valorizar se cuentan aparte**: cuentan como hitos del pipeline pero no aportan plata, porque todavía no tienen base.
+- La normalización a CLP ya estaba resuelta al guardar (sprint 8): las columnas `comision_*` son `numeric(16,2)` en pesos con la UF congelada del hito. Acá no se convierte nada, solo se agrupa.
+
+**Nota técnica:** el agrupamiento por mes se hace en Python y no con `to_char`, que es exclusivo de Postgres y dejaría este cálculo sin poder testearse contra la base en memoria. Con este volumen la diferencia es irrelevante.
 
 ### 13 · F2 — Dashboard de negocios
 

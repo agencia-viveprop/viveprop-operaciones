@@ -16,6 +16,7 @@ from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
 from app.services.movimientos import MovimientoError, crear_movimiento_negocio
 from app.services.negocios import NegocioError
+from app.services.reportes_negocios import ResumenNegocios, obtener_resumen_negocios
 
 router = APIRouter(prefix="/negocios", tags=["negocios"])
 
@@ -229,6 +230,18 @@ def buscar_propiedades(
 ):
     """Para que el alta ofrezca lo que ya existe antes de crear un duplicado."""
     return servicio.buscar_propiedades_parecidas(db, q)
+
+
+@router.get("/reportes/resumen", response_model=ResumenNegocios)
+def reportes_resumen(
+    db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+):
+    """Base de calculo de la reporteria (sprint 12).
+
+    Los tres buckets vienen separados a proposito y no hay un campo `total`:
+    sumar ganado, pipeline y perdido da un numero que no significa nada.
+    """
+    return obtener_resumen_negocios(db)
 
 
 # Va antes de "/{negocio_id}": FastAPI resuelve por orden de registro, y si

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8, 9, 10 y 11 listos)
+**Última actualización:** 2026-08-21 (10 sprints listos; falta el 13 para cerrar el camino crítico)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 9 |
+| Listos | 10 |
 | En curso | 0 |
-| Pendientes | 13 |
+| Pendientes | 12 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8, 9, 10 y 11. **La serie D está completa**: el dominio de Negocios queda registrable, gestionable y con su pipeline. El siguiente es el **12 (F1 · Base de cálculo)**, y después el 13, el dashboard.
+**Sprint actual:** ninguno. Diez sprints listos. **Queda uno para cerrar el camino crítico**: el 13 (F2 · Dashboard de negocios), el segundo hito visible.
 
 ---
 
@@ -28,20 +28,20 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 9 | 12 | **75,0%** |
-| Plan completo | 9 | 22 | 40,9% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 18 | 31 | 58% |
+| **Camino crítico** (1, 3–13) | 10 | 12 | **83,3%** |
+| Plan completo | 10 | 22 | 45,5% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 19 | 31 | 61% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
-| **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
+| **F** · Reportería | 1 | 5 | 20% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Primer hito visible alcanzado y **serie D completa**. Quedan **2 sprints** hasta el dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Primer hito visible alcanzado y serie D completa. Queda **1 sprint** hasta el dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -73,7 +73,7 @@ Primer hito visible alcanzado y **serie D completa**. Quedan **2 sprints** hasta
 | 9 | D4 · Pantalla Negocios | **Listo** | 2026-08-21 | — | Listado, ficha y alta. **Primer hito visible.** |
 | 10 | D5 · Carga de los 19 históricos | **Listo** | 2026-08-21 | — | 18 negocios, 19 hitos, 13 propiedades, 114 obligaciones. Una sola diferencia: VVP-2. |
 | 11 | D6 · Pipeline de negocios | **Listo** | 2026-08-21 | — | 10 tipos, línea de tiempo en la ficha. `etapa` movida al negocio (`D-027`). |
-| 12 | F1 · Base de cálculo | Pendiente | — | — | |
+| 12 | F1 · Base de cálculo | **Listo** | 2026-08-21 | — | Tres buckets separados por construcción. 13 tests. |
 | 13 | F2 · Dashboard de negocios | Pendiente | — | — | Segundo hito visible. |
 | 14 | E1 · Plantilla de negocios | Pendiente | — | — | |
 | 15 | E2 · Importador de negocios | Pendiente | — | — | |
@@ -115,6 +115,32 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 12 (F1) — Listo
+
+**La base de cálculo de la reportería está lista** y da exactamente los números verificados en la auditoría inicial: **8.087.862 ganado, 1.824.272 en pipeline, 4.751.491 de comisión potencial no concretada.**
+
+`app/services/reportes_negocios.py` más `GET /api/negocios/reportes/resumen`. Es la capa que van a consumir los sprints 13 a 18.
+
+**La propiedad que define el sprint:** los tres buckets están separados de forma **estructural**, no como un filtro que alguien recuerde aplicar. Y **no existe un campo que los sume** — hay un test que lo verifica, `test_no_existe_un_campo_que_los_sume`. Sumar ganado, pipeline y perdido da un número que no significa nada; si alguien lo quiere, lo suma a mano y sabe lo que está haciendo.
+
+**Decisiones del cálculo:**
+
+- `DESISTIDO` va con lo perdido: no entró.
+- **Los negocios se cuentan sin duplicar.** Un negocio con dos hitos ganados es un negocio, no dos. Los hitos sí se cuentan por separado.
+- El corte por mes usa **`fecha_cierre`**, no la de inicio: lo que importa es cuándo entró la plata. Un hito cerrado sin fecha cae en "Sin fecha" en vez de desaparecer del gráfico.
+- Los desgloses por alianza y modelo van **solo sobre lo ganado**. El pipeline se mira por etapa, que es donde está detenido cada negocio.
+- **Los hitos sin valorizar se cuentan aparte.** Cuentan como hitos del pipeline pero no aportan plata, porque todavía no tienen base. Hoy son cero, pero el modelo lo permite y el dashboard no debería hacerlos desaparecer.
+- El rebate del concentrador va por bucket: los 317.153 del pipeline no están en lo ganado.
+
+**La normalización a CLP ya estaba resuelta** al guardar, en el sprint 8: las columnas `comision_*` son `numeric(16,2)` en pesos, calculadas con la UF congelada del hito. Acá no se convierte nada, solo se agrupa.
+
+**Dos notas técnicas:**
+
+1. El agrupamiento por mes se hace en Python y no con `to_char`, que es exclusivo de Postgres y dejaría este cálculo sin poder testearse contra la base en memoria. Con este volumen la diferencia es irrelevante, y tener el número verificado vale más que ahorrar una vuelta. Ojo: `reportes_canjes.py` sí usa `to_char` y por eso esa parte no tiene test.
+2. Un defecto encontrado al verificar: el corte por modelo mostraba `ModeloNegocio.MERCADO_PRIMARIO`, el repr de Python del enum, en vez de su valor. Corregido con un test.
+
+**117 tests pasando** más 1 xfail.
 
 ### 2026-08-21 · Sprint 11 (D6) — Listo · serie D completa
 
