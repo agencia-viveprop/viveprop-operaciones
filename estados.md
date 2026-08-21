@@ -66,7 +66,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 2 | G2 · Despliegue en Render | Pendiente | — | — | **Desbloqueado.** El servicio está sano; el 503 era transitorio. |
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
 | 4 | C3 · Catálogos | **Listo** | 2026-08-21 | — | 10 tests. 27 filas sembradas, endpoint con 9 grupos. |
-| 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
+| 5 | C4 · Plantilla y carga manual de UF | **Listo** | 2026-08-21 | — | Plantilla con fechas prellenadas, carga idempotente, aviso y alerta. 24 tests. |
 | 6 | D1 · Esquema de negocios | **Listo** | 2026-08-21 | — | 4 tablas, 13 tests. Migración reversible verificada. |
 | 7 | D2 · Motor de comisiones | **Listo** | 2026-08-21 | — | 34 tests. 18 de 19 históricos al peso; VVP-2 descuadrado en el origen (`D-026`). |
 | 8 | D3 · CRUD backend | **Listo** | 2026-08-21 | — | 5 endpoints, 18 tests. Verificado punta a punta contra `dev`. |
