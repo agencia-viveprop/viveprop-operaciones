@@ -303,6 +303,8 @@ Ninguna bloquea el arranque.
 | 7 (D2) | En arriendo, `% Broker` se calcula sobre la comisión total o sobre el arriendo mensual. |
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | Qué quiere ver el directorio. |
+| — | Si la ruta `/uf` se restringe a admin, además de su enlace del menú. |
+| — | Si la carga de UF se automatiza desde el SII (fuente verificada: 617 fechas sin diferencias). |
 
 ## Diferido por decisión del usuario
 

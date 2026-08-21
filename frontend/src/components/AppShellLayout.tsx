@@ -105,14 +105,6 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               active={location.pathname === '/reportes/semanal'}
               variant="filled"
             />
-            <NavLink
-              component={Link}
-              to="/uf"
-              label="Unidad de Fomento"
-              leftSection={<IconCoin size={18} />}
-              active={location.pathname === '/uf'}
-              variant="filled"
-            />
           </Stack>
 
           {usuario.rol === 'admin' && (
@@ -126,6 +118,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
                 label="Usuarios"
                 leftSection={<IconUsers size={18} />}
                 active={location.pathname === '/admin/usuarios'}
+                variant="filled"
+              />
+              <NavLink
+                component={Link}
+                to="/uf"
+                label="Unidad de Fomento"
+                leftSection={<IconCoin size={18} />}
+                active={location.pathname === '/uf'}
                 variant="filled"
               />
             </Stack>

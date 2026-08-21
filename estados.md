@@ -116,6 +116,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Unidad de Fomento pasa al grupo ADMIN
+
+Pedido del usuario. El enlace estaba en OPERACIONES y ahora está en ADMIN, junto a Usuarios.
+
+**Ojo, esto cambia quién lo ve:** el bloque ADMIN se dibuja solo si `usuario.rol === 'admin'`, así que gerencia y operaciones pierden el enlace. **La ruta `/uf` sigue accesible por URL para operaciones**, que puede editar (`puedeEditar={usuario.rol !== 'gerencia'}`). Mover el menú y restringir el acceso son dos cosas distintas; se hizo solo la primera, que es la que se pidió. Queda preguntado si la ruta también debe quedar solo para admin — con la consecuencia de que si el admin no está, la serie vence y no se puede valorizar ningún negocio.
+
 ### 2026-08-21 · Sprint 2 (G2) — En curso
 
 **El sprint chico de despliegue destapó tres cosas que ya estaban en producción.** Ninguna se buscaba; salieron de mirar el servido con atención.
