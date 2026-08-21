@@ -207,11 +207,21 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         />
       </Group>
 
-      {/* Con ocho columnas y nombres largos la tabla se aprieta y los badges se
-          truncan ("CANCELA..."). El ancho minimo la deja respirar y la hace
-          desplazarse dentro de su contenedor en vez de estirar la pagina. */}
-      <Table.ScrollContainer minWidth={1080}>
-      <Table striped withTableBorder highlightOnHover>
+      {/* Nueve columnas con nombres de hasta 30 caracteres no caben en una
+          pantalla normal. En vez de dejar que el texto se parta en dos lineas,
+          se prohibe el quiebre y se le da a la tabla el ancho que necesita: el
+          contenedor se desplaza y cada fila se lee de un tiron. */}
+      <Table.ScrollContainer minWidth={1320}>
+      <Table
+        striped
+        withTableBorder
+        highlightOnHover
+        fz="sm"
+        styles={{
+          th: { whiteSpace: 'nowrap' },
+          td: { whiteSpace: 'nowrap' },
+        }}
+      >
         <Table.Thead>
           <Table.Tr>
             <Table.Th>N°</Table.Th>
@@ -236,7 +246,13 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>
-                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
+                  {/* Mantine recorta la etiqueta del badge con puntos
+                      suspensivos, que es de donde salia "CANCELA...". */}
+                  <Badge
+                    color={c.estado === 'ACTIVO' ? 'good' : 'critical'}
+                    variant="light"
+                    styles={{ label: { overflow: 'visible' } }}
+                  >
                     {c.estado}
                   </Badge>
                 </Table.Td>
