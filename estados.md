@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6 y 7 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7 y 8 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 5 |
+| Listos | 6 |
 | En curso | 0 |
-| Pendientes | 17 |
+| Pendientes | 16 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4, 6 y 7. Sin bloqueos. El siguiente en el orden aprobado es el **8 (D3 · CRUD backend)**.
+**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7 y 8. Sin bloqueos. El siguiente en el orden aprobado es el **10 (D5 · Carga de los 19 históricos)**, y ahí hay dos cosas que preguntarle a Felipe: el descuadre de VVP-2 (`D-026`) y los motivos de pérdida.
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 5 | 12 | **41,7%** |
-| Plan completo | 5 | 22 | 22,7% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 14 | 31 | 45% |
+| **Camino crítico** (1, 3–13) | 6 | 12 | **50,0%** |
+| Plan completo | 6 | 22 | 27,3% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 15 | 31 | 48% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 2 | 6 | 33% | 6–11 |
+| **D** · Negocios | 3 | 6 | 50% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **2 sprints** hasta la pantalla de Negocios y
-**5** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **2 sprints** hasta la pantalla de Negocios (va después
+de la carga histórica) y **4** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -70,7 +70,7 @@ Distancia a los hitos visibles: **2 sprints** hasta la pantalla de Negocios y
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
 | 6 | D1 · Esquema de negocios | **Listo** | 2026-08-21 | — | 4 tablas, 13 tests. Migración reversible verificada. |
 | 7 | D2 · Motor de comisiones | **Listo** | 2026-08-21 | — | 34 tests. 18 de 19 históricos al peso; VVP-2 descuadrado en el origen (`D-026`). |
-| 8 | D3 · CRUD backend | Pendiente | — | — | |
+| 8 | D3 · CRUD backend | **Listo** | 2026-08-21 | — | 5 endpoints, 18 tests. Verificado punta a punta contra `dev`. |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
 | 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Solo queda pendiente los 10 motivos de pérdida. |
 | 11 | D6 · Pipeline de negocios | Pendiente | — | — | |
@@ -116,6 +116,29 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 8 (D3) — Listo
+
+**Cinco endpoints** de negocios más la búsqueda de propiedades: listar con filtros, obtener con sus hitos, crear, editar, y agregar o editar un hito. `gerencia` solo lee; escribir exige `operaciones`.
+
+**La capa de servicio es lo que importa.** `app/services/negocios.py` deja el orden de guardado en un solo lugar: congelar la UF de la fecha de referencia, resolver la base con el manual ganándole al calculado, aplicar la fórmula del modelo, persistir los siete montos. Ahí se juntan los sprints 3, 6 y 7.
+
+**Verificado punta a punta contra `dev`** con los números reales de VVP-4, no solo en tests: 39.735,63 de UF congelada, 42.914.480,40 de base y 858.289,61 de comisión total, todos exactos. El negocio de prueba se borró después.
+
+**Decisiones de implementación:**
+
+- Un hito sin valorizar deja los montos en **nulo**, no en cero. "Sin valorizar" y "valorizado en cero" son cosas distintas y el dashboard del sprint 13 necesita poder distinguirlas.
+- Si falta la UF de la fecha, el error dice qué fecha, qué rango cubre la serie y que hay que cargar el nuevo tramo. Es el mismo hueco que cierra el sprint 5.
+- La propiedad se reusa si ya existe con esa dirección, unidad y comuna. Sin eso, cada reintento sobre la misma unidad crearía una propiedad nueva y el patrón que la tabla existe para mostrar quedaría invisible igual que en el Excel.
+- `GET /api/negocios/propiedades?q=` para que el alta del sprint 9 ofrezca las parecidas antes de crear un duplicado — la clave única no alcanza cuando la misma dirección está escrita de dos formas.
+- Cambiar el modelo de un negocio recalcula las comisiones de todos sus hitos, porque la fórmula depende del modelo.
+
+**18 tests nuevos, 93 en la suite** más 1 xfail.
+
+**Dos arreglos de calidad:**
+
+1. Un `SAWarning` señalaba un orden frágil: se hacían consultas —la UF, la etapa, los catálogos— mientras el negocio todavía no estaba en la sesión, así que la cascada desde `Propiedad.negocios` no lo alcanzaba. Se agrega el negocio a la sesión antes de aplicar los hitos.
+2. **Los avisos de SQLAlchemy ahora rompen los tests** (`filterwarnings` en `pytest.ini`). Casi siempre marcan un problema real de orden o de sesión, y en el resumen pasan desapercibidos.
 
 ### 2026-08-21 · Sprint 7 (D2) — Listo
 

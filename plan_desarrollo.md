@@ -132,9 +132,15 @@ Función pura, sin base de datos: entra el negocio, salen los 5 montos del orden
 
 ### 8 · D3 — CRUD backend
 
-Endpoints de negocios con cálculo de comisiones **al guardar** — persistido, no recalculado al leer, para que un cambio futuro de reglas no altere la historia. Padre e hijos. Respeta la jerarquía de roles.
+✅ **Listo** **el 2026-08-21.** Cinco endpoints, más búsqueda de propiedades. La comisión se calcula al guardar y se persiste.
 
-- **Listo cuando:** crear un negocio con dos hitos por API devuelve las comisiones correctas y sumar no duplica.
+El orden al guardar un hito es siempre el mismo, en `app/services/negocios.py`: se congela la UF de la fecha de referencia (`fecha_valorizacion`, o `fecha_inicio` si falta), se resuelve la base con el manual ganándole al calculado (`D-017`), y se aplican las comisiones con la fórmula del modelo (`D-018`).
+
+- Verificado punta a punta contra `dev` con los números reales de VVP-4: 39.735,63 de UF, 42.914.480,40 de base y 858.289,61 de comisión total.
+- Un hito sin valorizar deja los montos en **nulo**, no en cero, para distinguir "sin valorizar" de "valorizado en cero".
+- Si falta la UF de la fecha, el error dice qué fecha, qué rango tiene la serie y que hay que cargar el nuevo tramo — conecta con el sprint 5.
+- La propiedad se reusa si ya existe con esa dirección, unidad y comuna, así el patrón de reintento queda visible. Más `GET /api/negocios/propiedades?q=` para que el alta del sprint 9 ofrezca las parecidas.
+- Los catálogos se validan por tipo en el servicio, que es el costo aceptado en `D-021`.
 
 ### 9 · D4 — Pantalla Negocios
 
