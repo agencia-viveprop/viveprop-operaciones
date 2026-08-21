@@ -48,7 +48,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
 | 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
-| 21 | 21 | B7 · Migrar el seguimiento histórico | 69 filas trabajadas + 65 motivos |
+| 21 | 21 | B7 · Migrar el seguimiento histórico | ✅ **Listo** |
 | 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
 
 **Dos cambios de orden respecto de v4**, aprobados el 2026-08-21:
@@ -263,7 +263,15 @@ Verificado de punta a punta contra `dev`: registrar un movimiento en un canje re
 
 ### 21 · B7 — Migrar el seguimiento histórico
 
-Las 69 filas trabajadas de `✅ Seguimiento Operativo` a `movimientos`, más los 65 motivos de cancelación.
+✅ **Listo** **el 2026-08-21.** **384 movimientos en 112 canjes**, vía `app/scripts/migrar_seguimiento_canjes.py`.
+
+- **Tres tipos de movimiento que faltaban.** El catálogo sembrado en B3 no cubría `Cliente calificado`, `Propiedad disponible` ni `Email registro solicitante` — este último una omisión evidente, porque existía el del propietario. Sin ellos se perdían 100 pasos completados. Se agregaron y se reordenó el catálogo siguiendo el orden real del proceso.
+- **Las fechas son aproximadas y lo dicen** (`D-030`). La hoja registra qué pasos se completaron pero no cuándo; cada movimiento lleva la mejor fecha real del canje según su lado, y el comentario dice `Migrado del Excel — fecha aproximada`.
+- Los pasos marcados "No" y las observaciones van juntos en un comentario, no como movimientos: un "No" no es un paso completado.
+- **La migración no mueve etapas**: la etapa viene de Dataprop y es más confiable que reconstruirla del checklist.
+- **26 filas del Excel referencian canjes que no están en la base** y quedaron fuera, reportadas por el cargador.
+
+**El efecto en la bandeja:** de 194 canjes indiferenciados a **146 sin gestión y 48 críticos**. Los 48 son casos reales de "se trabajó y se dejó estar", que antes eran indistinguibles.
 
 ### 22 · G1 — Recuperación de contraseña
 

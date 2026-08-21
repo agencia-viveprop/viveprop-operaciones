@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 14 |
+| Listos | 15 |
 | En curso | 0 |
-| Pendientes | 8 |
+| Pendientes | 7 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Catorce sprints listos. Lo que queda: migrar el seguimiento histórico (21), carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
+**Sprint actual:** ninguno. Quince sprints listos y **la serie B completa**: el Excel deja de ser necesario para operar canjes. Lo que queda: carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 14 | 22 | 63,6% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 23 | 31 | 74% |
+| Plan completo | 15 | 22 | 68,2% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 24 | 31 | 77% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -39,7 +39,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
-| **B** · Gestión de canjes | 2 | 3 | 67% | 19–21 |
+| **B** · Gestión de canjes | 3 | 3 | **100%** | 19–21 |
 
 **Los dos hitos visibles están alcanzados** y el camino crítico cerrado, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
@@ -82,7 +82,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
 | 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
-| 21 | B7 · Migrar el seguimiento histórico | Pendiente | — | — | |
+| 21 | B7 · Migrar el seguimiento histórico | **Listo** | 2026-08-21 | — | 384 movimientos en 112 canjes. La bandeja pasó a 146 + 48. |
 | 22 | G1 · Recuperación de contraseña | Pendiente | — | — | Disparador: antes de crear la tercera cuenta de usuario. |
 
 ---
@@ -115,6 +115,33 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 21 (B7) — Listo · serie B completa
+
+**El seguimiento histórico está en la base**: 384 movimientos repartidos en 112 canjes. Con esto el Excel deja de ser necesario para operar canjes.
+
+**Tres tipos de movimiento que faltaban.** Al mapear las diez columnas del checklist apareció que el catálogo sembrado en B3 no cubría `Cliente calificado`, `Propiedad disponible` ni `Email registro solicitante` — el tercero una omisión evidente, porque existía `EMAIL_REGISTRO_PROPIETARIO` pero no su par. Sin ellos se habrían perdido 100 pasos ya completados. Se agregaron en la migración `f7d2c48b91a3`, que además reordena el catálogo completo siguiendo el orden real del proceso: un desplegable que no sigue el flujo de trabajo hace que la gente busque.
+
+**El problema de las fechas, y qué se decidió** (`D-030`). La hoja registra **qué** pasos se completaron pero no **cuándo**: hay 287 marcas de "✓ Sí" y solo 69 filas con `Fecha último update`. Se migró un movimiento por paso, cada uno con la mejor fecha real del canje según su lado —gestión del solicitante, del propietario, o la del acuerdo—, y **el comentario de cada movimiento dice que la fecha es aproximada**. Ninguna fecha es inventada; lo aproximado es la correspondencia entre fecha y paso, y queda dicho en cada fila.
+
+La alternativa era un solo movimiento por canje resumiendo todo, con fecha exacta. Se descartó porque perdería *cuáles* pasos están hechos, que es lo que hace falta para seguir desde donde se quedó.
+
+**Lo que no se convirtió en movimiento:** los pasos marcados "✗ No" y las observaciones generales van juntos en un `COMENTARIO_GENERAL` por canje. Un "No" es información —que la propiedad no estaba disponible aparece 18 veces— pero no es un paso completado.
+
+**La migración no mueve etapas.** `etapa_resultante` va nulo en todos: la etapa viene de Dataprop y es más confiable que reconstruirla del checklist.
+
+**26 filas del Excel referencian canjes que no están en la base** y quedaron fuera, reportadas por el cargador. Son ids que existieron en Dataprop y no vienen en el export actual.
+
+**El efecto que importa, en la bandeja:**
+
+| | Antes | Después |
+|---|---:|---:|
+| Sin gestión | 194 | **146** |
+| Crítico | 0 | **48** |
+
+Esos 48 son casos reales de "se trabajó y se dejó estar", que antes eran indistinguibles de los que nunca se tocaron. Es exactamente la distinción que `D-029` buscaba poder hacer.
+
+**Verificado en una ficha concreta:** el canje #324 muestra sus once movimientos en orden, con el acuerdo en su fecha propia y los demás en la de gestión, cada uno marcado como migrado.
 
 ### 2026-08-21 · Sprint 20 (B6) — Listo
 

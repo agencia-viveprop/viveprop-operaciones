@@ -41,6 +41,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-027](#d-027) | 2026-08-21 | `etapa` es del negocio; `estado` se queda en el hito | 11 |
 | [D-028](#d-028) | 2026-08-21 | La paleta de los gráficos se valida con un script, no a ojo | 13 |
 | [D-029](#d-029) | 2026-08-21 | `sin gestión` es un nivel del semáforo, no `crítico` | 20 |
+| [D-030](#d-030) | 2026-08-21 | El seguimiento migrado conserva la estructura y admite la fecha aproximada | 21 |
 
 ---
 
@@ -526,3 +527,21 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Los umbrales son globales, no por tipo.** `tipos_movimiento` tiene un `sla_horas` propio de cada paso, pero eso mide otra cosa: cuánto debería demorar *ese* paso, no cuánto lleva el canje sin que nadie lo mire. El semáforo usa los dos umbrales de `CONFIG` y nada más.
 
 **Pendiente, sin bloquear.** Cinco tipos de movimiento tienen `sla_es_habil = true` (2 horas hábiles, 24 hábiles). `CONFIG` no define cuál es la ventana de horario hábil, así que ese campo no se usa todavía. Cuando haga falta medir SLA por paso habrá que preguntar el horario.
+
+---
+
+## D-030 · El seguimiento migrado conserva la estructura y admite la fecha aproximada
+
+**Contexto.** La hoja `✅ Seguimiento Operativo` registra **qué** pasos se completaron —287 marcas de "✓ Sí" en diez columnas— pero **no cuándo** se completó cada uno. Las fechas que hay son de otra cosa: `Fecha último update` en 69 filas de 158, `Última gestión solicitante` en 91 y `Última gestión propietario` en 64.
+
+**Decisión.** Se migra un movimiento por paso completado, y cada uno recibe la **mejor fecha real disponible para ese canje** según el lado al que pertenece: los pasos del solicitante usan su fecha de gestión, los del propietario la suya, el acuerdo su propia fecha, y el respaldo es `Fecha último update` o, si falta, la fecha de solicitud del canje.
+
+**Ninguna fecha es inventada.** Lo aproximado es la correspondencia entre la fecha y el paso, y **cada movimiento lo dice en su comentario**: `Migrado del Excel — fecha aproximada · operador Felipe`. Quien lea la línea de tiempo sabe qué está mirando.
+
+**La alternativa descartada** era un solo movimiento por canje resumiendo todo, con la fecha real y sin ambigüedad. Se descartó porque perdería **cuáles** pasos están hechos, que es justamente lo que hace falta para seguir desde donde se quedó. La estructura vale más que la precisión de un dato que el origen nunca tuvo.
+
+**Lo que no se convirtió en movimiento.** Los pasos marcados con "✗ No" y las observaciones generales van juntos en un `COMENTARIO_GENERAL` por canje. Un "No" es información —que la propiedad no estaba disponible aparece 18 veces— pero no es un paso completado, y no valía inventar tipos de movimiento para representar el fracaso de cada paso.
+
+**La migración no mueve etapas.** `etapa_resultante` va nulo en todos los movimientos migrados: la etapa de cada canje viene de Dataprop y es más confiable que reconstruirla desde el checklist.
+
+**Consecuencia en la bandeja.** Pasó de 194 canjes indiferenciados a **146 sin gestión y 48 críticos**. Esos 48 son casos reales de "se trabajó y se dejó estar", que antes eran indistinguibles de los que nunca se tocaron. Eso es exactamente lo que `D-029` buscaba poder distinguir.
