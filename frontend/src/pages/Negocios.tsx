@@ -13,7 +13,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { IconEye, IconPlus } from '@tabler/icons-react'
+import { IconEye, IconPlus, IconTableImport } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import {
   listarNegocios,
@@ -25,6 +25,7 @@ import AvisoUF from '../components/AvisoUF'
 import PageHeader from '../components/PageHeader'
 import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
+import CargaMasivaModal from '../components/CargaMasivaModal'
 import { COLOR_ESTADO, clp, MODELO_CORTO } from '../components/negociosFormato'
 
 /** Un negocio con hitos en estados distintos no tiene "un" estado. */
@@ -36,6 +37,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   const [filtros, setFiltros] = useState<FiltrosNegocios>({})
   const [fichaId, setFichaId] = useState<number | null>(null)
   const [formAbierto, setFormAbierto] = useState(false)
+  const [cargaAbierta, setCargaAbierta] = useState(false)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
   const { data: negocios, isLoading } = useQuery({
@@ -66,9 +68,18 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
         }
         action={
           puedeEditar && (
-            <Button color="accent" leftSection={<IconPlus size={16} />} onClick={() => setFormAbierto(true)}>
-              Nuevo negocio
-            </Button>
+            <Group gap="xs">
+              <Button
+                variant="light"
+                leftSection={<IconTableImport size={16} />}
+                onClick={() => setCargaAbierta(true)}
+              >
+                Carga masiva
+              </Button>
+              <Button color="accent" leftSection={<IconPlus size={16} />} onClick={() => setFormAbierto(true)}>
+                Nuevo negocio
+              </Button>
+            </Group>
           )
         }
       />
@@ -197,6 +208,8 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
         onClose={() => setFichaId(null)}
         puedeEditar={puedeEditar}
       />
+      <CargaMasivaModal abierto={cargaAbierta} onCerrar={() => setCargaAbierta(false)} />
+
       <NegocioFormModal
         abierto={formAbierto}
         onClose={() => setFormAbierto(false)}

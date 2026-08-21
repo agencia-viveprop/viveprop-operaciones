@@ -50,6 +50,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-036](#d-036) | 2026-08-21 | La UF se baja del SII, verificado contra 617 fechas | 23 |
 | [D-037](#d-037) | 2026-08-21 | La descarga corre en el propio servicio, no en un Cron Job | 23 |
 | [D-038](#d-038) | 2026-08-21 | Cargar UF es solo de admin; consultar su estado, de todos | 23 |
+| [D-039](#d-039) | 2026-08-21 | La plantilla de negocios pide entradas, no resultados | 14, 15 |
 
 ---
 
@@ -680,3 +681,25 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **`GET /uf/estado` queda abierto a cualquier usuario con sesión.** Lo consulta el aviso que aparece en la página de Negocios y en su dashboard: sin UF vigente no se puede valorizar, y quien opera necesita saberlo aunque no pueda arreglarlo. Restringirlo dejaría a operaciones sin entender por qué no puede dar de alta un negocio.
 
 **El riesgo que se aceptó.** Deja al admin como único punto de rescate humano: si la serie vence y no está, no se puede valorizar nada. Se le preguntó al usuario justamente eso y eligió restringir. Pesa mucho menos ahora que la serie se actualiza sola (`D-037`), que era la condición que hacía razonable la decisión.
+
+---
+
+## D-039 · La plantilla de negocios pide entradas, no resultados
+
+**Contexto.** `negocio_hitos` tiene unas 35 columnas. Había que decidir cuáles entran en la plantilla de carga masiva. La tentación era espejar el Excel, que trae las comisiones calculadas en sus propias columnas.
+
+**Decisión.** La plantilla tiene 32 columnas y **ninguna es un monto de comisión**. Pide el valor del negocio, la moneda, la fecha de valorización y las tasas; comisión total, broker, rebate, VP bruta, equipo, tercero y real VP las calcula el motor al cargar.
+
+**Motivo.** Si la plantilla tuviera esas columnas, alguien escribiría un número a mano y la garantía que el motor existe para dar se perdería en silencio, fila por fila. Hay un test que falla si alguna de esas columnas aparece: la propiedad se protege, no se confía en que nadie la agregue.
+
+**Corolario incómodo, y hay que decirlo:** por eso mismo **esta no es la herramienta para los 19 históricos**. Esos se migran fieles y sin recalcular (`D-026`), porque siete están cerrados con plata ya facturada y `VVP-2` viene descuadrado del origen. Para eso sigue estando `scripts/cargar_negocios.py`, que migra tal cual y reporta las diferencias contra el motor. Se evaluó agregar un grupo de columnas de override para cubrir los dos casos con una sola herramienta y **se descartó**: sería exactamente el agujero que el párrafo anterior cierra.
+
+**Una fila es un hito, no un negocio.** Si el código se repite son varios hitos del mismo negocio, como `VVP-3` con su PROMESA y su ESCRITURA. Y los datos de nivel negocio —propiedad, modelo, alianza, etapa— tienen que coincidir entre esas filas: si la fila 5 dice una dirección y la fila 8 otra para el mismo código, es error. No hay forma de saber cuál gana, y elegir una en silencio sería peor que rechazar.
+
+**Las tasas se escriben en porcentaje**, 2 para 2%. La base guarda la fracción. Se pide en porcentaje porque es como están escritas en los contratos y en la hoja de reglas; pedirle a alguien que escriba `0,0252001208200461` es pedirle que se equivoque.
+
+**Los códigos válidos van en una hoja generada desde la base**, no escrita en el código. Una alianza nueva aparece sola en la próxima plantilla que alguien baje, y las inactivas no se ofrecen porque no tiene sentido cargar contra ellas. Misma razón por la que los desplegables del front salen de la API.
+
+**Los errores de contenido vuelven con 200, no con 4xx.** Son decenas de mensajes por fila y el front los lista; un 400 obligaría a inventar una forma aparte de transportarlos. Lo que sí es 400 es un archivo que no se puede leer o al que le faltan columnas: ahí no hay nada que listar.
+
+**Y las tres reglas heredadas de la carga de UF**, por los mismos motivos: si hay un solo error no se escribe nada, cargar dos veces actualiza en vez de duplicar, y **nunca borra** — si la base tiene dos hitos y el archivo trae uno, el otro se queda. Un import que borra lo que no menciona convierte un archivo incompleto en pérdida de datos.

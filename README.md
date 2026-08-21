@@ -75,6 +75,8 @@ Variables de entorno en Render:
 
 **La UF se actualiza sola.** Una tarea dentro del web service chequea una vez al día si a la serie le quedan menos de 20 días por delante y, si es así, baja lo que publica el SII (`D-036`, `D-037`). La fuente se verificó contra 617 fechas sin una diferencia. Hay además un botón para traer la historia completa, un año por página desde 2022, para una serie que arranque tarde. La carga manual de la plantilla se queda como respaldo para cuando el SII no esté o cambie su página, y los dos caminos escriben con el mismo upsert. Solo admin puede cargar UF (`D-038`).
 
+**Carga masiva de negocios.** Botón *Carga masiva* en la pantalla de Negocios: baja una plantilla `.xlsx` con los códigos válidos de esta base y la vuelve a subir. Una fila es un hito, las tasas van en porcentaje y **las comisiones no se escriben** — las calcula el motor (`D-039`). No es la vía para los 19 históricos: esos van con `scripts/cargar_negocios.py`, que migra fiel sin recalcular.
+
 **Health checks.** Son dos y miden cosas distintas (`D-035`):
 
 - `GET /api/health` — el proceso está vivo. No toca la base a propósito: Neon suspende la rama sin tráfico y un despertar lento se leería como servicio caído. Es el que mira Render (`healthCheckPath`).

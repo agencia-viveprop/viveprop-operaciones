@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (17 listos + G2 en curso; la UF ya no se carga a mano)
+**Última actualización:** 2026-08-21 (19 listos + G2 en curso; carga masiva de negocios lista, serie E completa)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 23 |
-| Listos | 17 |
+| Listos | 19 |
 | En curso | 1 |
-| Pendientes | 5 |
+| Pendientes | 3 |
 | Bloqueados | 0 |
 
-**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Dieciséis sprints listos. Lo que queda: carga masiva (14–15), los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 17 | 23 | 73,9% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 26 | 32 | 81,3% |
+| Plan completo | 19 | 23 | 82,6% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 28 | 32 | 87,5% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -38,7 +38,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 3 | 5 | 60% | 12, 13, 16–18 |
-| **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
+| **E** · Carga masiva | 2 | 2 | **100%** | 14, 15 |
 | **B** · Gestión de canjes | 3 | 3 | **100%** | 19–21 |
 
 **Los dos hitos visibles están alcanzados** y el camino crítico cerrado, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
@@ -75,8 +75,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 11 | D6 · Pipeline de negocios | **Listo** | 2026-08-21 | — | 10 tipos, línea de tiempo en la ficha. `etapa` movida al negocio (`D-027`). |
 | 12 | F1 · Base de cálculo | **Listo** | 2026-08-21 | — | Tres buckets separados por construcción. 13 tests. |
 | 13 | F2 · Dashboard de negocios | **Listo** | 2026-08-21 | — | Paleta validada con script (`D-028`). **Segundo hito visible.** |
-| 14 | E1 · Plantilla de negocios | Pendiente | — | — | |
-| 15 | E2 · Importador de negocios | Pendiente | — | — | |
+| 14 | E1 · Plantilla de negocios | **Listo** | 2026-08-21 | — | 32 columnas en grupos, hoja de instrucciones y códigos válidos leídos de la base. |
+| 15 | E2 · Importador de negocios | **Listo** | 2026-08-21 | — | Una fila es un hito (`D-039`). Idempotente, y no escribe nada si hay un solo error. 32 tests. |
 | 16 | F3 · Reporte semanal | **Listo** | 2026-08-21 | — | Los dos dominios. 30 tests. "Avanzó" es toda actividad (`D-031`); umbral como control (`D-032`). |
 | 17 | F4 · Reporte mensual comparativo | Pendiente | — | — | |
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
@@ -116,6 +116,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprints 14 y 15 (E1, E2) — Listos · serie E completa
+
+**Carga masiva de negocios**, desde el botón *Carga masiva* de la pantalla de Negocios. Los dos sprints van en un solo modal porque bajar la plantilla y subirla es el mismo trabajo partido en dos; separarlos obliga a buscar dónde estaba el otro.
+
+**La decisión de fondo: la plantilla pide entradas, no resultados** (`D-039`). No hay columnas de comisión total, broker ni real VP — eso lo calcula el motor con el valor y las tasas. Tenerlas sería dejar que alguien escriba un número a mano y perder la garantía que el motor existe para dar. Hay un test que se cae si alguna vez aparecen.
+
+**Una fila es un hito, no un negocio.** Código repetido = más hitos del mismo negocio, como `VVP-3`. Y los datos de nivel negocio tienen que coincidir entre esas filas: si la fila 5 dice una dirección y la fila 8 otra para el mismo código, es error, porque no hay forma de saber cuál gana.
+
+**Las tasas se escriben en porcentaje**, 2 para 2%. Pedir `0,0252001208200461` en una planilla es pedir que alguien se equivoque; convertir acá es una división.
+
+**Los códigos válidos van en una hoja generada desde la base**, no escrita a mano. Una alianza nueva aparece sola en la próxima plantilla, y las inactivas no se ofrecen. Es la misma razón por la que los desplegables del front salen de la API.
+
+**Tres reglas que vienen de la carga de UF, por los mismos motivos:** si hay un solo error no se escribe nada; cargar dos veces actualiza en vez de duplicar; y **nunca borra** — si la base tiene dos hitos y el archivo trae uno, el otro se queda, porque un import que borra lo que no menciona convierte un archivo incompleto en pérdida de datos.
+
+**Esto no sirve para los 19 históricos**, y conviene que quede dicho: esos se migran fieles y sin recalcular (`D-026`) porque siete están cerrados con plata facturada y `VVP-2` viene descuadrado del origen. Para eso sigue estando `scripts/cargar_negocios.py`.
+
+**El test que más vale es la vuelta completa**: bajar la plantilla de verdad, llenarla y cargarla. Los otros arman el `.xlsx` a mano y comparten la suposición de cómo es la plantilla; ese usa la real, con sus dos filas de encabezado y sus celdas combinadas. Cualquier desajuste entre generador y parser aparece ahí y en ningún otro lado.
+
+Verificado además por HTTP contra `dev` con un negocio de prueba que después se borró: carga, y al subirlo de nuevo actualiza sin duplicar. 32 tests nuevos, 289 en total.
 
 ### 2026-08-21 · Carga de historia de UF desde el SII
 

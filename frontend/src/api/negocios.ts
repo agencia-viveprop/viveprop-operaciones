@@ -211,3 +211,35 @@ export type ResumenNegocios = {
 export function obtenerResumenNegocios(): Promise<ResumenNegocios> {
   return fetch('/api/negocios/reportes/resumen', { credentials: 'include' }).then(parseOrThrow)
 }
+
+export type ResumenCargaNegocios = {
+  negocios_nuevos: number
+  negocios_actualizados: number
+  hitos_nuevos: number
+  hitos_actualizados: number
+  errores: string[]
+}
+
+/** Baja la plantilla y la guarda. El navegador de la SPA no puede seguir un
+ *  link directo a un endpoint con cookie, así que se pide y se crea el blob. */
+export async function descargarPlantillaNegocios(): Promise<void> {
+  const res = await fetch('/api/negocios/plantilla', { credentials: 'include' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'plantilla-negocios.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export function importarNegocios(archivo: File): Promise<ResumenCargaNegocios> {
+  const formData = new FormData()
+  formData.append('archivo', archivo)
+  return fetch('/api/negocios/importar', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(parseOrThrow)
+}

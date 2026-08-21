@@ -41,8 +41,8 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
 | 12 | 5 | C4 · Plantilla y carga manual de UF | ✅ **Listo** |
 | 13 | 2 | G2 · Despliegue en Render | 🔸 **En curso** falta solo el dominio (acción tuya) |
-| 14 | 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable |
-| 15 | 15 | E2 · Importador de negocios | Carga masiva validada fila por fila |
+| 14 | 14 | E1 · Plantilla de negocios | ✅ **Listo** |
+| 15 | 15 | E2 · Importador de negocios | ✅ **Listo** |
 | 16 | 16 | F3 · Reporte semanal | ✅ **Listo** los dos dominios |
 | 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
@@ -238,15 +238,21 @@ Los tres buckets dan exactamente los números verificados: **8.087.862 / 1.824.2
 - Aviso si hay liquidaciones sin valorizar, para que no desaparezcan del cuadro.
 - **La paleta se validó con un script** (`D-028`), no a ojo. Encontró tres problemas que no se habrían visto, incluido que la tríada verde/teal/rojo quedaba a ΔE 2,8 en tritanopía.
 
-### 14 · E1 — Plantilla de negocios
+### 14 y 15 · E1 y E2 — Plantilla e importador de negocios ✅ Listo
 
-`.xlsx` generado por la app, con desplegables alimentados desde los catálogos del sprint 4.
+Van juntos porque son la misma herramienta partida en dos: bajar la plantilla y subirla es un solo trabajo. En la app quedan en un solo modal, desde el botón **Carga masiva** de la pantalla de Negocios.
 
-### 15 · E2 — Importador de negocios
+**Una fila es un hito, no un negocio** (`D-039`). Si el código se repite, son varios hitos del mismo negocio — como `VVP-3`. Los datos de nivel negocio tienen que coincidir entre esas filas; si no, es error, porque no hay forma de saber cuál gana.
 
-Validación fila por fila con informe de errores; no escribe nada si hay errores bloqueantes.
+**La plantilla pide entradas, no resultados.** No hay columnas de comisión total, broker ni real VP: eso lo calcula el motor con el valor y las tasas. Hay un test que se cae si alguna vez aparecen.
 
-- **Listo cuando:** un archivo con 3 filas malas reporta las 3 y no carga ninguna.
+**Las tasas se escriben en porcentaje**: 2 para 2%. Pedir `0,0252001208200461` en una planilla es pedir que alguien se equivoque.
+
+**Los códigos válidos van en una hoja aparte, leídos de la base.** Si mañana se agrega una alianza, aparece sola en la próxima plantilla que alguien baje.
+
+**No es la herramienta para los 19 históricos.** Esos se migran fieles y sin recalcular (`D-026`), con `scripts/cargar_negocios.py`. Esta plantilla es para negocios nuevos, donde el motor debe mandar.
+
+- **Listo cuando:** un archivo con 3 filas malas reporta las 3 y no carga ninguna. ✅ Verificado, más la vuelta completa por HTTP contra `dev`: bajar la plantilla real, llenarla, subirla, y subirla otra vez sin duplicar. 32 tests.
 
 ### 16 · F3 — Reporte semanal ✅ Listo
 

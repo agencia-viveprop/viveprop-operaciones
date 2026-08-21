@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -16,9 +16,17 @@ from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
 from app.services.movimientos import MovimientoError, crear_movimiento_negocio
 from app.services.negocios import NegocioError
+from app.services.importar_negocios import (
+    ArchivoInvalido,
+    ResumenCargaNegocios,
+    cargar_desde_xlsx,
+)
+from app.services.plantilla_negocios import generar_plantilla
 from app.services.reportes_negocios import ResumenNegocios, obtener_resumen_negocios
 
 router = APIRouter(prefix="/negocios", tags=["negocios"])
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 # ------------------------------------------------------------------- esquemas
@@ -230,6 +238,38 @@ def buscar_propiedades(
 ):
     """Para que el alta ofrezca lo que ya existe antes de crear un duplicado."""
     return servicio.buscar_propiedades_parecidas(db, q)
+
+
+@router.get("/plantilla")
+def descargar_plantilla(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """El .xlsx vacío para la carga masiva, con los códigos válidos de esta base."""
+    contenido = generar_plantilla(db)
+    return Response(
+        content=contenido,
+        media_type=XLSX,
+        headers={"Content-Disposition": 'attachment; filename="plantilla-negocios.xlsx"'},
+    )
+
+
+@router.post("/importar", response_model=ResumenCargaNegocios)
+async def importar(
+    archivo: UploadFile,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Carga masiva. Si hay un solo error no se escribe nada.
+
+    Los errores de contenido vuelven en el cuerpo con 200, no como 4xx: son
+    decenas de mensajes por fila y el front los lista. Un 400 obligaría a
+    inventar una forma aparte de transportarlos.
+    """
+    try:
+        return cargar_desde_xlsx(db, await archivo.read())
+    except ArchivoInvalido as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("/reportes/resumen", response_model=ResumenNegocios)
