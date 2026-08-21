@@ -29,6 +29,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-014](#d-014) | 2026-08-20 | Códigos de `tipos_movimiento` de negocio con prefijo | 11 |
 | [D-015](#d-015) | 2026-08-20 | La documentación se actualiza en el mismo commit que el cambio | Todos |
 | [D-016](#d-016) | 2026-08-20 | Ninguna conversión UF↔CLP sin fecha, y Decimal en todo el camino | 3 |
+| [D-017](#d-017) | 2026-08-20 | El valor en pesos se puede ingresar a mano y es la base de comisión | 6, 7, 10 |
 
 ---
 
@@ -231,3 +232,32 @@ Qué se revisa en cada cierre de trabajo:
 Lo segundo es aritmética: con `float`, 1080 × 39.735,63 no da exacto, y las comisiones dejarían de cuadrar al peso contra el Excel. Verificado en 4 negocios reales: VVP-4, VVP-1, VVP-2 y VVP-19, los cuatro reproduciendo la columna AC exactamente.
 
 **Consecuencia.** `dias_de_colchon` devuelve negativo cuando la serie está vencida, lo que le da al sprint 5 la señal para distinguir el aviso (3 días o menos, `D-008`) de la alerta (serie vencida).
+
+---
+
+## D-017 · El valor en pesos se puede ingresar a mano y es la base de comisión
+
+**Contexto.** La valorización por regla —monto en UF por la UF de la fecha— es un buen default, pero **no es la verdad**. En Mercado Primario y en Assetplan el valor en pesos del negocio lo determinan liquidaciones externas que muchas veces no coinciden con la regla.
+
+Verificado en el histórico: 17 de 19 filas siguen la regla, y **VVP-2 no**. Su comisión se calculó sobre 81.505.175 en vez de los 104.100.248 que da la UF, un 21,7% menos, y la observación de la planilla lo explica: *"Ver liq Negocio, hubo ajustes por costo credito pie ultima hora"*.
+
+**Decisión.** El modelo guarda los dos valores y el manual manda:
+
+| Campo | Rol |
+|---|---|
+| `valor_negocio` + `moneda` | El monto como se acordó |
+| `fecha_valorizacion` | Nullable; si falta se usa `fecha_inicio` |
+| `uf_snapshot` | La UF congelada, para trazabilidad |
+| `valor_clp_calculado` | Derivado: `valor_negocio × uf_snapshot` |
+| `valor_clp_manual` | Nullable. **Cuando existe, manda.** |
+| `motivo_valor_manual` | Por qué se ingresó a mano |
+
+La **base de comisión** es `COALESCE(valor_clp_manual, valor_clp_calculado)`, y el motor trabaja siempre sobre ella, nunca sobre la conversión por UF directamente.
+
+**Motivo.** Los dos valores se conservan, no uno reemplazando al otro, por la misma razón de `D-005`: comparar el calculado contra el real es información. Si las liquidaciones de un concentrador o una inmobiliaria se desvían sistemáticamente de la regla, eso se ve en los datos en vez de perderse.
+
+`motivo_valor_manual` existe porque el único caso real del histórico vino con su explicación escrita. Un número puesto a mano sin motivo no es auditable.
+
+**Consecuencia para el sprint 7.** Los 19 tests de regresión corren sobre la base de comisión, no sobre la conversión por UF. Si corrieran sobre la UF, VVP-2 no reproduciría nunca.
+
+**Corrección de un diagnóstico previo.** Se había reportado que VVP-15 y VVP-17 tenían la UF mal capturada. **Es falso**: ambos siguen la regla y sus números cuadran; la diferencia de 5,38 pesos era redondeo. El caso real de valor externo es VVP-2.

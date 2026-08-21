@@ -108,6 +108,8 @@ Botón que descarga la plantilla (`FECHA`, `VALOR`). Carga con **upsert por fech
 
 **Validación a replicar.** `movimientos.entity_id` no tiene ni puede tener foreign key (es polimórfico). La verificación de que la entidad exista antes de insertar vive en la capa de servicio — `crear_movimiento_canje` ya lo hace, y hay que replicarlo para negocios.
 
+**Valorización (D-017).** El hijo lleva `valor_negocio` + `moneda`, `fecha_valorizacion`, `uf_snapshot`, `valor_clp_calculado`, `valor_clp_manual` (nullable) y `motivo_valor_manual`. La **base de comisión** es `COALESCE(valor_clp_manual, valor_clp_calculado)` — el valor en pesos se puede ingresar a mano porque en Mercado Primario y Assetplan lo determinan liquidaciones externas que no siguen la regla de la UF.
+
 - **Listo cuando:** la migración sube y baja limpia contra `dev`.
 
 ### 7 · D2 — Motor de comisiones
@@ -115,6 +117,7 @@ Botón que descarga la plantilla (`FECHA`, `VALOR`). Carga con **upsert por fech
 Función pura, sin base de datos: entra el negocio, salen los 5 montos del orden universal (Total → Broker → VP Bruta → Equipo → Real VP). **Los tests se escriben antes del motor.**
 
 - **Listo cuando:** pasan los **22 casos** — 3 de `REGLAS CALCULO` + 19 de regresión con las filas reales, cubriendo los 3 modelos, venta y arriendo, con y sin rebate de concentrador, con y sin tercero.
+- **Corren sobre la base de comisión (D-017)**, no sobre la conversión por UF. Si corrieran sobre la UF, VVP-2 no reproduciría nunca.
 - **Decisión pendiente:** en arriendo, `% Broker` sobre la comisión total o sobre el arriendo mensual. Hoy indistinguible porque las partes pagan 50/50. Se arranca con la fórmula documentada (sobre el valor) y queda el test marcado.
 
 ### 8 · D3 — CRUD backend
@@ -136,10 +139,12 @@ Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no e
 - **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
 - **Pendiente de consultar:** tasas de rebate de VVP-15/16/17 (los montos están —123.480 / 206.521 / 193.673— pero el % nunca se registró) y los 10 motivos de pérdida, que están vacíos.
 
-**Regla de la UF del negocio, levantada de los datos en el sprint 3.** La columna AB (`Valor_UF al momento del negocio`) usa la UF de `Fecha Valorización` cuando esa columna está poblada, y la de `Fecha_Inicio` cuando está vacía. Verificado exacto en 16 de las 19 filas. Las tres excepciones hay que resolverlas al cargar:
+**Base de comisión, verificado sobre las 19 filas (ver D-017).** 17 siguen la regla —comisión sobre `valor × UF`— y **2 no**. Al cargar hay que decidir qué se hace con esas dos:
 
-- **VVP-15 y VVP-17 tienen la UF del 2026-08-20**, o sea la del día en que se editó la planilla, no la de su negocio (les correspondería 39.751,00 y 40.040,43). Su valor en CLP y sus comisiones están calculados con una UF inflada.
-- **VVP-3 PROMESA tiene 39.707,30, que no existe en la serie.** El valor más cercano es el del 2025-12-26 (39.708,77). Su `Fecha Valorización` dice 2026-12-26, con el año probablemente mal escrito.
+- **VVP-2**: comisión calculada sobre 81.505.175 en vez de los 104.100.248 que da la UF (−21,7%). La observación de la planilla lo explica: *"Ver liq Negocio, hubo ajustes por costo credito pie ultima hora"*. Es el caso de `valor_clp_manual`, y su observación es el `motivo_valor_manual`.
+- **VVP-16**: base exactamente la mitad del calculado, con `% declarado` 0,04 pero cobrado 0,02. No es valor externo: es medio porcentaje. Observación: "En proceso de formalización". **Hay que preguntar** si fue un cobro parcial o el porcentaje quedó mal registrado.
+
+**Nota sobre la UF del snapshot.** La columna AB usa la UF de `Fecha Valorización` si está poblada, y la de `Fecha_Inicio` si no. VVP-3 PROMESA tiene 39.707,30, que no corresponde a ninguna fecha de la serie —lo más cercano es el 2025-12-26 con 39.708,77— y su `Fecha Valorización` dice `2026-12-26`, con el año probablemente mal escrito. Sus comisiones sí cuadran con ese valor, así que se carga tal cual y se deja anotado.
 
 ### 11 · D6 — Pipeline de negocios
 
