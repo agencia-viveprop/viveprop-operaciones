@@ -117,6 +117,28 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Hallazgo: los datos históricos están en `dev`, no en producción
+
+Salió al verificar el deploy. **No es un defecto introducido, es un estado que el despliegue dejó a la vista.**
+
+Hay dos formas en que los datos llegaron a la base, y solo una alcanza producción:
+
+| Qué | Cómo entró | ¿Está en producción? |
+|---|---|---|
+| Catálogos, etapas, tipos de movimiento | Sembrados en migraciones | **Sí** — Render corre `alembic upgrade head` en cada deploy |
+| Canjes (297) | Importados antes del plan | **Sí** |
+| UF (1.409 filas, desde 2022-11) | `scripts/cargar_uf.py` contra `dev` | **No** |
+| Negocios (18 negocios, 19 hitos, 13 propiedades, 114 obligaciones) | `scripts/cargar_negocios.py` contra `dev` | **No** |
+| Seguimiento de canjes (384 movimientos) | `scripts/migrar_seguimiento_canjes.py` contra `dev` | **No** |
+
+Estaba anotado desde el sprint 3 —"aplicada a `dev`, no está en producción todavía"— pero referido a la migración, que sí entró. Los **datos** que cargaron los scripts no.
+
+**Qué implica para lo que se ve en producción:** Negocios vacío y su dashboard en cero; la bandeja mostrando todos los canjes abiertos como "sin gestión", sin el corte 146/48; el reporte semanal casi vacío. Los canjes sí funcionan.
+
+**Un efecto lateral del sprint 23:** como la tabla de UF de producción estaba vacía, la tarea automática la encontró sin colchón y descargó — pero el SII solo cubre el año en curso, así que producción quedaría con 2026 y sin 2022–2025. Suficiente para valorizar hoy, insuficiente para un negocio con fecha de 2025.
+
+**No se tocó producción.** Cargar datos ahí es una operación de una sola vía y necesita autorización explícita. Queda propuesto como próximo paso.
+
 ### 2026-08-21 · Sprint 23 (C5) — Listo · la UF se carga sola
 
 **Ya no hay que subir la plantilla cada mes.** Una tarea dentro del propio web service chequea una vez al día si a la serie le quedan menos de 20 días por delante y, si es así, baja lo que el SII publica.
