@@ -1,7 +1,7 @@
 # Decisiones · ViveProp Operaciones
 
 Registro de las decisiones tomadas durante la planificación y ejecución de [plan_desarrollo.md](plan_desarrollo.md).
-Avance de la ejecución: [estados.md](estados.md).
+Avance de la ejecución: [estados.md](estados.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
 **Última actualización:** 2026-08-20
 
@@ -85,7 +85,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 
 **Motivo.** El porcentaje es el acuerdo y el monto es el resultado; compararlos es precisamente el análisis. Permite verificar que la tasa pactada se cumpla, comparar condiciones entre concentradores, y ver su evolución. Bonus: con `monto / pct` queda implícita la comisión propia del concentrador.
 
-**Nota de datos.** El porcentaje nunca se registró en las 19 filas históricas. No se infiere hacia atrás; queda como campo a poblar.
+**Nota de datos, corregida el 2026-08-20.** Se había reportado que el porcentaje nunca se registró. **Es falso**: la columna AG vale 0,12 en las 13 filas de Concentradores. La regla es `rebate = 12% × Comisión Total`, y el monto calza al peso en VVP-15 y VVP-17. En los 10 perdidos la tasa está y el monto es 0, que es correcto.
 
 ---
 

@@ -5,7 +5,7 @@
 
 **Versión:** v4 · **Última actualización:** 2026-08-20
 
-Archivos relacionados: [estados.md](estados.md) (avance de la ejecución) · [decisiones.md](decisiones.md) (decisiones tomadas)
+Archivos relacionados: [estados.md](estados.md) (avance) · [decisiones.md](decisiones.md) (decisiones) · [diseno_modelo_datos.md](diseno_modelo_datos.md) (D0, diseño del esquema)
 
 ---
 
@@ -137,7 +137,7 @@ Listado con filtros (estado, modelo, alianza, etapa) + ficha con sus hitos + for
 Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no existe como fila en el Excel.
 
 - **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
-- **Pendiente de consultar:** tasas de rebate de VVP-15/16/17 (los montos están —123.480 / 206.521 / 193.673— pero el % nunca se registró) y los 10 motivos de pérdida, que están vacíos.
+- **Pendiente de consultar:** los 10 motivos de pérdida, que están vacíos, y el caso de VVP-16. La tasa de rebate **ya no es una pregunta**: es 12% de la Comisión Total, registrada en la columna AG de las 13 filas de Concentradores.
 
 **Base de comisión, verificado sobre las 19 filas (ver D-017).** 17 siguen la regla —comisión sobre `valor × UF`— y **2 no**. Al cargar hay que decidir qué se hace con esas dos:
 
