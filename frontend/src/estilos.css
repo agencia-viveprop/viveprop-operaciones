@@ -30,3 +30,43 @@
   overflow: visible;
   text-overflow: clip;
 }
+
+/* Contenedor de tabla con barra de desplazamiento horizontal SIEMPRE visible.
+ *
+ * `overflow-x: scroll` y no `auto`: con `auto` la barra aparece y desaparece, y
+ * cuando no está no hay nada que indique que la tabla sigue hacia la derecha.
+ *
+ * La tabla adentro usa `min-width: max-content` para que no se comprima: se
+ * queda del ancho que su contenido pide y el contenedor la desplaza.
+ */
+.tabla-scroll-x {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--mantine-color-gray-5) transparent;
+}
+
+.tabla-scroll-x > table {
+  min-width: max-content;
+}
+
+/* WebKit y Blink: la barra nativa se esconde en macOS, así que se dibuja. */
+.tabla-scroll-x::-webkit-scrollbar {
+  height: 10px;
+}
+
+.tabla-scroll-x::-webkit-scrollbar-track {
+  background: var(--mantine-color-default-border);
+  border-radius: 5px;
+}
+
+.tabla-scroll-x::-webkit-scrollbar-thumb {
+  background: var(--mantine-color-gray-5);
+  border-radius: 5px;
+}
+
+.tabla-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: var(--mantine-color-gray-6);
+}
+

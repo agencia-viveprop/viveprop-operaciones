@@ -41,71 +41,6 @@ const ETAPA_LABELS: Record<CanjeEtapa, string> = {
   CERRADO: 'Cerrado',
 }
 
-/** En la tabla el nombre largo no cabe; en el filtro sí conviene el explícito. */
-const ETAPA_CORTA: Record<CanjeEtapa, string> = {
-  SIN_ETAPA: 'Sin etapa',
-  EN_REVISION: 'Revisión',
-  PROCESO_DE_ACUERDO: 'Acuerdo',
-  EN_OFERTA: 'Oferta',
-  EN_NEGOCIO: 'Negocio',
-  CERRADO: 'Cerrado',
-}
-
-const ESTADO_CORTO: Record<CanjeEstado, string> = {
-  ACTIVO: 'Activo',
-  CANCELADO: 'Cancelado',
-}
-
-const PARTICULAS = new Set([
-  'de', 'del', 'la', 'las', 'los', 'da', 'do', 'dos', 'van', 'von', 'di', 'y', 'e',
-])
-
-/**
- * Primer nombre y primer apellido, en capitalización normal.
- *
- * Los nombres chilenos completos llegan a 30 caracteres y en mayúsculas ocupan
- * aún más: con dos columnas de corredor no cabían sin scroll. El nombre entero
- * queda en el `title` de la celda y en el formulario de edición.
- *
- * Se asume el orden `NOMBRE [SEGUNDO] [TERCERO] APELLIDO [APELLIDO2]`, que es el
- * de los datos de Dataprop. Con dos palabras o menos se devuelve tal cual, así
- * que razones sociales como "DATABROKERS" no se tocan.
- */
-function nombreCorto(nombre: string | null): string {
-  if (!nombre) return '—'
-
-  const capitalizar = (p: string) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()
-
-  // Las partículas se pegan a la palabra que las sigue, así "COX DE LA FUENTE"
-  // cuenta como dos unidades y no como cuatro. Sin esto,
-  // "MARÍA BELÉN COX DE LA FUENTE" salía como "María La".
-  const unidades: string[] = []
-  let prefijo: string[] = []
-  for (const palabra of nombre.trim().split(/\s+/)) {
-    if (PARTICULAS.has(palabra.toLowerCase())) {
-      prefijo.push(palabra.toLowerCase())
-      continue
-    }
-    unidades.push([...prefijo, capitalizar(palabra)].join(' '))
-    prefijo = []
-  }
-  if (prefijo.length) unidades.push(prefijo.join(' '))
-
-  if (unidades.length <= 2) return unidades.join(' ')
-  // Con tres unidades no se puede saber si es nombre+nombre+apellido o
-  // nombre+apellido+apellido, así que se toma la última, que acierta en el
-  // primer caso y sigue siendo un apellido en el segundo.
-  const apellido = unidades.length === 3 ? unidades[2] : unidades[unidades.length - 2]
-  return `${unidades[0]} ${apellido}`
-}
-
-/** `2026-08-10` -> `10-08-26`: dos caracteres menos y se lee igual. */
-function fechaCompacta(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const [a, m, d] = iso.slice(0, 10).split('-')
-  return `${d}-${m}-${a.slice(2)}`
-}
-
 const ESTADOS: CanjeEstado[] = ['ACTIVO', 'CANCELADO']
 const ETAPAS = Object.keys(ETAPA_LABELS) as CanjeEtapa[]
 const OPERACIONES = ['VENTA', 'ARRIENDO', 'OTRO']
@@ -272,15 +207,14 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         />
       </Group>
 
-      {/* Para que las nueve columnas quepan sin scroll horizontal en cualquier
-          resolucion, lo que se reduce es el CONTENIDO y no solo la letra: el
-          nombre del corredor se acorta a nombre y apellido, la fecha va en
-          formato corto y la etapa con su etiqueta breve. El dato completo queda
-          en el `title` de cada celda.
-          El ancho minimo es bajo a proposito: solo entra en juego en pantallas
-          de telefono, donde desplazar es el comportamiento correcto. */}
-      <Table.ScrollContainer minWidth={620}>
-      <Table striped withTableBorder highlightOnHover fz="sm" className="tabla-una-linea">
+      {/* Nueve columnas con nombres de hasta 30 caracteres no caben en una
+          pantalla normal, y acortar los datos no es opcion: el nombre completo
+          del corredor es justamente lo que se quiere ver.
+          Entonces: letra chica, sin quiebre de linea, y una barra de
+          desplazamiento horizontal SIEMPRE visible, para que se sepa que la
+          tabla sigue hacia la derecha en vez de tener que descubrirlo. */}
+      <div className="tabla-scroll-x">
+      <Table striped withTableBorder highlightOnHover fz="xs" className="tabla-una-linea">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>N°</Table.Th>
@@ -291,7 +225,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             <Table.Th>Operación</Table.Th>
             <Table.Th>Estado</Table.Th>
             <Table.Th>Etapa</Table.Th>
-            <Table.Th />
+            <Table.Th>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -299,27 +233,17 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             canjes?.map((c) => (
               <Table.Tr key={c.id}>
                 <Table.Td fw={600} ff="monospace">{c.id}</Table.Td>
-                <Table.Td ff="monospace" title={c.fecha_solicitud?.slice(0, 10)}>
-                  {fechaCompacta(c.fecha_solicitud)}
-                </Table.Td>
-                <Table.Td title={c.corredor_solicitante_nombre ?? undefined}>
-                  {nombreCorto(c.corredor_solicitante_nombre)}
-                </Table.Td>
-                <Table.Td title={c.corredor_propietario_nombre ?? undefined}>
-                  {nombreCorto(c.corredor_propietario_nombre)}
-                </Table.Td>
+                <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
+                <Table.Td>{c.corredor_solicitante_nombre}</Table.Td>
+                <Table.Td>{c.corredor_propietario_nombre}</Table.Td>
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>
-                  <Badge
-                    color={c.estado === 'ACTIVO' ? 'good' : 'critical'}
-                    variant="light"
-                    tt="none"
-                  >
-                    {ESTADO_CORTO[c.estado]}
+                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
+                    {c.estado}
                   </Badge>
                 </Table.Td>
-                <Table.Td title={ETAPA_LABELS[c.etapa]}>{ETAPA_CORTA[c.etapa]}</Table.Td>
+                <Table.Td>{ETAPA_LABELS[c.etapa]}</Table.Td>
                 <Table.Td>
                   <Group gap="xs">
                     <ActionIcon variant="subtle" onClick={() => setSeguimientoId(c.id)} aria-label="Seguimiento">
@@ -336,7 +260,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             ))}
         </Table.Tbody>
       </Table>
-      </Table.ScrollContainer>
+      </div>
       {!isLoading && canjes?.length === 0 && <Text c="dimmed">No hay canjes que calcen con el filtro.</Text>}
 
       <Modal opened={modalAbierto} onClose={() => setModalAbierto(false)} title={editandoId ? `Canje #${editandoId}` : 'Nuevo canje'} size="lg">
