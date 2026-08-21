@@ -12,6 +12,7 @@ from app.routers import (
     catalogos,
     health,
     negocios,
+    reportes,
     tipos_movimiento,
     uf,
     usuarios,
@@ -34,6 +35,7 @@ app.include_router(canjes.router, prefix="/api")
 app.include_router(catalogos.router, prefix="/api")
 app.include_router(negocios.router, prefix="/api")
 app.include_router(uf.router, prefix="/api")
+app.include_router(reportes.router, prefix="/api")
 app.include_router(tipos_movimiento.router, prefix="/api")
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"

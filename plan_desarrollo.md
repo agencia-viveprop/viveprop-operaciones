@@ -3,7 +3,7 @@
 > **Regla base:** no se escribe código sin autorización explícita, sprint por sprint.
 > Autorizar un sprint no autoriza el siguiente.
 
-**Versión:** v4 · **Última actualización:** 2026-08-20
+**Versión:** v4 · **Última actualización:** 2026-08-21
 
 Archivos relacionados: [estados.md](estados.md) (avance) · [decisiones.md](decisiones.md) (decisiones) · [diseno_modelo_datos.md](diseno_modelo_datos.md) (D0, diseño del esquema)
 
@@ -43,7 +43,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 13 | 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure`, `<title>` |
 | 14 | 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable |
 | 15 | 15 | E2 · Importador de negocios | Carga masiva validada fila por fila |
-| 16 | 16 | F3 · Reporte semanal | Qué se cerró, avanzó, se cayó, está estancado |
+| 16 | 16 | F3 · Reporte semanal | ✅ **Listo** los dos dominios |
 | 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
@@ -225,9 +225,13 @@ Validación fila por fila con informe de errores; no escribe nada si hay errores
 
 - **Listo cuando:** un archivo con 3 filas malas reporta las 3 y no carga ninguna.
 
-### 16 · F3 — Reporte semanal
+### 16 · F3 — Reporte semanal ✅ Listo
 
-Qué se cerró, qué avanzó, qué se cayó, qué está estancado.
+Qué se cerró, qué avanzó, qué se cayó, qué está estancado. **En los dos dominios**: un reporte de la semana que ignore los 194 canjes abiertos sería medio reporte, y quien lo lee opera los dos.
+
+Es lo contrario del dashboard. El dashboard responde "cómo vamos" y mira el estado actual; esto responde "qué pasó" y mira los movimientos del período. Por eso no repite las cifras de cartera.
+
+- **Listo cuando:** una semana con gestión registrada pero sin cambios de etapa aparece con actividad, no vacía (`D-031`), y el umbral de estancado es un control visible, no una constante escondida (`D-032`). ✅ 30 tests; verificado contra `dev`.
 
 ### 17 · F4 — Reporte mensual comparativo
 

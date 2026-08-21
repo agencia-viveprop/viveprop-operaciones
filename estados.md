@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (12 sprints listos; camino crítico cerrado y serie C completa)
+**Última actualización:** 2026-08-21 (16 sprints listos; primer reporte de período, cubriendo los dos dominios)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 15 |
+| Listos | 16 |
 | En curso | 0 |
-| Pendientes | 7 |
+| Pendientes | 6 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Quince sprints listos y **la serie B completa**: el Excel deja de ser necesario para operar canjes. Lo que queda: carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
+**Sprint actual:** ninguno. Dieciséis sprints listos. Lo que queda: carga masiva (14–15), los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,15 +29,15 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 15 | 22 | 68,2% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 24 | 31 | 77% |
+| Plan completo | 16 | 22 | 72,7% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 25 | 31 | 80,6% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 4 | 4 | **100%** | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
-| **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
+| **F** · Reportería | 3 | 5 | 60% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 3 | 3 | **100%** | 19–21 |
 
@@ -77,7 +77,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 13 | F2 · Dashboard de negocios | **Listo** | 2026-08-21 | — | Paleta validada con script (`D-028`). **Segundo hito visible.** |
 | 14 | E1 · Plantilla de negocios | Pendiente | — | — | |
 | 15 | E2 · Importador de negocios | Pendiente | — | — | |
-| 16 | F3 · Reporte semanal | Pendiente | — | — | |
+| 16 | F3 · Reporte semanal | **Listo** | 2026-08-21 | — | Los dos dominios. 30 tests. "Avanzó" es toda actividad (`D-031`); umbral como control (`D-032`). |
 | 17 | F4 · Reporte mensual comparativo | Pendiente | — | — | |
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
@@ -115,6 +115,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 16 (F3) — Listo
+
+**El primer reporte de período, y cubre los dos dominios.** Pantalla nueva en `/reportes/semanal`: qué se cerró, qué avanzó, qué se cayó y qué está estancado, en negocios y en canjes, con navegación por semana. Es lo contrario del dashboard —ese mira el estado actual, este mira los movimientos del período— y a propósito no repite las cifras de cartera: sumar lo mismo dos veces con dos cortes distintos es la forma más rápida de que nadie confíe en ninguna.
+
+**Un filtro mal pensado, encontrado al probar contra `dev`** (`D-031`). La primera versión contaba como "avanzó" solo los movimientos que cambian de etapa. Sobre la semana del 10 al 16 de agosto dio **cero avanzados con 44 movimientos reales en la base**: los movimientos migrados del Excel llevan la etapa nula a propósito (`D-030`). Se corrigió a "toda actividad que no sea una caída", que además es lo correcto por sí solo: registrar la confirmación por WhatsApp del corredor propietario es progreso aunque la etapa no se mueva, y son ocho de los diez pasos del checklist. El test que fija esto nombra la regresión.
+
+**El umbral de estancado quedó como control, no como constante** (`D-032`). Los 14 días son una estimación mía y nadie los definió; meterlos en `CONFIG` los haría parecer una regla acordada. En la pantalla hay 7 / 14 / 30 a un clic. Tampoco reusa los 48/24 horas de la bandeja: esa pregunta "qué me toca hoy", esta "qué se quedó atrás".
+
+**Las listas vienen topeadas en 25 y los totales van aparte.** Con 188 canjes estancados, una lista truncada sin decirlo se leería como el total; la pantalla dice "se muestran 25 de 188".
+
+Verificado punta a punta contra `dev` con una sesión real: el período, el rechazo de los períodos imposibles y el umbral por query. 30 tests nuevos, 193 en total con 1 `xfail`.
+
+**Nota de ambiente:** el backend local corría sin `--reload`, así que no habría visto el router nuevo. Hubo que reiniciarlo a mano.
 
 ### 2026-08-21 · Sprint 21 (B7) — Listo · serie B completa
 

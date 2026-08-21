@@ -42,6 +42,8 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-028](#d-028) | 2026-08-21 | La paleta de los gráficos se valida con un script, no a ojo | 13 |
 | [D-029](#d-029) | 2026-08-21 | `sin gestión` es un nivel del semáforo, no `crítico` | 20 |
 | [D-030](#d-030) | 2026-08-21 | El seguimiento migrado conserva la estructura y admite la fecha aproximada | 21 |
+| [D-031](#d-031) | 2026-08-21 | En el reporte semanal, "avanzó" es toda actividad registrada | 16 |
+| [D-032](#d-032) | 2026-08-21 | El umbral de estancado es un parámetro, no una constante de negocio | 16 |
 
 ---
 
@@ -545,3 +547,31 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **La migración no mueve etapas.** `etapa_resultante` va nulo en todos los movimientos migrados: la etapa de cada canje viene de Dataprop y es más confiable que reconstruirla desde el checklist.
 
 **Consecuencia en la bandeja.** Pasó de 194 canjes indiferenciados a **146 sin gestión y 48 críticos**. Esos 48 son casos reales de "se trabajó y se dejó estar", que antes eran indistinguibles de los que nunca se tocaron. Eso es exactamente lo que `D-029` buscaba poder distinguir.
+
+---
+
+## D-031 · En el reporte semanal, "avanzó" es toda actividad registrada
+
+**Contexto.** La primera versión del reporte contaba como "avanzó" solo los movimientos que cambian de etapa (`etapa_resultante is not None`). Probada contra `dev` sobre la semana del 10 al 16 de agosto, devolvió **cero avanzados sobre 44 movimientos reales**. Los movimientos migrados del Excel llevan la etapa nula a propósito (`D-030`), así que el filtro dejaba el reporte vacío sobre toda la historia previa.
+
+**Decisión.** "Avanzó" es todo movimiento del período que no sea una caída. Cuando el movimiento sí mueve la etapa, la columna la muestra; cuando no, dice "sigue igual".
+
+**Motivo.** No es solo salvar la historia migrada. En un reporte semanal lo que importa es dónde hubo progreso, y registrar la confirmación por WhatsApp del corredor propietario **es** progreso aunque la etapa no se mueva: son ocho de los diez pasos del checklist de canjes. Un reporte que no ve la gestión registrada no sirve para la reunión de los lunes, que es para lo que existe.
+
+**Las caídas se cuentan aparte y no en las dos columnas.** Una cancelación es un movimiento, pero contarla también como avance infla las dos cifras con el mismo hecho.
+
+**Descartado:** una tercera columna que separe "avance de pipeline" de "gestión sin cambio de etapa". Es más preciso y es lo que el reporte muestra igual dentro de la lista, pero cuatro cifras de cabecera ya son las que alguien lee de un vistazo; una quinta se lee como ruido.
+
+---
+
+## D-032 · El umbral de estancado es un parámetro, no una constante de negocio
+
+**Contexto.** "Estancado" no es un estado guardado: es una ausencia — algo abierto sin movimiento en más de N días. Había que elegir N.
+
+**Decisión.** El default es **14 días** y es un control visible en la pantalla, con 7 / 14 / 30 a un clic. No entra en `CONFIG`.
+
+**Motivo.** Los 14 días son una estimación mía, no un dato del negocio: nadie los definió. Esconderlos en `CONFIG` los haría parecer una regla acordada. Como control, quien lee el reporte —que sabe mejor qué es "mucho" en su semana— lo mueve y ve el efecto.
+
+**Por qué no reusa los umbrales de la bandeja.** Los 48/24 horas de `CONFIG` miden otra cosa: la bandeja diaria pregunta "qué me toca hoy" sobre canjes abiertos. El reporte semanal pregunta "qué se quedó atrás esta semana" sobre los dos dominios. Compartir el número porque ambos midan tiempo sin gestión sería confundir dos preguntas distintas.
+
+**El umbral es estricto.** A los 14 días exactos todavía no está estancado; a los 15 sí. Sin eso, el límite dependería de a qué hora se abre el reporte.
