@@ -75,7 +75,9 @@ Rama `dev` en Neon separada de `production` — hoy el `.env` local escribe en l
 
 ### 2 · G2 — Despliegue en Render
 
-Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se copia a `backend/static/` y FastAPI sirve `/api/*` y la SPA. Sobre eso: dominio propio `operaciones.viveprop.com`, health check apuntado a `/api/health`, y dar vuelta la lógica de la cookie `secure` para que sea el valor por defecto y se desactive solo con `development` explícito.
+Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se copia a `backend/static/` y FastAPI sirve `/api/*` y la SPA. **El servicio está sano** — verificado el 2026-08-21: 200 en la raíz y en `/api/health`, 401 en `/api/canjes` sin sesión, ~200 ms de respuesta. El 503 que se reportó el 2026-08-20 era transitorio, probablemente el servicio despertando.
+
+Queda entonces solo lo que se quería agregar: dominio propio `operaciones.viveprop.com`, health check apuntado a `/api/health` en la configuración de Render, dar vuelta la lógica de la cookie `secure` para que sea el valor por defecto, y **cambiar el `<title>` del HTML, que dice `frontend`** — el default de Vite que nunca se tocó.
 
 - **Listo cuando:** la app responde en el dominio propio y la cookie sigue siendo `secure` aunque falte la variable de entorno.
 

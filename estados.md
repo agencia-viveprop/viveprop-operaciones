@@ -17,7 +17,7 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | Pendientes | 20 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1 y el 3. `D0` aprobado, así que los sprints 4 y 6 tienen especificación cerrada y esperan solo autorización. El 2 (Render) sigue **esperando el diagnóstico del 503**.
+**Sprint actual:** ninguno. Listos el 1 y el 3. **No queda ningún bloqueo en el plan**: `D0` está aprobado, el modelo y el motor no tienen decisiones pendientes, y el servicio de Render está sano. Todos los sprints esperan solo autorización.
 
 ---
 
@@ -64,7 +64,7 @@ Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) 
 | # | Sprint | Estado | Fecha | Commit | Notas |
 |---|---|---|---|---|---|
 | 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
-| 2 | G2 · Despliegue en Render | Pendiente | — | — | Render devuelve 503. Requiere diagnóstico del usuario antes de arrancar. |
+| 2 | G2 · Despliegue en Render | Pendiente | — | — | **Desbloqueado.** El servicio está sano; el 503 era transitorio. |
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
 | 4 | C3 · Catálogos | Pendiente | — | — | Especificación aprobada en `D-021`. Listo para autorizar. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
@@ -116,6 +116,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Render está sano — el 503 era transitorio
+
+Reverificado el servicio de producción: **HTTP 200** en la raíz y en `/api/health`, **401** en `/api/canjes` sin sesión, y ~200 ms de respuesta sin arranque en frío. El dashboard de Render confirma "All services are up and running".
+
+**Se corrige el reporte del 2026-08-20**, que decía que el servicio estaba caído o el deploy había fallado. Era un 503 transitorio, probablemente el servicio despertando de estar dormido, y se resolvió solo. No hubo nada que arreglar.
+
+El sprint 2 se desbloquea y se encoge: queda solo lo que se quería agregar — dominio propio, health check en la configuración, cookie `secure` por defecto, y cambiar el `<title>` del HTML, que dice `frontend` porque es el default de Vite que nunca se tocó.
+
+**Con esto no queda ningún bloqueo en el plan.**
 
 ### 2026-08-21 · D-022 — el motor de comisiones queda sin decisiones pendientes
 
