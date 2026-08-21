@@ -23,6 +23,7 @@ import {
 } from 'recharts'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { obtenerResumenNegocios, type Corte } from '../api/negocios'
+import AvisoUF from '../components/AvisoUF'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
 import BarrasMontos from '../components/BarrasMontos'
@@ -117,6 +118,8 @@ export default function DashboardNegocios() {
         title="Dashboard de Negocios"
         subtitle="Los tres montos son plata, pero no la misma plata. No se suman entre sí."
       />
+
+      <AvisoUF />
 
       {/* Los tres buckets. Cada tile lleva su etiqueta y su número, así que la
           identidad nunca depende solo del color. */}

@@ -21,6 +21,7 @@ import {
   type FiltrosNegocios,
   type NegocioResumen,
 } from '../api/negocios'
+import AvisoUF from '../components/AvisoUF'
 import PageHeader from '../components/PageHeader'
 import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
@@ -71,6 +72,9 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           )
         }
       />
+
+      {/* Sin UF vigente no se puede valorizar, y eso rompe el alta. */}
+      <AvisoUF />
 
       <Group>
         <TextInput

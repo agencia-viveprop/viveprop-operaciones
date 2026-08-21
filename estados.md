@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (11 sprints listos; **camino crítico cerrado**)
+**Última actualización:** 2026-08-21 (12 sprints listos; camino crítico cerrado y serie C completa)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 11 |
+| Listos | 12 |
 | En curso | 0 |
-| Pendientes | 11 |
+| Pendientes | 10 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Once sprints listos y **el camino crítico está cerrado**: negocios queda registrable, gestionable e informable. Lo que sigue son bloques independientes: carga masiva (14–15), reportería avanzada (16–18), gestión de canjes (19–21) y contraseñas (22). También queda el sprint 5, con fecha límite el 9 de septiembre.
+**Sprint actual:** ninguno. Doce sprints listos, camino crítico cerrado y **serie C completa**. Lo que queda son bloques independientes sin orden forzoso: carga masiva (14–15), reportería avanzada (16–18), gestión de canjes (19–21) y contraseñas (22). Ya no hay fechas límite pendientes.
 
 ---
 
@@ -29,12 +29,12 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 11 | 22 | 50,0% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 20 | 31 | 65% |
+| Plan completo | 12 | 22 | 54,5% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 21 | 31 | 68% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
-| **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
+| **C** · Cimientos | 4 | 4 | **100%** | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
@@ -115,6 +115,27 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 5 (C4) — Listo · serie C completa
+
+**La UF se puede cargar desde la app**, sin scripts. Pantalla propia en `/uf` con el estado de la serie, descarga de plantilla y carga. Con esto la fecha límite del 9 de septiembre queda cubierta.
+
+**La plantilla trae las fechas que faltan ya escritas** y el valor en blanco. Eso hace desaparecer la pregunta de "cuáles fechas tengo que llenar": se rellena la columna y se sube. Trae además una hoja de instrucciones. Si la serie estuviera vacía arranca en el día de hoy, porque no tiene sentido pedir cuatro años de historia a mano.
+
+**Decisiones de la carga:**
+
+- **Idempotente por fecha.** Subir un archivo solapado con lo ya cargado no duplica: actualiza lo que cambió y deja igual lo que no. El informe distingue nuevas, actualizadas y sin cambio, así que se ve qué pasó.
+- **Si hay errores de formato no se carga nada.** Media serie subida sin saber cuál mitad es peor que no cargar. Los errores van por fila, con el número y el valor que falló.
+- Acepta las dos convenciones de número: `40.885,63` y `40885.63`.
+- Las filas de la plantilla que no se llenaron se ignoran sin ruido: no hay que borrarlas.
+
+**Aviso y alerta** (`D-008`) en un solo componente, `AvisoUF`, que aparece en la página de Negocios y en su dashboard. Sin UF vigente no se puede valorizar, y eso rompe el alta, así que la alerta va donde duele y no escondida en el mantenedor. **Cuando la serie está sana no dibuja nada**: un aviso que se ve siempre deja de ser un aviso.
+
+**24 tests**, total 141 más 1 xfail. Este módulo **pilotea el patrón** de plantilla e importador validador que reusan los sprints 14 y 15, así que sus tests valen para los tres.
+
+**Nota técnica:** el upsert usa el ORM y no `ON CONFLICT` de Postgres, por la misma razón que el agrupamiento del sprint 12 se hace en Python: son 45 filas al mes, el rendimiento es irrelevante, y así el cálculo se puede testear contra la base en memoria.
+
+**Nota operativa, tercera vez que pasa:** el reloader de uvicorn no detecta los archivos que escribo por script en Windows, y estuvo sirviendo código viejo. Conviene reiniciar el backend a mano después de agregar routers, en vez de confiar en `--reload`.
 
 ### 2026-08-21 · Sprint 13 (F2) — Listo · camino crítico cerrado
 

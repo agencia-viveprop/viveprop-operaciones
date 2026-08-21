@@ -17,6 +17,7 @@ import {
   IconArrowsExchange,
   IconBriefcase,
   IconChartBar,
+  IconCoin,
   IconHome2,
   IconKey,
   IconLogout,
@@ -84,6 +85,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Dashboard Negocios"
               leftSection={<IconChartBar size={18} />}
               active={location.pathname === '/negocios/dashboard'}
+              variant="filled"
+            />
+            <NavLink
+              component={Link}
+              to="/uf"
+              label="Unidad de Fomento"
+              leftSection={<IconCoin size={18} />}
+              active={location.pathname === '/uf'}
               variant="filled"
             />
           </Stack>

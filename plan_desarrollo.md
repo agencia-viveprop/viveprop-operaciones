@@ -39,7 +39,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 9 | 12 | F1 · Base de cálculo | ✅ **Listo** |
 | 10 | 13 | F2 · Dashboard de negocios | ✅ **Listo** **segundo hito visible** |
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
-| 12 | 5 | C4 · Plantilla y carga manual de UF | Carga mensual autónoma. **Ver fecha límite abajo** |
+| 12 | 5 | C4 · Plantilla y carga manual de UF | ✅ **Listo** |
 | 13 | 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure`, `<title>` |
 | 14 | 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable |
 | 15 | 15 | E2 · Importador de negocios | Carga masiva validada fila por fila |
@@ -56,7 +56,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 1. **El sprint 10 va antes del 9**: los 19 históricos se cargan antes de construir la pantalla. Una pantalla hecha contra una tabla vacía se ve perfecta y se rompe con datos reales; acá los datos traen VVP-3 con sus dos hitos anidados, direcciones largas, los dos arriendos con su lógica 50/50 y VVP-2 con valor manual. El sprint 10 se verifica por SQL, así que no pierde nada por ir antes.
 2. **Los sprints 5 y 2 se corren hacia atrás**: ninguno desbloquea la cadena de negocios, y el 2 se encogió cuando Render resultó estar sano.
 
-**Fecha límite del sprint 5.** La serie de UF cargada termina el **2026-09-09**. Si se llega a principios de septiembre sin ese sprint, las conversiones a fecha del día dejan de funcionar. No es un bloqueo: `app/scripts/cargar_uf.py` ya existe y con la planilla actualizada se corre en un comando. Pero si el 5 de septiembre el sprint no está, hay que cargar la UF a mano.
+**Fecha límite del sprint 5: cumplida.** La serie llega hasta el 2026-09-09 y desde el 2026-08-21 hay cómo extenderla desde la app, sin scripts ni línea de comando.
 
 **Camino crítico:** los diez primeros de la tabla. Es la cadena donde cada sprint usa el diseño del anterior, y hacerlos seguidos evita reconstruir el contexto cada vez.
 
@@ -102,10 +102,16 @@ Tablas editables desde `CONFIG`: alianzas (8), modelos de negocio (3), etapas E1
 
 ### 5 · C4 — Plantilla y carga manual de UF
 
-Botón que descarga la plantilla (`FECHA`, `VALOR`). Carga con **upsert por fecha** para que subir meses solapados no duplique. Informe de resumen igual al de canjes (nuevas / actualizadas / sin cambio / errores por fila). **Aviso** cuando falten 3 días o menos respecto del último registro, y **alerta** distinta y más visible si la serie quedó vencida.
+✅ **Listo** **el 2026-08-21.** Pantalla propia en `/uf`, con estado de la serie, descarga de plantilla y carga.
 
-- **Listo cuando:** borrando los últimos días, la carga los repone y los dos umbrales se comportan bien.
-- **Nota:** pilotea el patrón plantilla + importador validador que reusan los sprints 14 y 15.
+- **La plantilla trae las fechas que faltan ya escritas** y el valor en blanco, así que no hay que averiguar cuáles son. Incluye una hoja de instrucciones. Si la serie estuviera vacía arranca en el día de hoy, porque no tiene sentido pedir cuatro años de historia a mano.
+- **Carga idempotente por fecha**: subir un archivo solapado no duplica, actualiza lo que cambió y deja igual lo que no. El informe distingue nuevas, actualizadas y sin cambio.
+- **Si hay errores de formato no se carga nada.** Media serie subida sin saber cuál mitad es peor que no cargar. Los errores se informan por fila.
+- Acepta las dos convenciones de número: `40.885,63` y `40885.63`.
+- **Aviso a 3 días** y **alerta distinta si la serie venció** (`D-008`), en un componente que aparece en la página de Negocios y en su dashboard: sin UF vigente no se puede valorizar, y eso rompe el alta. Cuando la serie está sana no dibuja nada.
+- 24 tests. Piloteó el patrón que reusan los sprints 14 y 15.
+
+**Fecha límite cumplida:** la serie llega hasta el 2026-09-09 y ahora hay cómo extenderla desde la app.
 
 ### 6 · D1 — Esquema de negocios
 
