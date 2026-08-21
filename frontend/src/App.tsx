@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Home from './pages/Home'
 import AdminUsuarios from './pages/AdminUsuarios'
 import Canjes from './pages/Canjes'
+import Bandeja from './pages/Bandeja'
 import Negocios from './pages/Negocios'
 import DashboardNegocios from './pages/DashboardNegocios'
 import UF from './pages/UF'
@@ -35,6 +36,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home usuario={usuario} />} />
         <Route path="/canjes" element={<Canjes puedeEditar={usuario.rol !== 'gerencia'} />} />
+        <Route path="/bandeja" element={<Bandeja puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios" element={<Negocios puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
         <Route path="/uf" element={<UF puedeEditar={usuario.rol !== 'gerencia'} />} />

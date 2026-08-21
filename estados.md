@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 13 |
+| Listos | 14 |
 | En curso | 0 |
-| Pendientes | 9 |
+| Pendientes | 8 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Trece sprints listos. Lo que queda: gestión de canjes (20–21), carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
+**Sprint actual:** ninguno. Catorce sprints listos. Lo que queda: migrar el seguimiento histórico (21), carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 13 | 22 | 59,1% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 22 | 31 | 71% |
+| Plan completo | 14 | 22 | 63,6% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 23 | 31 | 74% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -39,7 +39,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
-| **B** · Gestión de canjes | 1 | 3 | 33% | 19–21 |
+| **B** · Gestión de canjes | 2 | 3 | 67% | 19–21 |
 
 **Los dos hitos visibles están alcanzados** y el camino crítico cerrado, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
@@ -81,7 +81,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 17 | F4 · Reporte mensual comparativo | Pendiente | — | — | |
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
-| 20 | B6 · Semáforo y bandeja diaria | Pendiente | — | — | |
+| 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
 | 21 | B7 · Migrar el seguimiento histórico | Pendiente | — | — | |
 | 22 | G1 · Recuperación de contraseña | Pendiente | — | — | Disparador: antes de crear la tercera cuenta de usuario. |
 
@@ -115,6 +115,27 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 20 (B6) — Listo
+
+**La bandeja diaria funciona.** Pantalla `/bandeja`, "Qué me toca hoy", primera en el menú de Operaciones. Sobre la base real: **194 canjes abiertos, los 194 sin gestión.**
+
+**La decisión del sprint es `D-029`: cuatro niveles y no tres.** El semáforo mide horas sin gestión contra los umbrales de `CONFIG`, pero ningún canje tiene movimientos, así que medir desde `fecha_solicitud` habría dejado los 194 en rojo — incluyendo canjes de 2022. Una bandeja que abre con 194 filas rojas no informa nada.
+
+`sin_gestion` quedó como nivel propio y va primero en el orden. "Nunca se tocó" es trabajo por empezar; "se tocó y se dejó estar tres días" es trabajo abandonado. Son problemas distintos y se resuelven distinto.
+
+**Otras decisiones del cálculo:**
+
+- Entran los canjes con `estado = ACTIVO` **y** etapa distinta de `CERRADO`: 194 de los 225 activos. Los 31 con etapa cerrada no son trabajo pendiente.
+- Los umbrales son los **globales de `CONFIG`** (48 y 24 horas), no el `sla_horas` por tipo, que mide cuánto debería demorar *ese paso* y no cuánto lleva el canje sin que nadie lo mire.
+- El semáforo cuenta desde el movimiento **más reciente**, así que un canje viejo con gestión de hoy está al día.
+- Orden: primero lo que nunca se tocó, después lo más abandonado, y a igualdad de abandono el más antiguo.
+
+**En la interfaz:** cuatro tarjetas de conteo, un filtro que arranca en "Requieren atención", y la tabla con la espera y la última gestión de cada canje. Cada nivel se muestra **con su palabra**, nunca con el color solo — `theme.ts` ya advierte que el coral de acento y el rojo crítico se parecen entre sí. Hacer clic en una fila abre el seguimiento que ya existía.
+
+**22 tests**, total 163 más 1 xfail.
+
+**Pendiente anotado, sin bloquear:** cinco tipos de movimiento tienen `sla_es_habil = true` (2 horas hábiles, 24 hábiles) pero `CONFIG` no define cuál es la ventana de horario hábil, así que ese campo no se usa todavía.
 
 ### 2026-08-21 · Sprint 19 (B5) — Listo, y ya lo estaba
 

@@ -40,6 +40,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-026](#d-026) | 2026-08-21 | VVP-2 está descuadrado en el origen | 10 |
 | [D-027](#d-027) | 2026-08-21 | `etapa` es del negocio; `estado` se queda en el hito | 11 |
 | [D-028](#d-028) | 2026-08-21 | La paleta de los gráficos se valida con un script, no a ojo | 13 |
+| [D-029](#d-029) | 2026-08-21 | `sin gestión` es un nivel del semáforo, no `crítico` | 20 |
 
 ---
 
@@ -509,3 +510,19 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Consecuencia de forma.** El gráfico mensual iba a tener dos series —comisión total y real VP— pero ningún par de la rampa pasaba en modo oscuro. Eso obligó a revisar la forma, y la conclusión fue mejor: **el trabajo de ese gráfico es una sola medida en el tiempo**, cuánto se quedó ViveProp. La comisión total es contexto, no una serie de igual peso, así que va al tooltip y a la tabla. Una serie sola no necesita leyenda ni paleta categórica.
 
 **Regla que queda.** Antes de agregar color a un gráfico nuevo, se corre el validador sobre los pasos candidatos de `theme.ts`. Si un par no pasa, primero se revisa si la forma es la correcta.
+
+---
+
+## D-029 · `sin gestión` es un nivel del semáforo, no `crítico`
+
+**Contexto.** El semáforo de la bandeja mide horas sin gestión contra los umbrales de `CONFIG`: 48 horas es crítico, 24 es advertencia. Pero los 194 canjes abiertos **no tienen ningún movimiento registrado**, porque el seguimiento se hacía en el Excel. Si se midiera desde `fecha_solicitud`, todos serían críticos: hay canjes de 2022.
+
+**Decisión.** `sin_gestion` es un nivel propio, distinto de `critico`, y va primero en el orden de atención.
+
+**Motivo.** Una bandeja que abre con 194 filas rojas no informa nada: el color deja de distinguir. Y son dos problemas distintos que se resuelven distinto — "nunca se tocó" es trabajo por empezar, "se tocó y se dejó estar tres días" es trabajo abandonado. Meterlos en el mismo cubo perdería justamente la información que la bandeja existe para dar.
+
+**Qué entra en la bandeja.** `estado = ACTIVO` **y** etapa distinta de `CERRADO`. Los 31 canjes que están activos pero con etapa cerrada no son trabajo pendiente; es el mismo desalineamiento del dato de Dataprop que motivó el filtro del dashboard de canjes.
+
+**Los umbrales son globales, no por tipo.** `tipos_movimiento` tiene un `sla_horas` propio de cada paso, pero eso mide otra cosa: cuánto debería demorar *ese* paso, no cuánto lleva el canje sin que nadie lo mire. El semáforo usa los dos umbrales de `CONFIG` y nada más.
+
+**Pendiente, sin bloquear.** Cinco tipos de movimiento tienen `sla_es_habil = true` (2 horas hábiles, 24 hábiles). `CONFIG` no define cuál es la ventana de horario hábil, así que ese campo no se usa todavía. Cuando haga falta medir SLA por paso habrá que preguntar el horario.

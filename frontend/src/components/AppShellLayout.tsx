@@ -19,6 +19,7 @@ import {
   IconChartBar,
   IconCoin,
   IconHome2,
+  IconInbox,
   IconKey,
   IconLogout,
   IconMoon,
@@ -63,6 +64,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
             <Text size="xs" fw={700} c="dimmed" px="xs">
               OPERACIONES
             </Text>
+            <NavLink
+              component={Link}
+              to="/bandeja"
+              label="Qué me toca hoy"
+              leftSection={<IconInbox size={18} />}
+              active={location.pathname === '/bandeja'}
+              variant="filled"
+            />
             <NavLink
               component={Link}
               to="/canjes"

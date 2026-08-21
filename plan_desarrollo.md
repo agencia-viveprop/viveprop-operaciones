@@ -47,7 +47,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
-| 20 | 20 | B6 · Semáforo y bandeja diaria | "Qué me toca hoy" sobre los 297 canjes |
+| 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
 | 21 | 21 | B7 · Migrar el seguimiento histórico | 69 filas trabajadas + 65 motivos |
 | 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
 
@@ -251,9 +251,15 @@ Verificado de punta a punta contra `dev`: registrar un movimiento en un canje re
 
 ### 20 · B6 — Semáforo y bandeja diaria
 
-Semáforo por SLA usando `tipos_movimiento.sla_horas` con los umbrales 48h/24h de `CONFIG`, y bandeja "qué me toca hoy".
+✅ **Listo** **el 2026-08-21.** Pantalla `/bandeja`, "Qué me toca hoy", primera en el menú de Operaciones.
 
-- **Listo cuando:** un canje sin gestión por más de 48h aparece en rojo en la bandeja.
+- **Cuatro niveles**, no tres: `sin gestión`, `crítico`, `advertencia`, `al día`. Ver `D-029`: los 194 canjes abiertos nunca se tocaron, y meterlos en rojo dejaría la bandeja con 194 filas rojas y el color sin significado.
+- **Los umbrales son los globales de `CONFIG`** —48 y 24 horas— y no el `sla_horas` por tipo, que mide otra cosa.
+- Entran a la bandeja los canjes con `estado = ACTIVO` **y** etapa distinta de `CERRADO`: son 194 de los 225 activos.
+- **Orden de atención**: primero lo que nunca se tocó, después lo más abandonado, y a igualdad de abandono el más antiguo.
+- Cada nivel se muestra con su palabra, nunca con el color solo — `theme.ts` ya advierte que el coral de acento y el rojo crítico se parecen.
+- Hacer clic en una fila abre el seguimiento del canje, que ya existía. Registrar un movimiento saca el canje de "sin gestión" y reinicia el reloj.
+- 22 tests.
 
 ### 21 · B7 — Migrar el seguimiento histórico
 

@@ -77,3 +77,36 @@ export function importarCanjes(archivo: File): Promise<ImportarResumen> {
     body: formData,
   }).then(parseOrThrow)
 }
+
+// -------------------------------------------------------------- bandeja diaria
+
+/**
+ * `sin_gestion` es un nivel aparte y no "crítico": nunca tocado y abandonado
+ * tres días son problemas distintos. Ver el servicio del sprint 20.
+ */
+export type NivelSemaforo = 'sin_gestion' | 'critico' | 'advertencia' | 'al_dia'
+
+export type FilaBandeja = {
+  canje_id: number
+  fecha_solicitud: string
+  etapa: CanjeEtapa
+  corredor_solicitante_nombre: string | null
+  corredor_propietario_nombre: string | null
+  comuna: string | null
+  direccion: string | null
+  nivel: NivelSemaforo
+  horas_sin_gestion: number | null
+  ultimo_movimiento: string | null
+  ultimo_movimiento_nombre: string | null
+}
+
+export type Bandeja = {
+  resumen: { sin_gestion: number; critico: number; advertencia: number; al_dia: number }
+  filas: FilaBandeja[]
+  umbral_critico_horas: number
+  umbral_advertencia_horas: number
+}
+
+export function obtenerBandeja(): Promise<Bandeja> {
+  return fetch('/api/canjes/bandeja', { credentials: 'include' }).then(parseOrThrow)
+}

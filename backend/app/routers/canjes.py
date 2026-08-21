@@ -10,6 +10,7 @@ from app.db import get_db
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
+from app.services.bandeja_canjes import Bandeja, obtener_bandeja
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import MovimientoError, crear_movimiento_canje
 from app.services.reportes_canjes import ResumenCanjes, obtener_resumen_canjes
@@ -87,6 +88,14 @@ class CanjeUpdate(BaseModel):
     comision_dbrokers: float | None = None
     comision_dbrokers_moneda: MonedaTipo | None = None
     notas: str | None = None
+
+
+# Va antes de "/{canje_id}": FastAPI resuelve por orden de registro, y si esta
+# ruta quedara despues, "bandeja" se intentaria parsear como un id.
+@router.get("/bandeja", response_model=Bandeja)
+def bandeja(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    """Que canje hay que tocar hoy, ordenado por urgencia (sprint 20)."""
+    return obtener_bandeja(db)
 
 
 @router.get("/reportes/resumen", response_model=ResumenCanjes)
