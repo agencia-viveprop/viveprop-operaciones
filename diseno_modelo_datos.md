@@ -127,6 +127,13 @@ En `negocio_hitos`:
 | `valor_clp_manual` | `numeric(16,2) null` | **Cuando existe, manda** |
 | `motivo_valor_manual` | `text null` | Opcional, no obligatorio |
 
+Y para el cierre del hito, por `D-023`:
+
+| Campo | Tipo | Nota |
+|---|---|---|
+| `motivo_perdida_id` | `int null` FK a catálogo | Opcional |
+| `motivo_perdida_detalle` | `text null` | Texto libre, opcional |
+
 **Base de comisión** = `COALESCE(valor_clp_manual, valor_clp_calculado)`. El motor trabaja siempre sobre ella.
 
 Va en el **hito**, no en el negocio: VVP-3 PROMESA y VVP-3 ESCRITURA tienen bases distintas, 241,7M y 242,2M.

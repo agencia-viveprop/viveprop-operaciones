@@ -34,6 +34,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-020](#d-020) | 2026-08-21 | Dos tablas, `negocios` + `negocio_hitos`, en vez de autorreferencia | 6 |
 | [D-021](#d-021) | 2026-08-21 | Catálogos: tabla genérica, `etapas` aparte, `modelo_negocio` como enum | 4 |
 | [D-022](#d-022) | 2026-08-21 | El `% Broker` se aplica sobre la base en los tres modelos, arriendo incluido | 7 |
+| [D-023](#d-023) | 2026-08-21 | `motivo_perdida` es opcional, con catálogo más texto libre | 6, 10 |
 
 ---
 
@@ -369,3 +370,19 @@ Comision Broker = base x pct_broker      en los tres modelos
 **Motivo.** Es la fórmula documentada en `REGLAS CALCULO` y la que ya se verificó en venta. Que sea uniforme en los tres modelos elimina la última rama condicional del motor de comisiones.
 
 **Consecuencia.** El sprint 7 **no tiene decisiones pendientes**. No hace falta dejar un test marcado como se había planeado: la fórmula es una sola.
+
+---
+
+## D-023 · `motivo_perdida` es opcional, con catálogo más texto libre
+
+**Contexto.** Los 10 negocios perdidos están todos en etapa E2 y todos con Assetplan, sumando 4,75M de comisión potencial, y la columna `Motivo_Perdida` del Excel está **100% vacía**. Se propuso pedirle los motivos a Felipe para poder analizar el patrón.
+
+**Decisión.** Felipe resolvió el 2026-08-21 que **el motivo no es obligatorio**, pero que debe existir la opción de registrarlo. No se van a completar los 10 históricos.
+
+Se implementa como **catálogo más texto libre**: un `motivo_perdida_id` opcional apuntando al catálogo de motivos, y un `motivo_perdida_detalle` de texto libre. El catálogo arranca vacío y se puebla con lo que efectivamente se escriba.
+
+**Motivo del diseño.** Que sea catálogo y no solo texto hace que los motivos sean comparables entre negocios cuando alguien los llene. Con texto libre puro, diez frases distintas no se pueden agrupar y el campo no sirve para informar, solo para leer una ficha.
+
+**Consecuencia aceptada.** Los 10 negocios perdidos del histórico quedan sin motivo, así que **el análisis de por qué mueren los negocios en E2 no tiene base retroactiva**. Los 4,75M de comisión potencial perdida se van a poder contar pero no explicar. De aquí en adelante sí, en la medida en que el campo se use.
+
+Cuatro de esas unidades se volvieron a trabajar después — `Mario Kreutzberger 1520 u.316-A` se intentó tres veces y cerró a la tercera — y sin el motivo de la primera caída no se puede saber si el reintento tenía fundamento o fue suerte.

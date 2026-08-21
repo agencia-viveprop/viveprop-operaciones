@@ -140,7 +140,7 @@ Listado con filtros (estado, modelo, alianza, etapa) + ficha con sus hitos + for
 Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no existe como fila en el Excel.
 
 - **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
-- **Pendiente de consultar:** los 10 motivos de pérdida, que están vacíos. Eso es todo — la tasa de rebate y el caso de VVP-16 quedaron resueltos en `D-018`.
+- **Sin pendientes de consultar.** Los 10 motivos de pérdida quedan vacíos por decisión (`D-023`): el campo es opcional y no se completan los históricos.
 
 **Base de comisión, verificado sobre las 19 filas (ver D-017).** 17 siguen la regla —comisión sobre `valor × UF`— y **2 no**. Al cargar hay que decidir qué se hace con esas dos:
 
