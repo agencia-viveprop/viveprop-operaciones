@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 12 |
+| Listos | 13 |
 | En curso | 0 |
-| Pendientes | 10 |
+| Pendientes | 9 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Doce sprints listos, camino crítico cerrado y **serie C completa**. Lo que queda son bloques independientes sin orden forzoso: carga masiva (14–15), reportería avanzada (16–18), gestión de canjes (19–21) y contraseñas (22). Ya no hay fechas límite pendientes.
+**Sprint actual:** ninguno. Trece sprints listos. Lo que queda: gestión de canjes (20–21), carga masiva (14–15), reportería avanzada (16–18) y contraseñas (22). Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 12 | 22 | 54,5% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 21 | 31 | 68% |
+| Plan completo | 13 | 22 | 59,1% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 22 | 31 | 71% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -39,7 +39,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 2 | 5 | 40% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
-| **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
+| **B** · Gestión de canjes | 1 | 3 | 33% | 19–21 |
 
 **Los dos hitos visibles están alcanzados** y el camino crítico cerrado, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
@@ -80,7 +80,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 16 | F3 · Reporte semanal | Pendiente | — | — | |
 | 17 | F4 · Reporte mensual comparativo | Pendiente | — | — | |
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
-| 19 | B5 · Registrar movimientos en canjes | Pendiente | — | — | |
+| 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
 | 20 | B6 · Semáforo y bandeja diaria | Pendiente | — | — | |
 | 21 | B7 · Migrar el seguimiento histórico | Pendiente | — | — | |
 | 22 | G1 · Recuperación de contraseña | Pendiente | — | — | Disparador: antes de crear la tercera cuenta de usuario. |
@@ -115,6 +115,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 19 (B5) — Listo, y ya lo estaba
+
+**Al ir a construirlo se verificó que ya funcionaba desde el sprint B3.** No se escribió código.
+
+Existen y funcionan: el servicio `crear_movimiento_canje`, los endpoints `GET` y `POST /api/canjes/{id}/movimientos`, los 14 tipos sembrados en `tipos_movimiento`, y el `SeguimientoModal` conectado a la página de Canjes con su línea de tiempo y su formulario.
+
+Verificado de punta a punta contra `dev`: se registró un movimiento en el canje #349, avanzó de `EN_REVISION` a `PROCESO_DE_ACUERDO`, quedó en el historial con autor y fecha, y marcó `gestionado_en_app` para que la importación de Dataprop no lo sobreescriba. Después se revirtió.
+
+**El diagnóstico que traía el plan estaba equivocado.** Se venía diciendo desde la auditoría inicial que "la infraestructura está construida y sin uso, hay que activarla". La segunda mitad es falsa: no hay nada que activar. Que la tabla esté en cero con 297 canjes cargados no es falta de código.
+
+Lo que falta para que se use son los otros dos sprints del bloque: **sin bandeja diaria no hay razón para entrar a registrar un movimiento**, y sin el histórico migrado el Excel sigue siendo la referencia. Esos sí tienen trabajo.
 
 ### 2026-08-21 · Sprint 5 (C4) — Listo · serie C completa
 

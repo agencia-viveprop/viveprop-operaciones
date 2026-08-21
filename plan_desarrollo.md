@@ -46,7 +46,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 16 | 16 | F3 · Reporte semanal | Qué se cerró, avanzó, se cayó, está estancado |
 | 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
-| 19 | 19 | B5 · Registrar movimientos en canjes | Se activa la tabla que hoy está en cero |
+| 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
 | 20 | 20 | B6 · Semáforo y bandeja diaria | "Qué me toca hoy" sobre los 297 canjes |
 | 21 | 21 | B7 · Migrar el seguimiento histórico | 69 filas trabajadas + 65 motivos |
 | 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
@@ -243,9 +243,11 @@ Presentación ejecutiva, exportable.
 
 ### 19 · B5 — Registrar movimientos en canjes
 
-Activar en la ficha del canje el registro de movimientos. La tabla y los 14 tipos ya existen en Neon y están **en cero**.
+✅ **Listo** **el 2026-08-21, sin escribir código.** Al ir a construirlo se verificó que ya funcionaba desde el sprint B3: existen el servicio `crear_movimiento_canje`, los endpoints `GET`/`POST /api/canjes/{id}/movimientos`, los 14 tipos sembrados y el modal de seguimiento conectado a la página de Canjes.
 
-- **Listo cuando:** registrar un movimiento avanza la etapa del canje y queda en su historial.
+Verificado de punta a punta contra `dev`: registrar un movimiento en un canje real lo avanzó de `EN_REVISION` a `PROCESO_DE_ACUERDO`, quedó en el historial con autor y fecha, y marcó `gestionado_en_app` para que la importación de Dataprop no lo sobreescriba.
+
+**El diagnóstico del plan estaba mal.** Que la tabla esté en cero no era falta de código: es que nadie lo ha usado todavía. Lo que falta para que se use son los sprints 20 y 21 — sin bandeja diaria no hay razón para entrar a registrar, y sin el histórico migrado el Excel sigue siendo la referencia.
 
 ### 20 · B6 — Semáforo y bandeja diaria
 
