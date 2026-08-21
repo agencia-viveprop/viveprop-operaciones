@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1 y 3 listos; D0 aprobado)
+**Última actualización:** 2026-08-21 (sprints 1, 3 y 4 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 2 |
+| Listos | 3 |
 | En curso | 0 |
-| Pendientes | 20 |
+| Pendientes | 19 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1 y el 3. **No queda ningún bloqueo en el plan**: `D0` está aprobado, el modelo y el motor no tienen decisiones pendientes, y el servicio de Render está sano. Todos los sprints esperan solo autorización.
+**Sprint actual:** ninguno. Listos el 1, el 3 y el 4. Sin bloqueos ni decisiones pendientes. El siguiente en el orden aprobado es el **6 (D1 · Esquema de negocios)**, con especificación cerrada en `D-020`.
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 2 | 12 | **16,7%** |
-| Plan completo | 2 | 22 | 9,1% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 11 | 31 | 35% |
+| **Camino crítico** (1, 3–13) | 3 | 12 | **25,0%** |
+| Plan completo | 3 | 22 | 13,6% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 12 | 31 | 39% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
-| **C** · Cimientos | 2 | 4 | 50% | 1, 3, 4, 5 |
+| **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
 | **D** · Negocios | 0 | 6 | 0% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) y
-**11** hasta su dashboard (13). Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **4 sprints** hasta la pantalla de Negocios y
+**7** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -66,7 +66,7 @@ Distancia a los hitos visibles: **7 sprints** hasta la pantalla de Negocios (9) 
 | 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
 | 2 | G2 · Despliegue en Render | Pendiente | — | — | **Desbloqueado.** El servicio está sano; el 503 era transitorio. |
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
-| 4 | C3 · Catálogos | Pendiente | — | — | Especificación aprobada en `D-021`. Listo para autorizar. |
+| 4 | C3 · Catálogos | **Listo** | 2026-08-21 | — | 10 tests. 27 filas sembradas, endpoint con 9 grupos. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
 | 6 | D1 · Esquema de negocios | Pendiente | — | — | Especificación aprobada en `D-020`. Listo para autorizar. |
 | 7 | D2 · Motor de comisiones | Pendiente | — | — | **Sin decisiones pendientes.** `D-018` y `D-022`. |
@@ -116,6 +116,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 4 (C3) — Listo
+
+**Modelo.** `catalogos(id, tipo, codigo, nombre, orden, activo, metadatos)` con `UNIQUE (tipo, codigo)` e índice en `tipo`, más `etapas(codigo PK, nombre, responsable, orden, activo)`. Migración `c8f2b41d7e05`, aplicada a `dev` y **verificada reversible**. El `metadatos` es `JSONB` en Postgres con variante `JSON` en SQLite, para poder crear la tabla en la base de test sin renunciar al tipo nativo.
+
+**Enums en código, no en catálogo** (`D-021`): `ModeloNegocio` (3) y `EstadoNegocio` (4). El tipo de Postgres se crea en el sprint 6, junto con la tabla que lo usa. Se agregó también `ResponsableEtapa`.
+
+**Seed desde `CONFIG`**, dentro de la migración siguiendo la convención de `b2dbf50bc5fc`: 8 alianzas —cada una con su modelo de negocio en `metadatos`—, 11 estados de facturación, 2 tipos de propiedad, 2 de operación, 2 de estado de propiedad, y las 7 etapas con su responsable. `motivo_perdida` queda vacío por `D-023`.
+
+**Endpoint.** `GET /api/catalogos` devuelve los nueve grupos en una llamada, para que ningún formulario tenga que orquestar cinco peticiones. Más `GET /api/catalogos/{tipo}`, que ante un tipo desconocido responde 404 diciendo cuáles son los válidos.
+
+**Tests: 10 nuevos, total 29 pasando.** Se agregó infraestructura reutilizable: `httpx` en requirements y un fixture `cliente` que da un `TestClient` con la base en memoria y la autenticación sobreescrita. Eso deja los endpoints testeables de aquí en adelante. Un test verifica que sin ese override el endpoint responde 401.
+
+**Detalle técnico que costó encontrar:** la base SQLite en memoria necesita `StaticPool` y `check_same_thread=False`, porque `TestClient` corre la app en otro hilo y con el pool por defecto abriría una conexión nueva sin las tablas.
+
+**Corrección:** los estados de facturación son **11**, no 12 como se había dicho varias veces.
 
 ### 2026-08-21 · D-023 — cero pendientes del usuario
 

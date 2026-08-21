@@ -26,32 +26,39 @@ Reemplaza a `Archivos/GESTION_OPERACIONES_VIVEPROP.xlsx` como herramienta de tra
 
 Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A4` cimientos, `B1–B4` canjes). **Lo que manda es el número.**
 
-| # | Sprint | Qué deja funcionando |
-|---|---|---|
-| 1 | C1 · Ambiente dev y red de seguridad | Rama `dev` en Neon, `pytest`, repo limpio. **Va primero sin excepción.** |
-| 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure` por defecto. |
-| 3 | C2 · Tabla UF y conversión | Conversión UF↔CLP con fecha de referencia. |
-| 4 | C3 · Catálogos | Alianzas, modelos, etapas y estados de facturación desde la API. |
-| 5 | C4 · Plantilla y carga manual de UF | Carga mensual autónoma. Pilotea el patrón plantilla + importador. |
-| 6 | D1 · Esquema de negocios | `propiedades`, `negocios` con padre/hijos, `negocio_obligaciones`. |
-| 7 | D2 · Motor de comisiones | Los 22 casos de prueba pasando. |
-| 8 | D3 · CRUD backend | Alta y edición por API, con comisión calculada al guardar. |
-| 9 | D4 · Pantalla Negocios | **Primer hito visible.** |
-| 10 | D5 · Carga de los 19 históricos | Datos reales adentro, cuadrando al peso con el Excel. |
-| 11 | D6 · Pipeline de negocios | Avance por etapas E1–E7 con historial. |
-| 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido separados y normalizados a CLP. |
-| 13 | F2 · Dashboard de negocios | **Segundo hito visible.** |
-| 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable. |
-| 15 | E2 · Importador de negocios | Carga masiva validada fila por fila. |
-| 16 | F3 · Reporte semanal | Qué se cerró, avanzó, se cayó, está estancado. |
-| 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior. |
-| 18 | F5 · Vista directorio | Presentación ejecutiva exportable. |
-| 19 | B5 · Registrar movimientos en canjes | Se activa la tabla que hoy está en cero. |
-| 20 | B6 · Semáforo y bandeja diaria | "Qué me toca hoy" sobre los 297 canjes. |
-| 21 | B7 · Migrar el seguimiento histórico | 69 filas trabajadas + 65 motivos de cancelación. |
-| 22 | G1 · Recuperación de contraseña | Reset con cambio forzado en el primer ingreso. |
+| Orden | # | Sprint | Qué deja funcionando |
+|---|---|---|---|
+| 1 | 1 | C1 · Ambiente dev y red de seguridad | ✅ **Listo** |
+| 2 | 4 | C3 · Catálogos | ✅ **Listo** |
+| 3 | 6 | D1 · Esquema de negocios | `propiedades`, `negocios`, `negocio_hitos`, `negocio_obligaciones` |
+| 4 | 7 | D2 · Motor de comisiones | Los 22 casos de prueba pasando |
+| 5 | 8 | D3 · CRUD backend | Alta y edición por API, comisión calculada al guardar |
+| 6 | 10 | D5 · Carga de los 19 históricos | Datos reales adentro, cuadrando al peso |
+| 7 | 9 | D4 · Pantalla Negocios | **Primer hito visible**, con datos reales |
+| 8 | 11 | D6 · Pipeline de negocios | Avance por etapas E1–E7 con historial |
+| 9 | 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido, en CLP |
+| 10 | 13 | F2 · Dashboard de negocios | **Segundo hito visible** |
+| 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
+| 12 | 5 | C4 · Plantilla y carga manual de UF | Carga mensual autónoma. **Ver fecha límite abajo** |
+| 13 | 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure`, `<title>` |
+| 14 | 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable |
+| 15 | 15 | E2 · Importador de negocios | Carga masiva validada fila por fila |
+| 16 | 16 | F3 · Reporte semanal | Qué se cerró, avanzó, se cayó, está estancado |
+| 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
+| 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
+| 19 | 19 | B5 · Registrar movimientos en canjes | Se activa la tabla que hoy está en cero |
+| 20 | 20 | B6 · Semáforo y bandeja diaria | "Qué me toca hoy" sobre los 297 canjes |
+| 21 | 21 | B7 · Migrar el seguimiento histórico | 69 filas trabajadas + 65 motivos |
+| 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
 
-**Camino crítico:** 1 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13. Doce sprints hasta tener negocios registrables, gestionables e informables.
+**Dos cambios de orden respecto de v4**, aprobados el 2026-08-21:
+
+1. **El sprint 10 va antes del 9**: los 19 históricos se cargan antes de construir la pantalla. Una pantalla hecha contra una tabla vacía se ve perfecta y se rompe con datos reales; acá los datos traen VVP-3 con sus dos hitos anidados, direcciones largas, los dos arriendos con su lógica 50/50 y VVP-2 con valor manual. El sprint 10 se verifica por SQL, así que no pierde nada por ir antes.
+2. **Los sprints 5 y 2 se corren hacia atrás**: ninguno desbloquea la cadena de negocios, y el 2 se encogió cuando Render resultó estar sano.
+
+**Fecha límite del sprint 5.** La serie de UF cargada termina el **2026-09-09**. Si se llega a principios de septiembre sin ese sprint, las conversiones a fecha del día dejan de funcionar. No es un bloqueo: `app/scripts/cargar_uf.py` ya existe y con la planilla actualizada se corre en un comando. Pero si el 5 de septiembre el sprint no está, hay que cargar la UF a mano.
+
+**Camino crítico:** los diez primeros de la tabla. Es la cadena donde cada sprint usa el diseño del anterior, y hacerlos seguidos evita reconstruir el contexto cada vez.
 
 ### Bloques movibles
 
