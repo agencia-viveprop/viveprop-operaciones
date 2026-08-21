@@ -44,6 +44,9 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-030](#d-030) | 2026-08-21 | El seguimiento migrado conserva la estructura y admite la fecha aproximada | 21 |
 | [D-031](#d-031) | 2026-08-21 | En el reporte semanal, "avanzó" es toda actividad registrada | 16 |
 | [D-032](#d-032) | 2026-08-21 | El umbral de estancado es un parámetro, no una constante de negocio | 16 |
+| [D-033](#d-033) | 2026-08-21 | La cookie de sesión es `secure` por defecto, no por configuración | 2 |
+| [D-034](#d-034) | 2026-08-21 | Un `/api/...` sin router es 404, no la SPA | 2 |
+| [D-035](#d-035) | 2026-08-21 | El health check de Render no toca la base | 2 |
 
 ---
 
@@ -575,3 +578,47 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Por qué no reusa los umbrales de la bandeja.** Los 48/24 horas de `CONFIG` miden otra cosa: la bandeja diaria pregunta "qué me toca hoy" sobre canjes abiertos. El reporte semanal pregunta "qué se quedó atrás esta semana" sobre los dos dominios. Compartir el número porque ambos midan tiempo sin gestión sería confundir dos preguntas distintas.
 
 **El umbral es estricto.** A los 14 días exactos todavía no está estancado; a los 15 sí. Sin eso, el límite dependería de a qué hora se abre el reporte.
+
+---
+
+## D-033 · La cookie de sesión es `secure` por defecto, no por configuración
+
+**Contexto.** `set_session_cookie` marcaba `secure=settings.environment == "production"`. La cookie de sesión es la credencial completa: quien la tenga es el usuario. Sin `secure`, el navegador la manda también sobre HTTP.
+
+**El modo de falla es silencioso.** Si `ENVIRONMENT` faltaba en Render, venía vacía, o decía `prod` en vez de `production`, la cookie salía **sin** `secure` y la app seguía funcionando exactamente igual. Nada en la aplicación falla, ningún log lo dice, ninguna pantalla se ve distinta. Solo la sesión viaja expuesta.
+
+**Decisión.** Se invierte: `secure` está activo salvo que el ambiente se declare local, y solo tres valores exactos cuentan como local — `development`, `local`, `test`.
+
+**Motivo.** La pregunta correcta no es "¿estamos en producción?" sino "¿tenemos permiso para bajar la defensa?". Con la lógica anterior, un valor desconocido caía del lado insegura; ahora cae del lado seguro. Y cuando la configuración local se equivoca, el navegador no guarda una cookie `secure` sobre `http://localhost` y el login deja de funcionar **de inmediato y en la máquina del que se equivocó** — la dirección correcta para que un error se note.
+
+**Descartado:** una variable propia `COOKIE_SECURE`. Sería otra cosa que hay que acordarse de configurar, y el problema que se está arreglando es justamente que algo dependía de acordarse.
+
+---
+
+## D-034 · Un `/api/...` sin router es 404, no la SPA
+
+**Contexto.** FastAPI sirve la SPA con un catch-all: cualquier ruta que no matcheó ningún router devuelve el `index.html`, porque el ruteo de la SPA es del lado del navegador. Pero el catch-all no distinguía `/negocios` —una pantalla— de `/api/negocios-mal-escrito` —un endpoint que no existe.
+
+**Verificado en producción el 2026-08-21:** `/api/esto-no-existe` respondía `200 text/html`.
+
+**Decisión.** Todo lo que empiece con el prefijo `api/` y no haya matcheado un router es un 404. El resto sigue cayendo en el `index.html`.
+
+**Motivo.** Un 200 con HTML donde el cliente espera JSON hace que el error se manifieste lejos de su causa: el `fetch` no falla, falla el `.json()`, o peor, algo más adelante recibe `undefined`. **Costó una verificación mal leída en esta misma sesión**: se consultó `/api/health/db` contra producción, volvió 200, y por un momento se interpretó como que el endpoint nuevo ya estaba desplegado. Era el `index.html`.
+
+**Ojo con el prefijo.** La comparación es contra `api` exacto o `api/`, no `startswith("api")`: una futura ruta `/apiario` es de la SPA. Hay un test que lo fija.
+
+**Aparte, y en la misma función:** el servido de archivos armaba la ruta como `STATIC_DIR / full_path` sin revisar el resultado. Un `full_path` que sube de directorio apunta fuera de `static/`, y abajo están el código y el `.env`. Ahora se resuelve y se comprueba que quede dentro. **Producción no estaba expuesta** —`/%2e%2e/.env` devuelve el `index.html`, porque uvicorn o el proxy de Render normalizan la forma codificada antes del handler— pero por `TestClient` el `../` llegaba entero y la lógica anterior servía el archivo. Se arregló igual: que un proxy normalice no es una defensa de la aplicación, y puede cambiar sin aviso.
+
+---
+
+## D-035 · El health check de Render no toca la base
+
+**Contexto.** `healthCheckPath` estaba sin definir, así que Render usaba la raíz: devuelve el `index.html`, un 200 que no prueba que la aplicación arrancó. Había que apuntarlo a `/api/health`, y ahí surgió la pregunta de si ese endpoint debería confirmar que la base responde.
+
+**Decisión.** Dos endpoints separados. `/api/health` dice que el proceso está vivo y no consulta nada externo — es el que mira Render. `/api/health/db` hace un `SELECT 1` y devuelve 503 si falla — es para diagnosticar, no para el monitoreo automático.
+
+**Motivo.** Neon suspende la rama cuando no hay tráfico, y despertarla toma unos segundos. Si el chequeo de Render dependiera de eso, un despertar lento se leería como servicio caído y Render reiniciaría un proceso que no tiene nada roto — un reinicio que además vuelve a pagar el arranque. Son dos preguntas distintas: "¿está corriendo?" es de monitoreo, "¿puede trabajar?" es de diagnóstico.
+
+**El de diagnóstico existe por un caso concreto:** el 503 del 2026-08-20, donde no había forma rápida de distinguir "se cayó el servicio" de "se cayó la base". Con `/api/health/db` la respuesta es una consulta.
+
+**No devuelve el mensaje de la excepción**, solo su tipo. El detalle de una falla de conexión trae el host y a veces el usuario de la base, y este endpoint no pide sesión.

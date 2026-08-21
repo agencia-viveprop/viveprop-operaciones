@@ -37,7 +37,9 @@ def set_session_cookie(response: Response, sesion_id: uuid.UUID) -> None:
         key=COOKIE_NAME,
         value=str(sesion_id),
         httponly=True,
-        secure=settings.environment == "production",
+        # Seguro por defecto: solo un ambiente local declarado la deja salir sin
+        # `secure`. Ver `Settings.es_local` para por qué es al revés que antes.
+        secure=not settings.es_local,
         samesite="lax",
         max_age=int(ABSOLUTE_MAX.total_seconds()),
         path="/",

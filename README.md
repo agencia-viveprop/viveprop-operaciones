@@ -54,8 +54,25 @@ npm run dev
 
 El frontend en dev apunta a `/api` vía proxy de Vite hacia `http://localhost:8000`.
 
+**Ojo con el chequeo de tipos:** `npx tsc --noEmit` pasa en verde aunque haya
+errores. El `tsconfig.json` de la raíz es un archivo de referencias y no incluye
+ningún fuente, así que no revisa nada. El chequeo real es `npm run build`, que
+corre `tsc -b`. Un archivo roto ya pasó ese falso verde una vez.
+
 ## Despliegue
 
 Un solo Web Service en Render: build del frontend se copia a `backend/static/`, y FastAPI sirve tanto `/api/*` como el resto de rutas como SPA. Ver `render.yaml`.
 
-Variables de entorno requeridas en Render: `DATABASE_URL` (Neon), `SESSION_SECRET`, `ALLOWED_ORIGINS`.
+Variables de entorno en Render:
+
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | La rama `production` de Neon. |
+| `ALLOWED_ORIGINS` | Orígenes que acepta el CORS, separados por coma. **Al agregar un dominio propio hay que sumarlo acá** o el navegador rechaza las llamadas. |
+| `ENVIRONMENT` | Decide si la cookie de sesión sale con `secure`. Solo `development`, `local` y `test` la desactivan; **cualquier otro valor, o su ausencia, deja la cookie segura** (`D-033`). No hace falta configurarla para estar seguro. |
+| `SESSION_SECRET` | Declarada pero **el código nunca la lee**. Pendiente de limpiar. |
+
+**Health checks.** Son dos y miden cosas distintas (`D-035`):
+
+- `GET /api/health` — el proceso está vivo. No toca la base a propósito: Neon suspende la rama sin tráfico y un despertar lento se leería como servicio caído. Es el que mira Render (`healthCheckPath`).
+- `GET /api/health/db` — la base responde. `SELECT 1`, con 503 si falla. Para diagnosticar cuando la app carga pero ninguna pantalla trae datos.

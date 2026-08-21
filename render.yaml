@@ -8,6 +8,10 @@ services:
       mkdir -p ../backend/static && cp -r dist/* ../backend/static/ &&
       cd ../backend && pip install -r requirements.txt && alembic upgrade head
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # Render pega acá para saber si el proceso está sano. Sin esto usa la raíz,
+    # que devuelve el index.html de la SPA: un 200 que no prueba que la app
+    # arrancó. A propósito no consulta la base -- ver app/routers/health.py.
+    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
         sync: false

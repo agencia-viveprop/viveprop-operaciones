@@ -40,7 +40,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 10 | 13 | F2 · Dashboard de negocios | ✅ **Listo** **segundo hito visible** |
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
 | 12 | 5 | C4 · Plantilla y carga manual de UF | ✅ **Listo** |
-| 13 | 2 | G2 · Despliegue en Render | Dominio propio, health check, cookie `secure`, `<title>` |
+| 13 | 2 | G2 · Despliegue en Render | 🔸 **En curso** falta solo el dominio (acción tuya) |
 | 14 | 14 | E1 · Plantilla de negocios | Formulario de carga masiva descargable |
 | 15 | 15 | E2 · Importador de negocios | Carga masiva validada fila por fila |
 | 16 | 16 | F3 · Reporte semanal | ✅ **Listo** los dos dominios |
@@ -80,13 +80,21 @@ Rama `dev` en Neon separada de `production` — hoy el `.env` local escribe en l
 - **Requiere del usuario:** crear la rama en la consola de Neon y entregar el connection string, o una API key. *Única dependencia externa de todo el plan.*
 - **Decisión al crearla:** la rama de Neon es copy-on-write, así que heredaría los 297 canjes reales, con nombres y correos de corredores de verdad. Cómodo para desarrollar y para probar contra casos reales, pero implica datos personales en un ambiente de desarrollo. La alternativa es una rama solo con esquema y datos sintéticos.
 
-### 2 · G2 — Despliegue en Render
+### 2 · G2 — Despliegue en Render 🔸 En curso
 
-Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se copia a `backend/static/` y FastAPI sirve `/api/*` y la SPA. **El servicio está sano** — verificado el 2026-08-21: 200 en la raíz y en `/api/health`, 401 en `/api/canjes` sin sesión, ~200 ms de respuesta. El 503 que se reportó el 2026-08-20 era transitorio, probablemente el servicio despertando.
+Se mantiene **un solo servicio**, sin dividir a Vercel: el build del front se copia a `backend/static/` y FastAPI sirve `/api/*` y la SPA.
 
-Queda entonces solo lo que se quería agregar: dominio propio `operaciones.viveprop.com`, health check apuntado a `/api/health` en la configuración de Render, dar vuelta la lógica de la cookie `secure` para que sea el valor por defecto, y **cambiar el `<title>` del HTML, que dice `frontend`** — el default de Vite que nunca se tocó.
+**Hecho el 2026-08-21:**
 
-- **Listo cuando:** la app responde en el dominio propio y la cookie sigue siendo `secure` aunque falte la variable de entorno.
+- **La cookie de sesión es `secure` por defecto** (`D-033`). Antes se activaba solo si `ENVIRONMENT == "production"`, así que si esa variable faltaba o tenía un typo la cookie salía sin `secure` sobre HTTPS **y nada fallaba**. Ahora solo `development`, `local` y `test` la desactivan; cualquier otro valor cae del lado seguro.
+- **El `<title>` ya no dice `frontend`** — el default de Vite que nunca se tocó. Dice `ViveProp Operaciones`, el `lang` pasó de `en` a `es`, y se agregó `noindex` porque es una app interna que no tiene por qué estar en Google.
+- **`healthCheckPath` apuntado a `/api/health`** en `render.yaml`. Antes Render usaba la raíz, que devuelve el `index.html`: un 200 que no prueba que la app arrancó.
+- **`/api/health` y `/api/health/db` quedaron separados** (`D-035`). El de Render no toca la base a propósito; el otro sirve para diagnosticar, y es el que habría contestado la duda del 503 del 2026-08-20 en un segundo.
+- **Un `/api/...` inexistente ahora es 404 y no la SPA** (`D-034`). Estaba devolviendo 200 con el `index.html`, verificado en producción. De paso, el servido de archivos ya no arma la ruta con la URL sin revisarla.
+
+**Falta, y depende de ti:** el dominio propio `operaciones.viveprop.com`. Hay que agregarlo en Render (Settings → Custom Domains), crear el registro DNS que Render indique, y **después** actualizar `ALLOWED_ORIGINS` en `render.yaml` para que incluya el dominio nuevo. Sin ese último paso el CORS lo rechaza.
+
+- **Listo cuando:** la app responde en el dominio propio y la cookie sigue siendo `secure` aunque falte la variable de entorno. ✅ La segunda mitad está; falta la primera.
 
 ### 3 · C2 — Tabla UF y conversión
 

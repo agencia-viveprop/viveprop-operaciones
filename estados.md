@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (16 sprints listos; primer reporte de período, cubriendo los dos dominios)
+**Última actualización:** 2026-08-21 (16 listos + G2 en curso; el sprint de despliegue destapó tres defectos que ya estaban en producción)
 
 ---
 
@@ -13,11 +13,11 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 |---|---|
 | Sprints del plan | 22 |
 | Listos | 16 |
-| En curso | 0 |
-| Pendientes | 6 |
+| En curso | 1 |
+| Pendientes | 5 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Dieciséis sprints listos. Lo que queda: carga masiva (14–15), los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Dieciséis sprints listos. Lo que queda: carga masiva (14–15), los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -63,7 +63,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | # | Sprint | Estado | Fecha | Commit | Notas |
 |---|---|---|---|---|---|
 | 1 | C1 · Ambiente dev y red de seguridad | **Listo** | 2026-08-20 | — | 7 tests del importador pasando. `dev` operativa. Binarios fuera del repo. |
-| 2 | G2 · Despliegue en Render | Pendiente | — | — | **Desbloqueado.** El servicio está sano; el 503 era transitorio. |
+| 2 | G2 · Despliegue en Render | **En curso** | 2026-08-21 | — | Cookie segura por defecto, `<title>`, health check, 404 de API. Falta el dominio: depende de una acción del usuario. |
 | 3 | C2 · Tabla UF y conversión | **Listo** | 2026-08-20 | — | 1.409 filas en `dev`. 12 tests. Reproduce la columna AC al peso. |
 | 4 | C3 · Catálogos | **Listo** | 2026-08-21 | — | 10 tests. 27 filas sembradas, endpoint con 9 grupos. |
 | 5 | C4 · Plantilla y carga manual de UF | **Listo** | 2026-08-21 | — | Plantilla con fechas prellenadas, carga idempotente, aviso y alerta. 24 tests. |
@@ -115,6 +115,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 2 (G2) — En curso
+
+**El sprint chico de despliegue destapó tres cosas que ya estaban en producción.** Ninguna se buscaba; salieron de mirar el servido con atención.
+
+**1. La cookie de sesión podía salir sin `secure` y nadie se enteraba** (`D-033`). Estaba condicionada a `ENVIRONMENT == "production"`. Si esa variable faltaba en Render o venía con un typo, la cookie de sesión viajaba sin `secure` sobre HTTPS y **la app seguía funcionando idéntica** — el peor tipo de falla, la que no se manifiesta. Se dio vuelta: solo `development`, `local` y `test` la desactivan, y un typo ahora rompe el login **en local**, ruidoso y en el lugar correcto.
+
+**2. Un `/api/...` inexistente devolvía 200 con el HTML de la SPA** (`D-034`). Verificado en producción: `/api/esto-no-existe` respondía `200 text/html`. Un cliente que pega en un endpoint mal escrito recibe HTML donde espera JSON, y el error se manifiesta lejos de su causa. **Me engañó a mí mismo primero**: chequeé `/api/health/db` contra producción, vi un 200 y por un momento lo leí como que el endpoint nuevo ya estaba desplegado.
+
+**3. El servido de archivos armaba la ruta con la URL sin revisarla.** `STATIC_DIR / full_path` con un `full_path` que sube de directorio apunta fuera de `static/`, y ahí abajo están el código y el `.env`. **Producción no está expuesta** — se probó directo: `/%2e%2e/.env` y `/%2e%2e/app/config.py` devuelven el `index.html`, porque uvicorn o el proxy de Render normalizan la forma codificada antes de que llegue al handler. Pero por `TestClient`, que no pasa por ese parser, el `../` llegaba entero y la lógica anterior servía el archivo. Se arregló igual: depender de que un proxy normalice no es una defensa, y ese comportamiento puede cambiar sin aviso.
+
+**Lo que sí estaba en el plan:** el `<title>` dejó de decir `frontend` (el default de Vite), el `lang` pasó a `es`, se agregó `noindex`, y `healthCheckPath` quedó apuntado a `/api/health` en vez de la raíz. `/api/health` y `/api/health/db` se separaron (`D-035`): el que mira Render no toca la base a propósito, porque un despertar lento de Neon se leería como servicio caído.
+
+12 tests nuevos, 220 en total. **Falta el dominio propio**, que necesita que lo agregues en Render y crees el registro DNS; después hay que sumar el dominio a `ALLOWED_ORIGINS` o el CORS lo rechaza.
 
 ### 2026-08-21 · Sprint 16 (F3) — Listo
 
