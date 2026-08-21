@@ -31,7 +31,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 1 | 1 | C1 · Ambiente dev y red de seguridad | ✅ **Listo** |
 | 2 | 4 | C3 · Catálogos | ✅ **Listo** |
 | 3 | 6 | D1 · Esquema de negocios | ✅ **Listo** |
-| 4 | 7 | D2 · Motor de comisiones | Los 22 casos de prueba pasando |
+| 4 | 7 | D2 · Motor de comisiones | ✅ **Listo** |
 | 5 | 8 | D3 · CRUD backend | Alta y edición por API, comisión calculada al guardar |
 | 6 | 10 | D5 · Carga de los 19 históricos | Datos reales adentro, cuadrando al peso |
 | 7 | 9 | D4 · Pantalla Negocios | **Primer hito visible**, con datos reales |

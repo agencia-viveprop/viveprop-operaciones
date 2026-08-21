@@ -35,6 +35,9 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-021](#d-021) | 2026-08-21 | Catálogos: tabla genérica, `etapas` aparte, `modelo_negocio` como enum | 4 |
 | [D-022](#d-022) | 2026-08-21 | El `% Broker` se aplica sobre la base en los tres modelos, arriendo incluido | 7 |
 | [D-023](#d-023) | 2026-08-21 | `motivo_perdida` es opcional, con catálogo más texto libre | 6, 10 |
+| [D-024](#d-024) | 2026-08-21 | Las tasas se nombran por lado de la operación, no por destino | 6, 7 |
+| [D-025](#d-025) | 2026-08-21 | Dos correcciones a `REGLAS CALCULO`, verificadas en los datos | 7 |
+| [D-026](#d-026) | 2026-08-21 | VVP-2 está descuadrado en el origen | 10 |
 
 ---
 
@@ -386,3 +389,75 @@ Se implementa como **catálogo más texto libre**: un `motivo_perdida_id` opcion
 **Consecuencia aceptada.** Los 10 negocios perdidos del histórico quedan sin motivo, así que **el análisis de por qué mueren los negocios en E2 no tiene base retroactiva**. Los 4,75M de comisión potencial perdida se van a poder contar pero no explicar. De aquí en adelante sí, en la medida en que el campo se use.
 
 Cuatro de esas unidades se volvieron a trabajar después — `Mario Kreutzberger 1520 u.316-A` se intentó tres veces y cerró a la tercera — y sin el motivo de la primera caída no se puede saber si el reintento tenía fundamento o fue suerte.
+
+---
+
+## D-024 · Las tasas se nombran por lado de la operación, no por destino
+
+**Contexto.** `D-018` propuso renombrar la columna AD del Excel como `pct_comision_concentrador` y AE como `pct_comision_negocio`. Al implementar el esquema quedó claro que **esos nombres mienten en Mercado Primario**: ahí AD es lo que paga la inmobiliaria —no un concentrador— y AE vale cero, así que "comisión del negocio" sería cero.
+
+**Decisión.** Se nombran por lado de la operación, que es verdadero en los tres modelos:
+
+| Excel | Modelo |
+|---|---|
+| `% Comisión Vendedor` (AD) | `pct_lado_vendedor` |
+| `% Comisión Comprador` (AE) | `pct_lado_comprador` |
+
+El destino de cada uno depende del modelo, y eso vive documentado en `app/services/comisiones.py`, donde se puede explicar en prosa en vez de comprimirlo en un nombre de columna.
+
+**Motivo.** Un nombre que es correcto en dos modelos de tres y falso en el tercero es peor que un nombre neutro. Los nombres del Excel ya causaron cuatro lecturas equivocadas en esta sesión; la solución no era ponerles otro nombre igual de específico, sino uno que no dependa del modelo.
+
+La migración `d3a91f6c25b8` se editó en su lugar en vez de agregar una migración de renombre encima: no estaba pusheada y nada dependía de ella, así que un par "crear y renombrar" en el historial habría sido ruido.
+
+---
+
+## D-025 · Dos correcciones a `REGLAS CALCULO`, verificadas en los datos
+
+Ambas aparecieron al hacer pasar los 19 casos de regresión, **antes de escribir el motor**. Las dos se resolvieron a favor de los datos.
+
+### 1. El porcentaje del equipo se aplica después de sacar al tercero
+
+`REGLAS CALCULO` dice `③ Comisión Equipo = Comisión_VP_Bruta × Factor_Equipo_%`. Los datos dicen:
+
+```
+Comision Equipo = (VP Bruta - Comision Tercero) x pct_equipo
+Real VP         = VP Bruta - Tercero - Equipo + Rebate
+```
+
+Verificado en las 19 filas. Solo se nota en los dos hitos de VVP-3, que son los únicos con tercero, pero ahí son **7.252 pesos** de diferencia en la promesa.
+
+### 2. Cada modelo lee un lado, no se pueden sumar los dos
+
+La tentación era sumar `vendedor + comprador` asumiendo que el lado no usado viene en cero. **Es falso**: en las 13 filas de Concentradores, `% VP Vendedor` vale 0,008 y `% Comisión Comprador` vale 0,02 **sin participar del cálculo**. Sumar duplicaba la VP Bruta en 11 de los 19 casos.
+
+El reparto se resuelve con una rama explícita por modelo:
+
+| Modelo | Comisión Total | Broker | VP Bruta |
+|---|---|---|---|
+| Mercado Primario | lado vendedor | broker vendedor | VP vendedor |
+| Secundario Concentradores | lado comprador | broker comprador | VP comprador |
+| Secundario Agencia | suma de ambos | suma de ambos | suma de ambos |
+
+**Lección para lo que viene:** la planilla tiene celdas pobladas que su modelo no usa. No se puede inferir la fórmula de que un valor esté presente.
+
+---
+
+## D-026 · VVP-2 está descuadrado en el origen
+
+**Contexto.** VVP-2 es el único de los 19 negocios que ninguna fórmula consistente reproduce, y la razón no es el modelo sino la planilla.
+
+| | |
+|---|---:|
+| Comisión Total (AF) | 3.260.207 |
+| Comisión Broker (AO) | 2.623.339 |
+| Comisión VP Bruta (AQ) | 1.540.671 |
+| **Broker + VP Bruta** | **4.164.010** |
+| **Descuadre** | **903.803** |
+
+La Comisión Total se bajó a mano por el ajuste de costo de crédito que menciona la observación de la fila, pero **el reparto siguió calculado sobre la base original**. Broker y ViveProp juntos reclaman 903.803 más de lo que entró.
+
+**Decisión.** No se fuerza el motor para reproducirlo. El caso queda como `xfail` estricto en `tests/test_comisiones.py`, con el motivo escrito: si algún día se corrige y el test empieza a pasar, pytest avisa en vez de quedar silenciosamente verde. Y hay un test dedicado, `test_vvp2_esta_descuadrado_en_el_origen`, que deja constancia del monto exacto y de que el broker se calculó sobre la base original.
+
+**Pendiente para el sprint 10.** Al cargar hay que decidir quién absorbió los 903.803: si el corredor aliado tomó parte del ajuste y la planilla no se actualizó, o si ViveProp lo absorbió completo. De eso depende con qué números entra VVP-2 a la base.
+
+**Nota sobre `D-017`.** El caso confirma que el valor manual existe como necesidad —Felipe lo ratificó—, pero VVP-2 tal como está registrado no lo implementa de forma consistente: se overrideó el total sin rehacer el reparto. El diseño de `valor_clp_manual` sigue siendo el correcto; lo que no sirve es tomar VVP-2 como su ejemplo limpio.

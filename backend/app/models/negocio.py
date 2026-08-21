@@ -160,12 +160,18 @@ class NegocioHito(Base):
     valor_clp_manual: Mapped[Decimal | None] = mapped_column(MONTO, nullable=True)
     motivo_valor_manual: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # --- Tasas de comision (entrada). Nombres segun D-018, no los del Excel ---
-    # 'pct_comision_concentrador' es la columna AD, que el Excel llama
-    # "% Comision Vendedor" y NO es ingreso ViveProp: es lo que el concentrador
-    # le cobra al vendedor, y solo sirve para calcular el rebate.
-    pct_comision_concentrador: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
-    pct_comision_negocio: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
+    # --- Tasas de comision (entrada) ---
+    # Los dos primeros son "que porcentaje paga cada lado de la operacion", y
+    # su destino depende del modelo (ver app/services/comisiones.py):
+    #   Primario      -> el lado vendedor (la inmobiliaria) paga la comision.
+    #   Concentradores-> el lado comprador paga la comision; lo del lado
+    #                    vendedor lo cobra el concentrador y solo sirve para
+    #                    calcular el rebate del 12% que comparte con ViveProp.
+    #   Agencia       -> pagan los dos lados y la comision es la suma.
+    # Se evito nombrarlos por su destino porque cambia entre modelos: llamarle
+    # "pct_comision_concentrador" a la columna AD seria falso en Primario.
+    pct_lado_vendedor: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
+    pct_lado_comprador: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
     pct_rebate_concentrador: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
     pct_broker_vendedor: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)
     pct_broker_comprador: Mapped[Decimal | None] = mapped_column(PCT, nullable=True)

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4 y 6 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6 y 7 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 4 |
+| Listos | 5 |
 | En curso | 0 |
-| Pendientes | 18 |
+| Pendientes | 17 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4 y 6. Sin bloqueos ni decisiones pendientes. El siguiente en el orden aprobado es el **7 (D2 · Motor de comisiones)**, con la fórmula cerrada en `D-018` y `D-022`.
+**Sprint actual:** ninguno. Listos el 1, 3, 4, 6 y 7. Sin bloqueos. El siguiente en el orden aprobado es el **8 (D3 · CRUD backend)**.
 
 ---
 
@@ -28,21 +28,21 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 4 | 12 | **33,3%** |
-| Plan completo | 4 | 22 | 18,2% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 13 | 31 | 42% |
+| **Camino crítico** (1, 3–13) | 5 | 12 | **41,7%** |
+| Plan completo | 5 | 22 | 22,7% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 14 | 31 | 45% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 1 | 6 | 17% | 6–11 |
+| **D** · Negocios | 2 | 6 | 33% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **3 sprints** hasta la pantalla de Negocios y
-**6** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Distancia a los hitos visibles: **2 sprints** hasta la pantalla de Negocios y
+**5** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -69,7 +69,7 @@ Distancia a los hitos visibles: **3 sprints** hasta la pantalla de Negocios y
 | 4 | C3 · Catálogos | **Listo** | 2026-08-21 | — | 10 tests. 27 filas sembradas, endpoint con 9 grupos. |
 | 5 | C4 · Plantilla y carga manual de UF | Pendiente | — | — | |
 | 6 | D1 · Esquema de negocios | **Listo** | 2026-08-21 | — | 4 tablas, 13 tests. Migración reversible verificada. |
-| 7 | D2 · Motor de comisiones | Pendiente | — | — | **Sin decisiones pendientes.** `D-018` y `D-022`. |
+| 7 | D2 · Motor de comisiones | **Listo** | 2026-08-21 | — | 34 tests. 18 de 19 históricos al peso; VVP-2 descuadrado en el origen (`D-026`). |
 | 8 | D3 · CRUD backend | Pendiente | — | — | |
 | 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
 | 10 | D5 · Carga de los 19 históricos | Pendiente | — | — | Solo queda pendiente los 10 motivos de pérdida. |
@@ -116,6 +116,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 7 (D2) — Listo
+
+**Motor puro** en `app/services/comisiones.py`: no toca la base de datos, recibe modelo, estado, base y tasas, y devuelve los siete montos sin redondear. El redondeo queda como decisión de quien persiste o muestra.
+
+**Los tests se escribieron antes del motor**, y eso pagó tres veces.
+
+**El fixture se generó desde el Excel, no a mano.** `tests/datos_historicos.py` tiene los 19 casos con sus entradas y sus montos esperados. Se generó por script porque transcribir a mano es exactamente lo que había fallado antes, y porque el `.xlsx` está en `.gitignore`: estos son los únicos datos históricos versionados.
+
+**34 tests: los 19 de regresión, los 3 de `REGLAS CALCULO`, y 12 de reglas aisladas.** Total de la suite: 75 pasando y 1 xfail.
+
+**Tres hallazgos, todos antes de que existiera el motor:**
+
+1. **El porcentaje del equipo se aplica después de sacar al tercero** (`D-025`), no sobre la VP Bruta completa como dice `REGLAS CALCULO`. Son 7.252 pesos en VVP-3 PROMESA.
+2. **Cada modelo lee un lado; no se pueden sumar** (`D-025`). La planilla puebla `% VP Vendedor` con 0,008 en las 13 filas de Concentradores sin usarlo, así que sumar duplicaba la VP Bruta en 11 de los 19 casos.
+3. **VVP-2 está descuadrado en el origen** (`D-026`): la Comisión Total se bajó a mano por el ajuste de crédito y el reparto siguió sobre la base original, dejando Broker + VP Bruta 903.803 por encima del total. Queda como xfail estricto con su motivo, más un test dedicado que deja constancia del monto. Hay que resolverlo en el sprint 10.
+
+**Renombre de las tasas** (`D-024`): `pct_comision_concentrador` y `pct_comision_negocio` pasaron a `pct_lado_vendedor` y `pct_lado_comprador`, porque los primeros mienten en Mercado Primario. La migración `d3a91f6c25b8` se editó en su lugar, sin agregar una migración de renombre encima, porque no estaba pusheada.
 
 ### 2026-08-21 · Sprint 6 (D1) — Listo
 

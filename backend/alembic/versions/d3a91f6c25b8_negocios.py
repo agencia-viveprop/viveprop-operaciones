@@ -96,8 +96,8 @@ def upgrade() -> None:
         sa.Column("valor_clp_manual", MONTO, nullable=True),
         sa.Column("motivo_valor_manual", sa.Text(), nullable=True),
         # Tasas (D-018)
-        sa.Column("pct_comision_concentrador", PCT, nullable=True),
-        sa.Column("pct_comision_negocio", PCT, nullable=True),
+        sa.Column("pct_lado_vendedor", PCT, nullable=True),
+        sa.Column("pct_lado_comprador", PCT, nullable=True),
         sa.Column("pct_rebate_concentrador", PCT, nullable=True),
         sa.Column("pct_broker_vendedor", PCT, nullable=True),
         sa.Column("pct_broker_comprador", PCT, nullable=True),
