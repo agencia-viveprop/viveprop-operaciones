@@ -17,6 +17,7 @@ import {
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import { obtenerNegocio, type Hito } from '../api/negocios'
+import NegocioPipeline from './NegocioPipeline'
 import { clp, COLOR_ESTADO, fecha, MODELO_CORTO, pct, uf } from './negociosFormato'
 
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {
@@ -51,7 +52,6 @@ function FichaHito({ hito }: { hito: Hito }) {
           <Badge color={COLOR_ESTADO[hito.estado]} variant="light">
             {hito.estado}
           </Badge>
-          {hito.etapa && <Badge variant="default">{hito.etapa}</Badge>}
         </Group>
         <Text size="sm" c="dimmed">
           {fecha(hito.fecha_inicio)}
@@ -154,6 +154,7 @@ function FichaHito({ hito }: { hito: Hito }) {
 export default function NegocioFichaModal({
   negocioId,
   onClose,
+  puedeEditar,
 }: {
   negocioId: number | null
   onClose: () => void
@@ -213,6 +214,12 @@ export default function NegocioFichaModal({
               <Text size="sm">{negocio.observaciones}</Text>
             </Alert>
           )}
+
+          <NegocioPipeline
+            negocioId={negocio.id}
+            etapaActual={negocio.etapa}
+            puedeEditar={puedeEditar}
+          />
 
           <Group justify="space-between" align="baseline">
             <Title order={4}>

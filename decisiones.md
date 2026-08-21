@@ -38,6 +38,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-024](#d-024) | 2026-08-21 | Las tasas se nombran por lado de la operación, no por destino | 6, 7 |
 | [D-025](#d-025) | 2026-08-21 | Dos correcciones a `REGLAS CALCULO`, verificadas en los datos | 7 |
 | [D-026](#d-026) | 2026-08-21 | VVP-2 está descuadrado en el origen | 10 |
+| [D-027](#d-027) | 2026-08-21 | `etapa` es del negocio; `estado` se queda en el hito | 11 |
 
 ---
 
@@ -465,3 +466,20 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Sigue pendiente:** quién absorbió los 903.803, si el corredor aliado tomó parte del ajuste o si ViveProp lo absorbió completo.
 
 **Nota sobre `D-017`.** El caso confirma que el valor manual existe como necesidad —Felipe lo ratificó—, pero VVP-2 tal como está registrado no lo implementa de forma consistente: se overrideó el total sin rehacer el reparto. El diseño de `valor_clp_manual` sigue siendo el correcto; lo que no sirve es tomar VVP-2 como su ejemplo limpio.
+
+---
+
+## D-027 · `etapa` es del negocio; `estado` se queda en el hito
+
+**Contexto.** `D-020` dejó dicho que el pipeline E1–E7 es del negocio y que el hito es una liquidación dentro de él, y por eso `movimientos` apunta al negocio. Pero al implementar el esquema la columna `etapa` quedó en el hito, porque así estaba en el Excel. Eso hacía imposible el sprint 11: un movimiento que apunta al negocio no tiene a qué hito aplicarle la etapa resultante.
+
+**Decisión.** `etapa` pasa a `negocios`. `estado` se queda en `negocio_hitos`.
+
+**Motivo.** Son dos cosas distintas que el Excel había aplanado en la misma fila:
+
+- La **etapa** es la posición del negocio en su avance. Un negocio está en un punto del pipeline, no en varios. Verificado sobre los 18 negocios cargados: **ninguno tiene hitos con etapas distintas** — VVP-3 tiene sus dos hitos en E7, o sea el mismo valor repetido, que es la firma de un campo que pertenece al padre. La migración es sin pérdida.
+- El **estado** es el desenlace de cada liquidación. Que la promesa cierre y la escritura se caiga es un escenario real, aunque los 18 negocios históricos no lo muestren todavía. Moverlo al negocio habría cerrado esa puerta.
+
+**Consecuencia en el servicio.** `crear_movimiento_negocio` mueve la etapa del negocio vía `etapa_resultante` del tipo, y los desenlaces (`NEG_PERDIDA`, `NEG_DESISTIMIENTO`) cambian el estado **solo de las liquidaciones que siguen abiertas**. Una promesa ya cerrada no se vuelve perdida porque la escritura se cayó.
+
+**Códigos con prefijo `NEG_`** según `D-014`, verificado: cero colisiones con los 14 tipos de canje.

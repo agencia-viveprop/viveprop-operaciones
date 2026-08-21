@@ -35,7 +35,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 5 | 8 | D3 · CRUD backend | Alta y edición por API, comisión calculada al guardar |
 | 6 | 10 | D5 · Carga de los 19 históricos | ✅ **Listo** |
 | 7 | 9 | D4 · Pantalla Negocios | ✅ **Listo** **primer hito visible** |
-| 8 | 11 | D6 · Pipeline de negocios | Avance por etapas E1–E7 con historial |
+| 8 | 11 | D6 · Pipeline de negocios | ✅ **Listo** |
 | 9 | 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido, en CLP |
 | 10 | 13 | F2 · Dashboard de negocios | **Segundo hito visible** |
 | 11 | 3 | C2 · Tabla UF y conversión | ✅ **Listo** |
@@ -175,11 +175,13 @@ La UF se preserva de la columna AB en vez de buscarla en la serie: la de VVP-3 P
 
 ### 11 · D6 — Pipeline de negocios
 
-Sembrar `tipos_movimiento` para `entity_type=negocio` (E1–E7 con su responsable) y activar el avance por etapa. Reusa la infraestructura de movimientos que ya existe: sin código nuevo de seguimiento.
+✅ **Listo** **el 2026-08-21.** 10 tipos de movimiento sembrados con prefijo `NEG_` (`D-014`), cero colisiones con los 14 de canjes. Servicio, endpoints y línea de tiempo en la ficha.
 
-**Restricción del esquema existente (D-014).** Los códigos van con prefijo (`NEG_CIERRE`, `NEG_CANCELACION`). `tipos_movimiento.codigo` es PK global, no compuesta con `entity_type`, y ya existen `CIERRE`, `CANCELACION` y `COMENTARIO_GENERAL` para canjes.
+**Hubo que mover `etapa` del hito al negocio** (`D-027`): un movimiento que apunta al negocio no tenía a qué hito aplicarle la etapa. Migración sin pérdida, verificada sobre los 18 negocios cargados.
 
-- **Listo cuando:** avanzar un negocio de etapa queda registrado en su línea de tiempo con autor y fecha.
+- Los 7 pasos E1–E7 mueven la etapa; `NEG_PERDIDA` y `NEG_DESISTIMIENTO` cambian el estado **solo de las liquidaciones abiertas**; `NEG_COMENTARIO` no mueve nada.
+- `GET /api/negocios/tipos-movimiento` para que el front no hardcodee los pasos. Va **antes** de `/{negocio_id}` en el registro de rutas, porque FastAPI resuelve por orden y si no, `tipos-movimiento` se interpreta como un id.
+- Verificado contra `dev` con VVP-17: E4 → E5 registrado con autor y fecha, y revertido después.
 
 ### 12 · F1 — Base de cálculo de reportería
 

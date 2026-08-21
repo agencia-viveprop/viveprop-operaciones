@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8, 9 y 10 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8, 9, 10 y 11 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 8 |
+| Listos | 9 |
 | En curso | 0 |
-| Pendientes | 14 |
+| Pendientes | 13 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8, 9 y 10. **El primer hito visible está hecho**: la pantalla de Negocios funciona con los 18 negocios reales. El siguiente es el **11 (D6 · Pipeline de negocios)**.
+**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8, 9, 10 y 11. **La serie D está completa**: el dominio de Negocios queda registrable, gestionable y con su pipeline. El siguiente es el **12 (F1 · Base de cálculo)**, y después el 13, el dashboard.
 
 ---
 
@@ -28,20 +28,20 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 8 | 12 | **66,7%** |
-| Plan completo | 8 | 22 | 36,4% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 17 | 31 | 55% |
+| **Camino crítico** (1, 3–13) | 9 | 12 | **75,0%** |
+| Plan completo | 9 | 22 | 40,9% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 18 | 31 | 58% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 5 | 6 | 83% | 6–11 |
+| **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Primer hito visible **alcanzado**. Quedan **2 sprints** hasta el dashboard de negocios, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Primer hito visible alcanzado y **serie D completa**. Quedan **2 sprints** hasta el dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -72,7 +72,7 @@ Primer hito visible **alcanzado**. Quedan **2 sprints** hasta el dashboard de ne
 | 8 | D3 · CRUD backend | **Listo** | 2026-08-21 | — | 5 endpoints, 18 tests. Verificado punta a punta contra `dev`. |
 | 9 | D4 · Pantalla Negocios | **Listo** | 2026-08-21 | — | Listado, ficha y alta. **Primer hito visible.** |
 | 10 | D5 · Carga de los 19 históricos | **Listo** | 2026-08-21 | — | 18 negocios, 19 hitos, 13 propiedades, 114 obligaciones. Una sola diferencia: VVP-2. |
-| 11 | D6 · Pipeline de negocios | Pendiente | — | — | |
+| 11 | D6 · Pipeline de negocios | **Listo** | 2026-08-21 | — | 10 tipos, línea de tiempo en la ficha. `etapa` movida al negocio (`D-027`). |
 | 12 | F1 · Base de cálculo | Pendiente | — | — | |
 | 13 | F2 · Dashboard de negocios | Pendiente | — | — | Segundo hito visible. |
 | 14 | E1 · Plantilla de negocios | Pendiente | — | — | |
@@ -115,6 +115,33 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 11 (D6) — Listo · serie D completa
+
+**El pipeline de negocios funciona**, reusando la tabla `movimientos` que ya servía a canjes. 10 tipos sembrados con prefijo `NEG_` (`D-014`), verificado: cero colisiones con los 14 de canjes.
+
+**Hubo que resolver una tensión de diseño primero (`D-027`).** `D-020` decía que el pipeline es del negocio y por eso `movimientos` apunta ahí, pero `etapa` había quedado en el hito porque así estaba en el Excel. Un movimiento que apunta al negocio no tenía a qué hito aplicarle la etapa resultante.
+
+Se movió `etapa` a `negocios`, y se verificó primero que fuera sin pérdida: **ninguno de los 18 negocios tiene hitos con etapas distintas** — VVP-3 tiene sus dos en E7, el mismo valor repetido, que es la firma de un campo que pertenece al padre. `estado` **no** se movió: que la promesa cierre y la escritura se caiga es un escenario real.
+
+**Comportamiento de los tipos:**
+
+- Los 7 pasos E1–E7 mueven la etapa del negocio.
+- `NEG_PERDIDA` y `NEG_DESISTIMIENTO` cambian el estado **solo de las liquidaciones abiertas**. Una promesa ya cerrada no se vuelve perdida porque la escritura se cayó.
+- `NEG_COMENTARIO` no mueve nada, solo queda en el historial.
+
+**En la interfaz:** la ficha del negocio muestra el recorrido E1–E7 con la etapa actual marcada, la línea de tiempo de movimientos con su autor y fecha, y el control para registrar un avance con comentario. El listado suma una columna de etapa.
+
+**Verificado contra `dev`** con VVP-17: E4 → E5 registrado con autor y fecha, y revertido después.
+
+**Dos defectos encontrados y corregidos:**
+
+1. **Orden de rutas.** `GET /api/negocios/tipos-movimiento` quedaba después de `/{negocio_id}` en el registro, y FastAPI resuelve por orden: `tipos-movimiento` se interpretaba como un id y devolvía un error de validación. Se movió arriba, con un comentario que explica por qué tiene que quedar ahí.
+2. **404 en vez de 400.** Un movimiento sobre un negocio inexistente devolvía 400 porque el servicio lanzaba su propio error. Un recurso que no está es un 404.
+
+**Infraestructura de test:** se agregó `usuarios` a la base de test —`movimientos.autor_id` la referencia— y el usuario de prueba ahora se persiste en vez de existir solo en memoria.
+
+**104 tests pasando** más 1 xfail. Migración `e5b73c19af42` verificada reversible.
 
 ### 2026-08-21 · Sprint 9 (D4) — Listo · primer hito visible
 

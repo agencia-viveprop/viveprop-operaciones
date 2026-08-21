@@ -97,6 +97,10 @@ class Negocio(Base):
     )
     alianza_id: Mapped[int | None] = mapped_column(ForeignKey("catalogos.id"), nullable=True)
     tipo_operacion_id: Mapped[int | None] = mapped_column(ForeignKey("catalogos.id"), nullable=True)
+    # El pipeline E1-E7 es del negocio, no del hito: un negocio esta en un punto
+    # de su avance, y sus liquidaciones son eventos dentro de ese avance. Lo
+    # mueve `crear_movimiento_negocio` via `etapa_resultante` del tipo.
+    etapa: Mapped[str | None] = mapped_column(ForeignKey("etapas.codigo"), nullable=True)
 
     vendedor_arrendador: Mapped[str | None] = mapped_column(Text, nullable=True)
     comprador_arrendatario: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -142,10 +146,11 @@ class NegocioHito(Base):
 
     fecha_inicio: Mapped[date] = mapped_column(Date, nullable=False)
     fecha_cierre: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # `estado` si vive en el hito: que la promesa cierre y la escritura se caiga
+    # es un escenario real, aunque los 18 negocios historicos no lo muestren.
     estado: Mapped[EstadoNegocio] = mapped_column(
         Enum(EstadoNegocio, name="estado_negocio"), nullable=False, default=EstadoNegocio.ACTIVO
     )
-    etapa: Mapped[str | None] = mapped_column(ForeignKey("etapas.codigo"), nullable=True)
 
     # --- Valorizacion (D-017) ---
     valor_negocio: Mapped[Decimal | None] = mapped_column(MONTO, nullable=True)

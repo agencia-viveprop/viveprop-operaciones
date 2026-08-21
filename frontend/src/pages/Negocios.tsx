@@ -112,13 +112,14 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
       )}
 
       {negocios && (
-        <Table.ScrollContainer minWidth={900}>
+        <Table.ScrollContainer minWidth={1000}>
           <Table striped withTableBorder highlightOnHover>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Código</Table.Th>
                 <Table.Th>Propiedad</Table.Th>
                 <Table.Th>Modelo</Table.Th>
+                <Table.Th>Etapa</Table.Th>
                 <Table.Th>Alianza</Table.Th>
                 <Table.Th>Estado</Table.Th>
                 <Table.Th ta="right">Comisión total</Table.Th>
@@ -144,6 +145,13 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                     </Text>
                   </Table.Td>
                   <Table.Td>{MODELO_CORTO[n.modelo]}</Table.Td>
+                  <Table.Td>
+                    {n.etapa ? (
+                      <Badge variant="default">{n.etapa}</Badge>
+                    ) : (
+                      <Text size="sm" c="dimmed">—</Text>
+                    )}
+                  </Table.Td>
                   <Table.Td>{nombreAlianza(n.alianza_id)}</Table.Td>
                   <Table.Td>
                     <Group gap={4}>
@@ -167,7 +175,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
             {negocios.length > 0 && (
               <Table.Tfoot>
                 <Table.Tr>
-                  <Table.Th colSpan={5}>Total</Table.Th>
+                  <Table.Th colSpan={6}>Total</Table.Th>
                   <Table.Th ta="right" ff="monospace">{clp(totales.total)}</Table.Th>
                   <Table.Th ta="right" ff="monospace">{clp(totales.realVp)}</Table.Th>
                   <Table.Th />

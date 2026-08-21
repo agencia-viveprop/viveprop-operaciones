@@ -10,9 +10,11 @@ from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.canje import MonedaTipo
 from app.models.catalogo import EstadoNegocio, ModeloNegocio, TipoCatalogo
+from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio, NegocioHito, Propiedad
 from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
+from app.services.movimientos import MovimientoError, crear_movimiento_negocio
 from app.services.negocios import NegocioError
 
 router = APIRouter(prefix="/negocios", tags=["negocios"])
@@ -39,7 +41,6 @@ class HitoIn(BaseModel):
     fecha_inicio: date
     fecha_cierre: date | None = None
     estado: EstadoNegocio = EstadoNegocio.ACTIVO
-    etapa: str | None = None
 
     valor_negocio: Decimal | None = None
     moneda: MonedaTipo | None = None
@@ -68,7 +69,6 @@ class HitoOut(BaseModel):
     fecha_inicio: date
     fecha_cierre: date | None
     estado: EstadoNegocio
-    etapa: str | None
 
     valor_negocio: Decimal | None
     moneda: MonedaTipo | None
@@ -100,6 +100,7 @@ class NegocioIn(BaseModel):
     modelo: ModeloNegocio
     propiedad_id: int | None = None
     propiedad: PropiedadIn | None = None
+    etapa: str | None = None
     alianza_id: int | None = None
     tipo_operacion_id: int | None = None
     vendedor_arrendador: str | None = None
@@ -118,6 +119,7 @@ class NegocioIn(BaseModel):
 
 class NegocioUpdate(BaseModel):
     modelo: ModeloNegocio | None = None
+    etapa: str | None = None
     alianza_id: int | None = None
     tipo_operacion_id: int | None = None
     vendedor_arrendador: str | None = None
@@ -131,6 +133,7 @@ class NegocioOut(BaseModel):
     id: int
     codigo: str
     modelo: ModeloNegocio
+    etapa: str | None
     propiedad: PropiedadOut
     alianza_id: int | None
     tipo_operacion_id: int | None
@@ -151,6 +154,7 @@ class NegocioResumen(BaseModel):
     id: int
     codigo: str
     modelo: ModeloNegocio
+    etapa: str | None
     direccion: str
     unidad: str | None
     comuna: str
@@ -159,6 +163,30 @@ class NegocioResumen(BaseModel):
     estados: list[EstadoNegocio]
     comision_total: Decimal
     comision_real_vp: Decimal
+
+
+class MovimientoOut(BaseModel):
+    id: int
+    tipo_movimiento: str
+    tipo_nombre: str
+    etapa_resultante: str | None
+    fecha: datetime
+    autor_nombre: str | None
+    comentario: str | None
+
+
+class MovimientoIn(BaseModel):
+    tipo_movimiento: str
+    comentario: str | None = None
+    fecha: datetime | None = None
+
+
+class TipoMovimientoOut(BaseModel):
+    codigo: str
+    nombre: str
+    etapa_resultante: str | None
+    orden: int | None
+    responsable_default: str | None
 
 
 # ------------------------------------------------------------------- helpers
@@ -181,7 +209,6 @@ def _validar_referencias(db: Session, alianza_id, tipo_operacion_id) -> None:
 
 
 def _aplicar_hito(db: Session, hito: NegocioHito, datos: dict, modelo: str) -> None:
-    servicio.validar_etapa(db, datos.get("etapa", hito.etapa))
     servicio.validar_catalogo(
         db, datos.get("motivo_perdida_id", hito.motivo_perdida_id),
         TipoCatalogo.MOTIVO_PERDIDA, "motivo_perdida_id",
@@ -202,6 +229,23 @@ def buscar_propiedades(
 ):
     """Para que el alta ofrezca lo que ya existe antes de crear un duplicado."""
     return servicio.buscar_propiedades_parecidas(db, q)
+
+
+# Va antes de "/{negocio_id}": FastAPI resuelve por orden de registro, y si
+# esta ruta quedara despues, "tipos-movimiento" se interpretaria como un id.
+@router.get("/tipos-movimiento", response_model=list[TipoMovimientoOut])
+def listar_tipos_movimiento(
+    db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
+):
+    """Los pasos posibles del pipeline, para que el front no los hardcodee."""
+    return db.scalars(
+        select(TipoMovimiento)
+        .where(
+            TipoMovimiento.entity_type == EntityType.negocio,
+            TipoMovimiento.activo.is_(True),
+        )
+        .order_by(TipoMovimiento.orden)
+    ).all()
 
 
 @router.get("", response_model=list[NegocioResumen])
@@ -233,6 +277,7 @@ def listar(
             id=n.id,
             codigo=n.codigo,
             modelo=n.modelo,
+            etapa=n.etapa,
             direccion=n.propiedad.direccion,
             unidad=n.propiedad.unidad,
             comuna=n.propiedad.comuna,
@@ -275,9 +320,11 @@ def crear(
         else:
             propiedad = servicio.obtener_o_crear_propiedad(db, payload.propiedad.model_dump())
 
+        servicio.validar_etapa(db, payload.etapa)
         negocio = Negocio(
             codigo=payload.codigo,
             modelo=payload.modelo,
+            etapa=payload.etapa,
             propiedad=propiedad,
             alianza_id=payload.alianza_id,
             tipo_operacion_id=payload.tipo_operacion_id,
@@ -322,6 +369,8 @@ def actualizar(
             cambios.get("alianza_id", negocio.alianza_id),
             cambios.get("tipo_operacion_id", negocio.tipo_operacion_id),
         )
+        if "etapa" in cambios:
+            servicio.validar_etapa(db, cambios["etapa"])
         for campo, valor in cambios.items():
             setattr(negocio, campo, valor)
 
@@ -381,3 +430,62 @@ def actualizar_hito(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     db.refresh(hito)
     return hito
+
+
+
+
+def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
+    tipo = db.get(TipoMovimiento, m.tipo_movimiento)
+    autor = db.get(Usuario, m.autor_id) if m.autor_id else None
+    return MovimientoOut(
+        id=m.id,
+        tipo_movimiento=m.tipo_movimiento,
+        tipo_nombre=tipo.nombre if tipo else m.tipo_movimiento,
+        etapa_resultante=m.etapa_resultante,
+        fecha=m.fecha,
+        autor_nombre=autor.nombre if autor else None,
+        comentario=m.comentario,
+    )
+
+
+@router.get("/{negocio_id}/movimientos", response_model=list[MovimientoOut])
+def listar_movimientos(
+    negocio_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    _cargar(db, negocio_id)
+    movimientos = db.scalars(
+        select(Movimiento)
+        .where(
+            Movimiento.entity_type == EntityType.negocio,
+            Movimiento.entity_id == negocio_id,
+        )
+        .order_by(Movimiento.fecha.desc())
+    ).all()
+    return [_a_movimiento_out(db, m) for m in movimientos]
+
+
+@router.post(
+    "/{negocio_id}/movimientos",
+    response_model=MovimientoOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def crear_movimiento(
+    negocio_id: int,
+    payload: MovimientoIn,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    # Un negocio inexistente es un 404, no un 400: el recurso no esta, no es que
+    # el cuerpo venga mal. El servicio igual lo valida, porque
+    # `movimientos.entity_id` no puede tener clave foranea.
+    _cargar(db, negocio_id)
+    try:
+        movimiento = crear_movimiento_negocio(
+            db, negocio_id, payload.tipo_movimiento, usuario.id, payload.comentario, payload.fecha
+        )
+    except MovimientoError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    return _a_movimiento_out(db, movimiento)

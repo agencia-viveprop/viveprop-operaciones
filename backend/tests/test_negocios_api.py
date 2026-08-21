@@ -49,10 +49,10 @@ def _payload_vvp4(**extra):
             "comuna": "San Ramón",
         },
         "vendedor_arrendador": "Assetplan",
+        "etapa": "E2",
         "hitos": [{
             "fecha_inicio": "2026-01-02",
             "estado": "PERDIDO",
-            "etapa": "E2",
             "valor_negocio": "1080",
             "moneda": "UF",
             "pct_lado_vendedor": "0.02",
@@ -214,8 +214,8 @@ def test_no_se_puede_usar_un_catalogo_del_tipo_equivocado(cliente, base_negocios
 
 
 def test_etapa_desconocida_dice_cuales_valen(cliente, base_negocios):
-    cuerpo = _payload_vvp4()
-    cuerpo["hitos"][0]["etapa"] = "E99"
+    """La etapa es del negocio, no del hito (D-027)."""
+    cuerpo = _payload_vvp4(etapa="E99")
 
     r = cliente.post("/api/negocios", json=cuerpo)
 

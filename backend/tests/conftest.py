@@ -1,7 +1,8 @@
 """Fixtures de test.
 
 La base de test es SQLite en memoria y se crean todas las tablas menos
-`sesiones`, que usa el tipo UUID del dialecto de Postgres y no tiene equivalente.
+`sesiones`, que es la unica incompatible: usa el tipo UUID del dialecto de
+Postgres. `usuarios` si se crea, porque `movimientos.autor_id` la referencia.
 
 Las claves foraneas se activan con un PRAGMA: SQLite las ignora por defecto, y
 sin eso los tests de integridad referencial pasarian sin probar nada.
@@ -21,6 +22,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.models.canje import Canje
 from app.models.catalogo import Catalogo, Etapa
+from app.models.movimiento import Movimiento, TipoMovimiento
+from app.models.usuario import RolUsuario, Usuario
 from app.models.negocio import (
     Negocio,
     NegocioHito,
@@ -47,8 +50,9 @@ def db():
         conexion.execute("PRAGMA foreign_keys=ON")
 
     for tabla in (
-        Canje, UFDiaria, Catalogo, Etapa,
+        Usuario, Canje, UFDiaria, Catalogo, Etapa,
         Propiedad, Negocio, NegocioHito, NegocioObligacion,
+        TipoMovimiento, Movimiento,
     ):
         tabla.__table__.create(engine)
 
@@ -136,11 +140,14 @@ def cliente(db):
     from app.auth import get_current_user
     from app.db import get_db
     from app.main import app
-    from app.models.usuario import RolUsuario, Usuario
 
+    # Se persiste, no basta con tenerlo en memoria: `movimientos.autor_id`
+    # apunta a `usuarios` y la clave foranea esta activa en los tests.
     usuario = Usuario(
         id=1, email="test@viveprop.com", nombre="Test", password_hash="x", rol=RolUsuario.admin
     )
+    db.add(usuario)
+    db.commit()
 
     app.dependency_overrides[get_db] = lambda: db
     app.dependency_overrides[get_current_user] = lambda: usuario

@@ -42,10 +42,30 @@ export type Hito = {
   motivo_perdida_detalle: string | null
 }
 
+export type Movimiento = {
+  id: number
+  tipo_movimiento: string
+  tipo_nombre: string
+  etapa_resultante: string | null
+  fecha: string
+  autor_nombre: string | null
+  comentario: string | null
+}
+
+export type TipoMovimientoNegocio = {
+  codigo: string
+  nombre: string
+  etapa_resultante: string | null
+  orden: number | null
+  responsable_default: string | null
+}
+
 export type Negocio = {
   id: number
   codigo: string
   modelo: ModeloNegocio
+  /** El pipeline E1-E7 es del negocio, no de sus hitos (D-027). */
+  etapa: string | null
   propiedad: Propiedad
   alianza_id: number | null
   tipo_operacion_id: number | null
@@ -63,6 +83,7 @@ export type NegocioResumen = {
   id: number
   codigo: string
   modelo: ModeloNegocio
+  etapa: string | null
   direccion: string
   unidad: string | null
   comuna: string
@@ -137,4 +158,19 @@ export function buscarPropiedades(q: string): Promise<Propiedad[]> {
   return fetch(`/api/negocios/propiedades?q=${encodeURIComponent(q)}`, {
     credentials: 'include',
   }).then(parseOrThrow)
+}
+
+export function listarTiposMovimiento(): Promise<TipoMovimientoNegocio[]> {
+  return fetch('/api/negocios/tipos-movimiento', { credentials: 'include' }).then(parseOrThrow)
+}
+
+export function listarMovimientos(negocioId: number): Promise<Movimiento[]> {
+  return fetch(`/api/negocios/${negocioId}/movimientos`, { credentials: 'include' }).then(parseOrThrow)
+}
+
+export function crearMovimiento(
+  negocioId: number,
+  payload: { tipo_movimiento: string; comentario?: string | null },
+): Promise<Movimiento> {
+  return json(`/api/negocios/${negocioId}/movimientos`, 'POST', payload)
 }
