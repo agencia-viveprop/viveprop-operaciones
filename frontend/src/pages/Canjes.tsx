@@ -207,11 +207,17 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         />
       </Group>
 
+      {/* Con ocho columnas y nombres largos la tabla se aprieta y los badges se
+          truncan ("CANCELA..."). El ancho minimo la deja respirar y la hace
+          desplazarse dentro de su contenedor en vez de estirar la pagina. */}
+      <Table.ScrollContainer minWidth={1080}>
       <Table striped withTableBorder highlightOnHover>
         <Table.Thead>
           <Table.Tr>
+            <Table.Th>N°</Table.Th>
             <Table.Th>Fecha</Table.Th>
             <Table.Th>Corredor solicitante</Table.Th>
+            <Table.Th>Corredor propietario</Table.Th>
             <Table.Th>Comuna</Table.Th>
             <Table.Th>Operación</Table.Th>
             <Table.Th>Estado</Table.Th>
@@ -223,8 +229,10 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           {!isLoading &&
             canjes?.map((c) => (
               <Table.Tr key={c.id}>
+                <Table.Td fw={600} ff="monospace">{c.id}</Table.Td>
                 <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
                 <Table.Td>{c.corredor_solicitante_nombre}</Table.Td>
+                <Table.Td>{c.corredor_propietario_nombre}</Table.Td>
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>
@@ -249,6 +257,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             ))}
         </Table.Tbody>
       </Table>
+      </Table.ScrollContainer>
       {!isLoading && canjes?.length === 0 && <Text c="dimmed">No hay canjes que calcen con el filtro.</Text>}
 
       <Modal opened={modalAbierto} onClose={() => setModalAbierto(false)} title={editandoId ? `Canje #${editandoId}` : 'Nuevo canje'} size="lg">
