@@ -118,6 +118,7 @@ Función pura, sin base de datos: entra el negocio, salen los 5 montos del orden
 
 - **Listo cuando:** pasan los **22 casos** — 3 de `REGLAS CALCULO` + 19 de regresión con las filas reales, cubriendo los 3 modelos, venta y arriendo, con y sin rebate de concentrador, con y sin tercero.
 - **Corren sobre la base de comisión (D-017)**, no sobre la conversión por UF. Si corrieran sobre la UF, VVP-2 no reproduciría nunca.
+- **La fórmula de Concentradores está resuelta y verificada (D-018).** Cada modelo lee columnas distintas para la Comisión Total, y el rebate es `base × % del concentrador × 12%`, no 12% del total.
 - **Decisión pendiente:** en arriendo, `% Broker` sobre la comisión total o sobre el arriendo mensual. Hoy indistinguible porque las partes pagan 50/50. Se arranca con la fórmula documentada (sobre el valor) y queda el test marcado.
 
 ### 8 · D3 — CRUD backend
@@ -137,7 +138,7 @@ Listado con filtros (estado, modelo, alianza, etapa) + ficha con sus hitos + for
 Script one-shot desde la hoja `NEGOCIOS`, **creando el padre `VVP-3`**, que no existe como fila en el Excel.
 
 - **Listo cuando:** los 19 quedan cargados y las comisiones en base coinciden al peso con el Excel.
-- **Pendiente de consultar:** los 10 motivos de pérdida, que están vacíos, y el caso de VVP-16. La tasa de rebate **ya no es una pregunta**: es 12% de la Comisión Total, registrada en la columna AG de las 13 filas de Concentradores.
+- **Pendiente de consultar:** los 10 motivos de pérdida, que están vacíos. Eso es todo — la tasa de rebate y el caso de VVP-16 quedaron resueltos en `D-018`.
 
 **Base de comisión, verificado sobre las 19 filas (ver D-017).** 17 siguen la regla —comisión sobre `valor × UF`— y **2 no**. Al cargar hay que decidir qué se hace con esas dos:
 

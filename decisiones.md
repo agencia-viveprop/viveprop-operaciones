@@ -30,6 +30,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-015](#d-015) | 2026-08-20 | La documentación se actualiza en el mismo commit que el cambio | Todos |
 | [D-016](#d-016) | 2026-08-20 | Ninguna conversión UF↔CLP sin fecha, y Decimal en todo el camino | 3 |
 | [D-017](#d-017) | 2026-08-20 | El valor en pesos se puede ingresar a mano y es la base de comisión | 6, 7, 10 |
+| [D-018](#d-018) | 2026-08-21 | La fórmula de comisiones de Concentradores, y los nombres del modelo | 7 |
 
 ---
 
@@ -85,7 +86,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 
 **Motivo.** El porcentaje es el acuerdo y el monto es el resultado; compararlos es precisamente el análisis. Permite verificar que la tasa pactada se cumpla, comparar condiciones entre concentradores, y ver su evolución. Bonus: con `monto / pct` queda implícita la comisión propia del concentrador.
 
-**Nota de datos, corregida el 2026-08-20.** Se había reportado que el porcentaje nunca se registró. **Es falso**: la columna AG vale 0,12 en las 13 filas de Concentradores. La regla es `rebate = 12% × Comisión Total`, y el monto calza al peso en VVP-15 y VVP-17. En los 10 perdidos la tasa está y el monto es 0, que es correcto.
+**Nota de datos, corregida el 2026-08-20.** Se había reportado que el porcentaje nunca se registró. **Es falso**: la columna AG vale 0,12 en las 13 filas de Concentradores. La regla, corregida el 2026-08-21, es `rebate = base × % comisión del concentrador × 12%` — no 12% de la Comisión Total. Calza al peso en los 3 negocios cerrados. En los 10 perdidos la tasa está y el monto es 0, que es correcto.
 
 ---
 
@@ -261,3 +262,56 @@ La **base de comisión** es `COALESCE(valor_clp_manual, valor_clp_calculado)`, y
 **Consecuencia para el sprint 7.** Los 19 tests de regresión corren sobre la base de comisión, no sobre la conversión por UF. Si corrieran sobre la UF, VVP-2 no reproduciría nunca.
 
 **Corrección de un diagnóstico previo.** Se había reportado que VVP-15 y VVP-17 tenían la UF mal capturada. **Es falso**: ambos siguen la regla y sus números cuadran; la diferencia de 5,38 pesos era redondeo. El caso real de valor externo es VVP-2.
+
+---
+
+## D-018 · La fórmula de comisiones de Concentradores, y los nombres del modelo
+
+**Contexto.** El sprint 7 estaba bloqueado: no se podía determinar qué columna de porcentaje alimentaba qué monto en el modelo Concentradores. La causa era que **los nombres de las columnas del Excel engañan**.
+
+**Lo que las columnas realmente son:**
+
+| Excel | Es | Nombre en el modelo |
+|---|---|---|
+| `% Comisión Vendedor` (AD) | La tasa que el **concentrador** cobra al vendedor. No es ingreso ViveProp | `pct_comision_concentrador` |
+| `% Comisión Comprador` (AE) | La comisión real del negocio, la que paga el comprador | `pct_comision_negocio` |
+| `% Broker Comprador` (AI) | La parte de AE que va al corredor aliado | `pct_broker` |
+| `% VP Comprador` (AK) | La parte de AE que va a ViveProp | `pct_vp` |
+| `% Comisión Agencia Concentrador` (AG) | 12%, la tajada de su comisión que el concentrador comparte | `pct_rebate_concentrador` |
+
+**Decisión.** La fórmula de Concentradores queda:
+
+```
+Comision Total = base x pct_comision_negocio
+  Broker       = base x pct_broker
+  VP Bruta     = base x pct_vp
+    Equipo     = VP Bruta x pct_equipo
+    Real VP    = VP Bruta - Equipo - Tercero + Rebate
+Rebate         = base x pct_comision_concentrador x pct_rebate_concentrador
+                 (solo si el negocio cierra)
+```
+
+Con la identidad `pct_broker + pct_vp = pct_comision_negocio`, que se cumple en las 13 filas.
+
+Y **se renombran los campos en el modelo**, porque los nombres del Excel ya causaron tres lecturas equivocadas en una sola sesión.
+
+**Motivo.** Verificado al peso en las 13 filas de Concentradores para total, broker, VP bruta y la identidad. El rebate calza en los 3 negocios cerrados; en los 10 perdidos la tasa está registrada y el monto es 0, que es el comportamiento correcto — sin negocio no hay rebate.
+
+**Pendiente de confirmar con Felipe:** que el 12% se calcula sobre la comisión que el concentrador cobra al vendedor. Los números lo dicen, pero es lectura del dato y no conocimiento del acuerdo.
+
+**Correcciones que arrastra.** Durante la sesión se reportaron tres cosas falsas sobre estos datos, todas por leer la columna equivocada:
+
+1. Que la Comisión Broker de VVP-4 salía de 0,008. Sale de 0,012 (`pct_broker`).
+2. Que VVP-15 y VVP-17 tenían la UF mal capturada. No: siguen la regla.
+3. Que VVP-16 tenía la base a la mitad y era un cobro parcial o un error. No: su `pct_comision_concentrador` es 4% en vez de 2%, por eso su rebate es el doble. Todo cuadra.
+
+**Tally final: 18 de 19 filas siguen la regla.** El único con base externa es VVP-2.
+
+---
+
+## D-019 · pct_equipo es 10% y editable, y el motivo del valor manual es opcional
+
+**Decisión.** Dos respuestas de Felipe del 2026-08-21:
+
+- **`pct_equipo` = 10%**, como en la práctica, no el 30–40% de los ejemplos de `REGLAS CALCULO`, que quedaron viejos. Pero va como **campo editable por hito**, no como constante, porque debe poder cambiar a futuro.
+- **`motivo_valor_manual` es opcional**, no obligatorio. Se había propuesto exigirlo; Felipe prefiere no agregar esa fricción al ingreso.

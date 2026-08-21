@@ -3,7 +3,7 @@
 > **Este documento existe para ser corregido antes de que se escriba una migración.**
 > Cubre los sprints 4 (catálogos) y 6 (esquema de negocios). No hay código asociado.
 
-**Última actualización:** 2026-08-20 · Relacionados: [plan_desarrollo.md](plan_desarrollo.md) · [decisiones.md](decisiones.md) · [estados.md](estados.md)
+**Última actualización:** 2026-08-21 · Relacionados: [plan_desarrollo.md](plan_desarrollo.md) · [decisiones.md](decisiones.md) · [estados.md](estados.md)
 
 ---
 
@@ -11,7 +11,7 @@
 
 `D-017` cambió tres campos del modelo, la fuente de la base de comisión y el diseño de 19 tests. Apareció a tiempo porque estábamos conversando el diseño en vez de construyéndolo. Este documento busca que el resto de esas correcciones aparezcan ahora y no después de una migración.
 
-Al final hay una lista de **preguntas abiertas**. La más importante — la fórmula de comisiones del modelo Concentradores — no se puede resolver leyendo el Excel.
+Al final hay una tabla de preguntas con su estado. Cuatro de las seis quedaron resueltas; las dos abiertas son aprobaciones de diseño (secciones 1 y 3).
 
 ---
 
@@ -125,7 +125,7 @@ En `negocio_hitos`:
 | `uf_snapshot` | `numeric(12,2) null` | UF congelada. Nulo si la moneda es CLP |
 | `valor_clp_calculado` | `numeric(16,2)` | `valor_negocio` × `uf_snapshot` |
 | `valor_clp_manual` | `numeric(16,2) null` | **Cuando existe, manda** |
-| `motivo_valor_manual` | `text null` | |
+| `motivo_valor_manual` | `text null` | Opcional, no obligatorio |
 
 **Base de comisión** = `COALESCE(valor_clp_manual, valor_clp_calculado)`. El motor trabaja siempre sobre ella.
 
@@ -133,32 +133,71 @@ Va en el **hito**, no en el negocio: VVP-3 PROMESA y VVP-3 ESCRITURA tienen base
 
 ---
 
-## 5 · Comisiones — aquí está el problema
+## 5 · Comisiones
 
 Por `D-005` van tasas y montos por separado. Las tasas son entrada; los montos se calculan al guardar y se persisten.
 
-**Tasas:** `pct_comision_vendedor`, `pct_comision_comprador`, `pct_rebate_concentrador`, `pct_broker_vendedor`, `pct_broker_comprador`, `pct_vp_vendedor`, `pct_vp_comprador`, `pct_equipo`, `pct_tercero`, `nombre_tercero`.
+**Tasas** (entrada, con los nombres propuestos más abajo): `pct_comision_vendedor`, `pct_comision_comprador`, `pct_rebate_concentrador`, `pct_broker_vendedor`, `pct_broker_comprador`, `pct_vp_vendedor`, `pct_vp_comprador`, `pct_equipo`, `pct_tercero`, `nombre_tercero`.
 
 **Montos calculados:** `comision_total`, `comision_broker`, `rebate_concentrador`, `comision_vp_bruta`, `comision_equipo`, `comision_tercero`, `comision_real_vp`.
 
 ### Lo que quedó verificado sobre los datos
 
-- **Comisión Total** = base × `pct_vendedor`, más base × `pct_comprador` **solo en Agencia**. En Concentradores la planilla tiene `pct_comprador` = 0,02 poblado pero **no lo usa**. Exacto en 17 de 19 filas.
-- **El rebate del concentrador es 12% de la Comisión Total.** La tasa está registrada en la columna AG de las 13 filas de Concentradores, y el monto calza al peso en VVP-15 (123.480) y VVP-17 (193.673). En los 10 perdidos la tasa está y el monto es 0, que es correcto: sin negocio no hay rebate.
+La Comisión Total depende del modelo, y **cada modelo lee columnas distintas**:
+
+| Modelo | Comisión Total |
+|---|---|
+| Mercado Primario | base × `% com vendedor` (AD) |
+| Secundario Concentradores | base × `% com comprador` (AE) — **AD no participa**, es la tasa del concentrador |
+| Secundario Agencia | base × (`% com vendedor` + `% com comprador`), que en arriendo es 50% + 50% |
+
+Verificado en **18 de las 19 filas**. La única excepción es VVP-2, que usa base externa (`D-017`).
+
+- **El rebate del concentrador es `base × AD × 12%`**, no 12% de la Comisión Total. AD es lo que el concentrador le cobra al vendedor, y comparte el 12% de eso. Calza al peso en los 3 negocios cerrados; en los 10 perdidos la tasa está y el monto es 0, que es correcto.
 - **El rebate no entra en la Comisión Total**; se suma al final a Real VP. Por eso Real VP puede superar el total.
-- `pct_equipo` es 0,10 en las 19 filas.
+- `pct_equipo` es 0,10 en las 19 filas, pero va editable (ver más abajo).
 
-### Pregunta abierta que bloquea el sprint 7
+### La fórmula de Concentradores, resuelta el 2026-08-21
 
-**En el modelo Concentradores no se puede determinar, leyendo el Excel, qué columna de porcentaje alimenta qué monto.**
+**Los nombres de las columnas engañan**, y eso era lo que trababa el sprint 7. Lo que la planilla realmente hace:
 
-Las 13 filas tienen `%broker_vendedor` = 0, `%broker_comprador` = 0,012, `%vp_vendedor` = 0,008, `%vp_comprador` = 0,008. Pero la Comisión Broker calculada de VVP-4 es 343.316, que es base × **0,008** — no × 0,012. O sea que el monto del broker no sale de la columna que se llama "% Broker".
+| Columna | Nombre en el Excel | Lo que es |
+|---|---|---|
+| AD | *% Comisión Vendedor* | La tasa que **el concentrador** le cobra al vendedor. No es ingreso ViveProp. |
+| AE | *% Comisión Comprador* | La comisión real del negocio: lo que paga el comprador. |
+| AI | *% Broker Comprador* | La parte de AE que va al corredor aliado. |
+| AK | *% VP Comprador* | La parte de AE que va a ViveProp. |
+| AG | *% Comisión Agencia Concentrador* | 12%: la tajada de su propia comisión que el concentrador comparte. |
 
-Y `REGLAS CALCULO` dice que las columnas de comprador son "SOLO Secundario Agencia", lo que las 13 filas contradicen.
+Se cumple la identidad **AI + AK = AE** en las 13 filas.
 
-Los 19 tests de regresión van a fijar los **resultados** correctos de todas formas. Pero la **fórmula** hay que confirmarla, porque de ella depende qué pasa con un negocio nuevo que no esté en el histórico. **Necesito que me expliques cómo se reparte la comisión en un negocio de Assetplan.**
+```
+Comision Total = base x AE
+  Broker       = base x AI
+  VP Bruta     = base x AK
+    Equipo     = VP Bruta x pct_equipo
+    Real VP    = VP Bruta - Equipo - Tercero + Rebate
+Rebate         = base x AD x AG      solo si el negocio cierra
+```
 
-Segunda diferencia, menor: `REGLAS CALCULO` ejemplifica `pct_equipo` con 30%, 40% y 35%, y en la práctica es 10% en todas las filas. Asumo que la práctica manda y la hoja quedó vieja, pero confírmalo.
+Verificado al peso en las 13 filas para total, broker, VP bruta y la identidad. El rebate cuadra en los 3 negocios que cerraron; en los 10 perdidos la tasa está registrada y el monto es 0, que es el comportamiento correcto.
+
+**Nombres propuestos para el modelo**, porque los del Excel inducen al error:
+
+| Excel | Modelo |
+|---|---|
+| `% Comisión Vendedor` (AD) | `pct_comision_concentrador` |
+| `% Comisión Comprador` (AE) | `pct_comision_negocio` |
+| `% Broker Comprador` (AI) | `pct_broker` |
+| `% VP Comprador` (AK) | `pct_vp` |
+
+**Única pieza a confirmar:** el rebate del 12% se calcula sobre `base × AD`, o sea sobre la comisión que el concentrador le cobra al vendedor. Los números lo dicen, pero es lectura del dato, no conocimiento del acuerdo.
+
+**Corrección:** este documento reportaba antes que la Comisión Broker de VVP-4 salía de 0,008. Sale de 0,012, que es exactamente `% broker comprador`. La lectura anterior era un error.
+
+### pct_equipo
+
+Es 10% en las 19 filas, contra los 30–40% de los ejemplos de `REGLAS CALCULO`. **Manda la práctica: 10%.** Pero va como campo editable por hito, no como constante, porque debe poder cambiar a futuro.
 
 ---
 
@@ -201,13 +240,15 @@ En los datos, `No Aplica - Negocio Caído` aparece en los 10 perdidos y en las 6
 
 ## Preguntas abiertas
 
-| # | Pregunta | Bloquea |
+| # | Pregunta | Estado |
 |---|---|---|
-| 1 | **¿Cómo se reparte la comisión en un negocio de Assetplan?** Los montos calculados no salen de las columnas que sus nombres sugieren. | Sprint 7 |
-| 2 | ¿Catálogos en tabla genérica, con `etapas` aparte y `modelo_negocio` como enum? | Sprint 4 |
-| 3 | ¿Dos tablas en vez de autorreferencia? Modifica `D-013`. | Sprint 6 |
-| 4 | ¿`motivo_valor_manual` obligatorio cuando hay valor manual? | Sprint 6 |
-| 5 | `pct_equipo` es 10% en la práctica y 30 a 40% en `REGLAS CALCULO`. ¿Manda la práctica? | Sprint 7 |
-| 6 | VVP-16 tiene base a la mitad y porcentaje declarado 0,04 cobrado 0,02. ¿Cobro parcial o error? | Sprint 10 |
+| 1 | ¿Cómo se reparte la comisión en Assetplan? | **Resuelta** sobre los datos. Queda confirmar que el rebate se calcula sobre `base × AD`. |
+| 2 | ¿Catálogos en tabla genérica, `etapas` aparte, `modelo_negocio` como enum? | Presentada, esperando aprobación |
+| 3 | ¿Dos tablas en vez de autorreferencia? Modifica `D-013`. | Presentada, esperando aprobación |
+| 4 | ¿`motivo_valor_manual` obligatorio? | **Resuelta: no.** Opcional |
+| 5 | ¿`pct_equipo` manda la práctica? | **Resuelta: 10%**, pero editable a futuro |
+| 6 | VVP-16: ¿cobro parcial o error? | **Resuelta: ninguno.** Su `AD = 0,04` significa que el concentrador cobró 4% al vendedor, por eso el rebate es el doble. Todo cuadra. |
 
-**Ya respondida por los datos, sale de pendientes:** la tasa de rebate del concentrador es **12%**, registrada en la columna AG de las 13 filas. No hace falta preguntarla.
+**Tally corregido:** 18 de las 19 filas siguen la regla. El único negocio con base externa es VVP-2.
+
+**Rebate del concentrador:** 12%, registrado en la columna AG. No era una pregunta.
