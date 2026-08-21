@@ -212,16 +212,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           se prohibe el quiebre y se le da a la tabla el ancho que necesita: el
           contenedor se desplaza y cada fila se lee de un tiron. */}
       <Table.ScrollContainer minWidth={1320}>
-      <Table
-        striped
-        withTableBorder
-        highlightOnHover
-        fz="sm"
-        styles={{
-          th: { whiteSpace: 'nowrap' },
-          td: { whiteSpace: 'nowrap' },
-        }}
-      >
+      <Table striped withTableBorder highlightOnHover fz="sm" className="tabla-una-linea">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>N°</Table.Th>
@@ -246,13 +237,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Td>{c.comuna}</Table.Td>
                 <Table.Td>{c.tipo_operacion}</Table.Td>
                 <Table.Td>
-                  {/* Mantine recorta la etiqueta del badge con puntos
-                      suspensivos, que es de donde salia "CANCELA...". */}
-                  <Badge
-                    color={c.estado === 'ACTIVO' ? 'good' : 'critical'}
-                    variant="light"
-                    styles={{ label: { overflow: 'visible' } }}
-                  >
+                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
                     {c.estado}
                   </Badge>
                 </Table.Td>

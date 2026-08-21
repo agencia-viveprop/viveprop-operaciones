@@ -16,6 +16,8 @@ import '@fontsource/inter/latin-ext-700.css'
 import '@fontsource/inter/latin-800.css'
 import '@fontsource/inter/latin-ext-800.css'
 import '@mantine/core/styles.css'
+// Despues de Mantine, para ganar los empates de especificidad.
+import './estilos.css'
 import App from './App.tsx'
 import { theme } from './theme.ts'
 

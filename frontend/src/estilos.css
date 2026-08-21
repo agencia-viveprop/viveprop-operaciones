@@ -1,0 +1,32 @@
+/* Estilos propios de la app, encima de los de Mantine.
+ *
+ * Se importa desde `main.tsx` DESPUES de `@mantine/core/styles.css`, para que
+ * gane en los empates de especificidad.
+ *
+ * Ojo: `src/index.css` existe pero nadie lo importa -- es un resto de la
+ * plantilla de Vite y su contenido contradice el sistema de diseño (un acento
+ * morado que no es la marca, un ancho fijo de 1126px, texto centrado). No
+ * agregar nada ahí.
+ */
+
+/* Tablas de una sola línea.
+ *
+ * Los nombres de corredor llegan a 30 caracteres, y sin esto cada fila queda de
+ * doble alto. Va como CSS y no con el `styles` de Mantine porque ese no alcanza
+ * a los `Table.Th` / `Table.Td`: son componentes propios con su propia API.
+ *
+ * La tabla vive dentro de un `Table.ScrollContainer` con ancho mínimo, así que
+ * cuando la ventana es más angosta se desplaza en vez de apretar las columnas.
+ */
+.tabla-una-linea th,
+.tabla-una-linea td {
+  white-space: nowrap;
+}
+
+/* Mantine le pone puntos suspensivos a la etiqueta del badge cuando no cabe, y
+ * de ahí salía el "CANCELA...". Con las columnas sin apretar ya no debería
+ * hacer falta, pero se fuerza para que no reaparezca al cambiar el ancho. */
+.tabla-una-linea [class*='Badge-label'] {
+  overflow: visible;
+  text-overflow: clip;
+}
