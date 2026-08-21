@@ -34,7 +34,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 4 | 7 | D2 · Motor de comisiones | ✅ **Listo** |
 | 5 | 8 | D3 · CRUD backend | Alta y edición por API, comisión calculada al guardar |
 | 6 | 10 | D5 · Carga de los 19 históricos | ✅ **Listo** |
-| 7 | 9 | D4 · Pantalla Negocios | **Primer hito visible**, con datos reales |
+| 7 | 9 | D4 · Pantalla Negocios | ✅ **Listo** **primer hito visible** |
 | 8 | 11 | D6 · Pipeline de negocios | Avance por etapas E1–E7 con historial |
 | 9 | 12 | F1 · Base de cálculo | Ganado / pipeline / potencial perdido, en CLP |
 | 10 | 13 | F2 · Dashboard de negocios | **Segundo hito visible** |
@@ -144,9 +144,14 @@ El orden al guardar un hito es siempre el mismo, en `app/services/negocios.py`: 
 
 ### 9 · D4 — Pantalla Negocios
 
-Listado con filtros (estado, modelo, alianza, etapa) + ficha con sus hitos + formulario de alta y edición.
+✅ **Listo** **el 2026-08-21.** Listado con filtros, ficha con sus hitos y formulario de alta.
 
-- **Listo cuando:** se puede registrar un negocio completo desde el navegador sin tocar la API.
+- **Listado** con filtros por código, modelo, estado y alianza. Fila de totales al pie, sumando los hitos — la única forma correcta de totalizar (`D-020`). Los negocios con más de un hito lo indican con una insignia.
+- **Ficha** con el desglose de comisiones de cada hito en cascada: total del negocio, corredor aliado, ViveProp bruta, y las restas de tercero y equipo hasta la comisión real. El rebate del concentrador se muestra en verde porque suma, no resta.
+- **Dos avisos que la ficha hace explícitos.** Si el hito usa valor ingresado a mano, se dice sobre qué monto se calculó y por qué. Y si la comisión total no cuadra con su reparto —el caso de VVP-2— aparece una alerta con el monto del descuadre en vez de mostrar números que no suman.
+- **Formulario que se adapta al modelo**: pide el lado vendedor en Primario, el comprador en Concentradores, los dos en Agencia. No muestra campos que ese modelo ignora, que es de donde salieron tres errores de lectura en el análisis.
+- Los porcentajes se ingresan como número (2 = 2%) y se envían como fracción.
+- Mientras se escribe la dirección se ofrecen las propiedades parecidas, porque la clave única no agrupa `Av. Fernández Albano 492` con `Fernández Albano 492`.
 
 ### 10 · D5 — Carga de los 19 históricos
 

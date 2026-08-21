@@ -18,6 +18,11 @@ router = APIRouter(prefix="/catalogos", tags=["catalogos"])
 
 
 class ItemCatalogo(BaseModel):
+    # El id viaja porque los negocios referencian catalogos por id
+    # (`alianza_id`, `tipo_operacion_id`). Sin esto el formulario no puede
+    # traducir lo que eligio el usuario a lo que la API espera.
+    # Los grupos que salen de un enum no tienen id: ahi va nulo.
+    id: int | None = None
     codigo: str
     nombre: str
     orden: int | None = None
@@ -71,7 +76,9 @@ def _items(db: Session, tipo: TipoCatalogo) -> list[ItemCatalogo]:
         .order_by(Catalogo.orden, Catalogo.nombre)
     ).all()
     return [
-        ItemCatalogo(codigo=f.codigo, nombre=f.nombre, orden=f.orden, metadatos=f.metadatos)
+        ItemCatalogo(
+            id=f.id, codigo=f.codigo, nombre=f.nombre, orden=f.orden, metadatos=f.metadatos
+        )
         for f in filas
     ]
 

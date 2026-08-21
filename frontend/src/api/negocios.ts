@@ -1,0 +1,140 @@
+export type ModeloNegocio = 'MERCADO_PRIMARIO' | 'SECUNDARIO_CONCENTRADORES' | 'SECUNDARIO_AGENCIA'
+export type EstadoNegocio = 'ACTIVO' | 'CERRADO' | 'PERDIDO' | 'DESISTIDO'
+export type MonedaTipo = 'CLP' | 'UF' | 'OTRA'
+
+export type Propiedad = {
+  id: number
+  direccion: string
+  unidad: string | null
+  comuna: string
+  tipo_propiedad_id: number | null
+  estado_propiedad_id: number | null
+}
+
+export type Hito = {
+  id: number
+  nombre: string | null
+  fecha_inicio: string
+  fecha_cierre: string | null
+  estado: EstadoNegocio
+  etapa: string | null
+
+  valor_negocio: number | null
+  moneda: MonedaTipo | null
+  fecha_valorizacion: string | null
+  uf_snapshot: number | null
+  valor_clp_calculado: number | null
+  valor_clp_manual: number | null
+  motivo_valor_manual: string | null
+  /** Sobre esto se calculó la comisión: el manual si existe, si no el calculado. */
+  base_comision: number | null
+
+  comision_total: number | null
+  comision_broker: number | null
+  rebate_concentrador: number | null
+  comision_vp_bruta: number | null
+  comision_equipo: number | null
+  comision_tercero: number | null
+  comision_real_vp: number | null
+
+  nombre_tercero: string | null
+  motivo_perdida_id: number | null
+  motivo_perdida_detalle: string | null
+}
+
+export type Negocio = {
+  id: number
+  codigo: string
+  modelo: ModeloNegocio
+  propiedad: Propiedad
+  alianza_id: number | null
+  tipo_operacion_id: number | null
+  vendedor_arrendador: string | null
+  comprador_arrendatario: string | null
+  corredor_agente: string | null
+  notas: string | null
+  observaciones: string | null
+  creado_en: string
+  hitos: Hito[]
+}
+
+/** Fila del listado: sin los hitos, con sus montos ya sumados. */
+export type NegocioResumen = {
+  id: number
+  codigo: string
+  modelo: ModeloNegocio
+  direccion: string
+  unidad: string | null
+  comuna: string
+  alianza_id: number | null
+  cantidad_hitos: number
+  estados: EstadoNegocio[]
+  comision_total: number
+  comision_real_vp: number
+}
+
+export type FiltrosNegocios = {
+  estado?: string
+  modelo?: string
+  alianza_id?: string
+  codigo?: string
+}
+
+async function parseOrThrow(res: Response) {
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    const detalle = body.detail
+    // Los errores de validación de FastAPI vienen como lista de objetos.
+    if (Array.isArray(detalle)) {
+      throw new Error(detalle.map((d: { msg?: string }) => d.msg ?? '').join(' · '))
+    }
+    throw new Error(detalle ?? `Error ${res.status}`)
+  }
+  return res.json()
+}
+
+function json(url: string, method: string, payload: unknown) {
+  return fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(payload),
+  }).then(parseOrThrow)
+}
+
+export function listarNegocios(filtros: FiltrosNegocios = {}): Promise<NegocioResumen[]> {
+  const params = new URLSearchParams()
+  Object.entries(filtros).forEach(([k, v]) => v && params.set(k, v))
+  const qs = params.toString()
+  return fetch(`/api/negocios${qs ? `?${qs}` : ''}`, { credentials: 'include' }).then(parseOrThrow)
+}
+
+export function obtenerNegocio(id: number): Promise<Negocio> {
+  return fetch(`/api/negocios/${id}`, { credentials: 'include' }).then(parseOrThrow)
+}
+
+export function crearNegocio(payload: Record<string, unknown>): Promise<Negocio> {
+  return json('/api/negocios', 'POST', payload)
+}
+
+export function actualizarNegocio(id: number, payload: Record<string, unknown>): Promise<Negocio> {
+  return json(`/api/negocios/${id}`, 'PATCH', payload)
+}
+
+export function crearHito(negocioId: number, payload: Record<string, unknown>): Promise<Hito> {
+  return json(`/api/negocios/${negocioId}/hitos`, 'POST', payload)
+}
+
+export function actualizarHito(
+  negocioId: number,
+  hitoId: number,
+  payload: Record<string, unknown>,
+): Promise<Hito> {
+  return json(`/api/negocios/${negocioId}/hitos/${hitoId}`, 'PATCH', payload)
+}
+
+export function buscarPropiedades(q: string): Promise<Propiedad[]> {
+  return fetch(`/api/negocios/propiedades?q=${encodeURIComponent(q)}`, {
+    credentials: 'include',
+  }).then(parseOrThrow)
+}

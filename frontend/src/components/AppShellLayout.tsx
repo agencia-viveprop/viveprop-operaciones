@@ -15,6 +15,7 @@ import {
 } from '@mantine/core'
 import {
   IconArrowsExchange,
+  IconBriefcase,
   IconHome2,
   IconKey,
   IconLogout,
@@ -66,6 +67,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Canjes"
               leftSection={<IconArrowsExchange size={18} />}
               active={location.pathname === '/canjes'}
+              variant="filled"
+            />
+            <NavLink
+              component={Link}
+              to="/negocios"
+              label="Negocios"
+              leftSection={<IconBriefcase size={18} />}
+              active={location.pathname === '/negocios'}
               variant="filled"
             />
           </Stack>

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8 y 10 listos)
+**Última actualización:** 2026-08-21 (sprints 1, 3, 4, 6, 7, 8, 9 y 10 listos)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 22 |
-| Listos | 7 |
+| Listos | 8 |
 | En curso | 0 |
-| Pendientes | 15 |
+| Pendientes | 14 |
 | Bloqueados | 0 |
 
-**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8 y 10. Sin bloqueos. El siguiente es el **9 (D4 · Pantalla Negocios)**, el primer hito visible, y ya hay 18 negocios reales en `dev` para que nazca mirando datos de verdad.
+**Sprint actual:** ninguno. Listos el 1, 3, 4, 6, 7, 8, 9 y 10. **El primer hito visible está hecho**: la pantalla de Negocios funciona con los 18 negocios reales. El siguiente es el **11 (D6 · Pipeline de negocios)**.
 
 ---
 
@@ -28,21 +28,20 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
-| **Camino crítico** (1, 3–13) | 7 | 12 | **58,3%** |
-| Plan completo | 7 | 22 | 31,8% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 16 | 31 | 52% |
+| **Camino crítico** (1, 3–13) | 8 | 12 | **66,7%** |
+| Plan completo | 8 | 22 | 36,4% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 17 | 31 | 55% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 3 | 4 | 75% | 1, 3, 4, 5 |
 | **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
-| **D** · Negocios | 4 | 6 | 67% | 6–11 |
+| **D** · Negocios | 5 | 6 | 83% | 6–11 |
 | **F** · Reportería | 0 | 5 | 0% | 12, 13, 16–18 |
 | **E** · Carga masiva | 0 | 2 | 0% | 14, 15 |
 | **B** · Gestión de canjes | 0 | 3 | 0% | 19–21 |
 
-Distancia a los hitos visibles: **el siguiente sprint** es la pantalla de Negocios, y
-**3** hasta su dashboard, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
+Primer hito visible **alcanzado**. Quedan **2 sprints** hasta el dashboard de negocios, en el orden aprobado el 2026-08-21. Entre el 2 y el 8 no hay cambios visibles en la app.
 
 ---
 
@@ -71,7 +70,7 @@ Distancia a los hitos visibles: **el siguiente sprint** es la pantalla de Negoci
 | 6 | D1 · Esquema de negocios | **Listo** | 2026-08-21 | — | 4 tablas, 13 tests. Migración reversible verificada. |
 | 7 | D2 · Motor de comisiones | **Listo** | 2026-08-21 | — | 34 tests. 18 de 19 históricos al peso; VVP-2 descuadrado en el origen (`D-026`). |
 | 8 | D3 · CRUD backend | **Listo** | 2026-08-21 | — | 5 endpoints, 18 tests. Verificado punta a punta contra `dev`. |
-| 9 | D4 · Pantalla Negocios | Pendiente | — | — | Primer hito visible. |
+| 9 | D4 · Pantalla Negocios | **Listo** | 2026-08-21 | — | Listado, ficha y alta. **Primer hito visible.** |
 | 10 | D5 · Carga de los 19 históricos | **Listo** | 2026-08-21 | — | 18 negocios, 19 hitos, 13 propiedades, 114 obligaciones. Una sola diferencia: VVP-2. |
 | 11 | D6 · Pipeline de negocios | Pendiente | — | — | |
 | 12 | F1 · Base de cálculo | Pendiente | — | — | |
@@ -116,6 +115,31 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 9 (D4) — Listo · primer hito visible
+
+**La pantalla de Negocios funciona con los 18 negocios reales.** El total del listado da 14.663.624 de comisión real VP, el mismo número que se calculó del Excel en la auditoría inicial.
+
+Tres archivos nuevos en el front, más el cliente de API: `pages/Negocios.tsx` (listado), `components/NegocioFichaModal.tsx` (ficha), `components/NegocioFormModal.tsx` (alta) y `components/negociosFormato.ts` (formato de moneda, UF, porcentajes y fechas en un solo lugar).
+
+**El listado** filtra por código, modelo, estado y alianza, con fila de totales al pie sumando los hitos. Los negocios con más de un hito lo dicen con una insignia — hoy solo VVP-3.
+
+**La ficha muestra el desglose en cascada**: comisión total del negocio, corredor aliado, ViveProp bruta, y las restas de tercero y equipo hasta la comisión real. El rebate del concentrador va en verde porque suma en vez de restar, que es lo que hace que la comisión real pueda superar el total.
+
+**Dos cosas que la ficha hace explícitas en vez de esconder:**
+
+1. Si el hito usa valor ingresado a mano, dice sobre qué monto se calculó, cuál era el calculado y por qué se cambió.
+2. Si la comisión total no cuadra con su reparto, aparece una alerta con el descuadre. **VVP-2 la va a mostrar**, con sus 903.803. Mostrar números que no suman sin decir nada habría sido peor que no mostrarlos.
+
+**El formulario se adapta al modelo**: pide el lado vendedor en Primario, el comprador en Concentradores, los dos en Agencia. No muestra campos que ese modelo ignora — que es exactamente de donde salieron tres lecturas equivocadas durante el análisis. Los porcentajes se ingresan como número (2 = 2%) y se convierten a fracción al enviar.
+
+Mientras se escribe la dirección, ofrece las propiedades parecidas, porque la clave única no agrupa `Av. Fernández Albano 492` con `Fernández Albano 492`.
+
+**Un hueco del backend encontrado al construir el consumidor:** `/api/catalogos` no devolvía el `id` de cada ítem, pero los negocios referencian catálogos por id, así que el formulario no podía traducir la alianza elegida a `alianza_id`. Se agregó, con dos tests. Los grupos que salen de un enum siguen sin id, porque no son filas de tabla.
+
+**95 tests pasando** más 1 xfail. Typecheck, lint y build del frontend limpios.
+
+**Nota operativa:** el backend local quedó corriendo con `--reload`. El proceso anterior tenía el código de hace varios sprints y no habría servido los endpoints nuevos.
 
 ### 2026-08-21 · Sprint 10 (D5) — Listo
 

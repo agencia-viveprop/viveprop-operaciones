@@ -95,3 +95,23 @@ def test_los_catalogos_exigen_sesion(db):
             assert c.get("/api/catalogos").status_code == 401
     finally:
         app.dependency_overrides.clear()
+
+
+def test_los_catalogos_traen_su_id(cliente, catalogos_sembrados):
+    """Los negocios referencian catálogos por id, no por código.
+
+    Sin el id en la respuesta, el formulario del sprint 9 no puede traducir la
+    alianza elegida a `alianza_id`.
+    """
+    alianzas = cliente.get("/api/catalogos").json()["alianzas"]
+    assert all(isinstance(a["id"], int) for a in alianzas)
+
+    por_tipo = cliente.get("/api/catalogos/alianza").json()
+    assert por_tipo[0]["id"] == alianzas[0]["id"]
+
+
+def test_los_grupos_que_salen_de_un_enum_no_traen_id(cliente, catalogos_sembrados):
+    """Modelo y estado no son filas de tabla, así que no tienen id."""
+    datos = cliente.get("/api/catalogos").json()
+    assert all(m["id"] is None for m in datos["modelos_negocio"])
+    assert all(e["id"] is None for e in datos["estados_negocio"])
