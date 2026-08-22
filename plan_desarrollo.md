@@ -332,7 +332,6 @@ Ninguna bloquea el arranque.
 | 18 (F5) | Qué quiere ver el directorio. |
 | — | **Importar #364 y #367**, que son posteriores al último export de Dataprop. La limpieza de canjes ya no está pendiente: va en la migración `a4e81b6f30c9` y se aplica en el deploy. |
 | — | **Cargar en producción los negocios y el seguimiento de canjes.** Se cargaron con scripts contra `dev` y nunca contra `production`. La UF ya no hace falta: se trae del SII desde la app. Ver la bitácora del 2026-08-21. |
-| — | Si la ruta `/uf` se restringe a admin, además de su enlace del menú. |
 
 
 ## Diferido por decisión del usuario
