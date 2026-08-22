@@ -23,6 +23,7 @@ import {
   IconInbox,
   IconKey,
   IconLogout,
+  IconPresentation,
   IconMoon,
   IconSun,
   IconUsers,
@@ -104,6 +105,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Reporte mensual"
               leftSection={<IconCalendarMonth size={18} />}
               active={location.pathname === '/reportes/mensual'}
+              variant="filled"
+            />
+            <NavLink
+              component={Link}
+              to="/reportes/directorio"
+              label="Vista directorio"
+              leftSection={<IconPresentation size={18} />}
+              active={location.pathname === '/reportes/directorio'}
               variant="filled"
             />
           </Stack>

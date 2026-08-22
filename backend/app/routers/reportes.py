@@ -18,6 +18,7 @@ from app.services.reporte_mensual import (
     ReporteMensual,
     obtener_reporte_mensual,
 )
+from app.services.vista_directorio import VistaDirectorio, obtener_vista_directorio
 from app.services.reporte_semanal import (
     DIAS_ESTANCADO_DEFECTO,
     ReporteSemanal,
@@ -98,3 +99,18 @@ def mensual(
             f"La ventana tiene que ser una de {list(VENTANAS_VALIDAS)}.",
         )
     return obtener_reporte_mensual(db, anio, mes, ventana)
+
+
+@router.get("/directorio", response_model=VistaDirectorio)
+def directorio(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """La vista ejecutiva: cuánto entró, de dónde, qué hay por delante.
+
+    La proyección va como **rango** y con el `n` visible. Con 17 negocios
+    resueltos, la tasa de conversión tiene un intervalo de confianza de casi 50
+    puntos: dar una cifra puntual sería darle al directorio falsa precisión sobre
+    una decisión de plata.
+    """
+    return obtener_vista_directorio(db)

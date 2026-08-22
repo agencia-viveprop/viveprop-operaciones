@@ -165,3 +165,63 @@ export function obtenerReporteMensual(
     credentials: 'include',
   }).then(parseOrThrow)
 }
+
+
+// ------------------------------------------------------- vista directorio
+
+export type Monto = { etiqueta: string; valor: string }
+
+export type BucketDirectorio = {
+  hitos: number
+  negocios: number
+  comision_real_vp: string
+}
+
+export type Conversion = {
+  cerrados: number
+  perdidos: number
+  /** Va siempre: una tasa de 41% sobre 17 casos y otra sobre 1.700 se leen
+   *  igual y no valen lo mismo. */
+  n: number
+  tasa_pct: string
+  intervalo_bajo_pct: string
+  intervalo_alto_pct: string
+}
+
+export type Ticket = {
+  mediano: string
+  minimo: string
+  maximo: string
+  n: number
+}
+
+export type Proyeccion = {
+  pipeline: string
+  pesimista: string
+  esperado: string
+  optimista: string
+  /** Si es true, no hay forma de decir *cuándo* entra la plata. */
+  sin_dato_de_plazo: boolean
+  nota: string
+}
+
+export type VistaDirectorio = {
+  generado: string
+  anio_corrido: MetricasMes
+  anio_corrido_anterior: MetricasMes
+  ultimos_12_meses: MetricasMes
+  ganado: BucketDirectorio
+  pipeline: BucketDirectorio
+  potencial_perdido: BucketDirectorio
+  por_modelo: Monto[]
+  por_alianza: Monto[]
+  conversion: Conversion
+  ticket: Ticket | null
+  proyeccion: Proyeccion
+  canjes_vigentes: number
+  canjes_historicos: number
+}
+
+export function obtenerVistaDirectorio(): Promise<VistaDirectorio> {
+  return fetch('/api/reportes/directorio', { credentials: 'include' }).then(parseOrThrow)
+}

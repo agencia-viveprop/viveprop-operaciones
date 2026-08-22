@@ -12,6 +12,7 @@ import Negocios from './pages/Negocios'
 import DashboardNegocios from './pages/DashboardNegocios'
 import ReporteSemanal from './pages/ReporteSemanal'
 import ReporteMensual from './pages/ReporteMensual'
+import VistaDirectorio from './pages/VistaDirectorio'
 import UF from './pages/UF'
 import AppShellLayout from './components/AppShellLayout'
 
@@ -50,6 +51,7 @@ function App() {
         <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
         <Route path="/reportes/semanal" element={<ReporteSemanal />} />
         <Route path="/reportes/mensual" element={<ReporteMensual />} />
+        <Route path="/reportes/directorio" element={<VistaDirectorio />} />
         <Route
           path="/uf"
           element={

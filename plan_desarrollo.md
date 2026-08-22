@@ -45,7 +45,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 15 | 15 | E2 · Importador de negocios | ✅ **Listo** |
 | 16 | 16 | F3 · Reporte semanal | ✅ **Listo** los dos dominios |
 | 17 | 17 | F4 · Reporte mensual comparativo | ✅ **Listo** |
-| 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
+| 18 | 18 | F5 · Vista directorio | ✅ **Listo** |
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
 | 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
 | 21 | 21 | B7 · Migrar el seguimiento histórico | ✅ **Listo** |
@@ -274,11 +274,13 @@ Mes actual contra mes anterior y contra el mismo mes del año anterior, con vari
 
 - **Listo cuando:** un mes sin datos no rompe la comparación, muestra vacío. ✅ La variación contra cero es nula y se muestra como "nuevo" con la diferencia absoluta, no como un porcentaje inventado (`D-041`). 25 tests.
 
-### 18 · F5 — Vista directorio
+### 18 · F5 — Vista directorio ✅ Listo
 
-Presentación ejecutiva, exportable.
+Presentación ejecutiva, exportable. **Armada con supuestos explícitos** (`D-044`): se preguntó cinco veces qué quiere ver el directorio y la respuesta no llegó, así que se entregó una primera versión concreta para corregir, con un aviso en la propia pantalla que lo dice.
 
-- **Pendiente de consultar:** qué quiere ver el directorio, antes de diseñarla.
+La proyección va como **rango** derivado del intervalo de confianza de la tasa de conversión, con el `n` a la vista, y declara que no puede decir *cuándo* entra la plata. "Exportable" se resolvió con estilos de impresión en vez de un generador de PDF.
+
+- **Listo cuando:** el directorio puede leer de dónde viene la plata y qué hay por delante sin que ninguna cifra finja una precisión que no tiene. ✅ 16 tests.
 
 ### 19 · B5 — Registrar movimientos en canjes
 
@@ -329,7 +331,7 @@ Ninguna bloquea el arranque.
 | 1 (C1) | La rama `dev` se crea con los datos reales heredados o solo con el esquema. |
 | 7 (D2) | En arriendo, `% Broker` se calcula sobre la comisión total o sobre el arriendo mensual. |
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
-| 18 (F5) | Qué quiere ver el directorio. |
+| 18 (F5) | ~~Qué quiere ver el directorio~~ — se entregó con supuestos; falta que los corrija. |
 | — | **Importar #364 y #367**, que son posteriores al último export de Dataprop. La limpieza de canjes ya no está pendiente: va en la migración `a4e81b6f30c9` y se aplica en el deploy. |
 
 

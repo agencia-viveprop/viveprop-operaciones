@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (21 listos + G2 en curso; solo falta la vista directorio)
+**Última actualización:** 2026-08-22 (22 listos + G2 en curso; solo falta el dominio propio, excluido por el usuario)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 23 |
-| Listos | 21 |
+| Listos | 22 |
 | En curso | 1 |
-| Pendientes | 1 |
+| Pendientes | 0 |
 | Bloqueados | 0 |
 
-**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: la vista directorio (18), que espera saber qué quiere ver el directorio. El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. No queda nada pendiente del plan: solo el dominio propio del sprint 2, que el usuario dejó fuera por ahora. El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 21 | 23 | 91,3% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 30 | 32 | 93,8% |
+| Plan completo | 22 | 23 | 95,7% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 31 | 32 | 96,9% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -79,7 +79,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 15 | E2 · Importador de negocios | **Listo** | 2026-08-21 | — | Una fila es un hito (`D-039`). Idempotente, y no escribe nada si hay un solo error. 32 tests. |
 | 16 | F3 · Reporte semanal | **Listo** | 2026-08-21 | — | Los dos dominios. 30 tests. "Avanzó" es toda actividad (`D-031`); umbral como control (`D-032`). |
 | 17 | F4 · Reporte mensual comparativo | **Listo** | 2026-08-21 | — | Contra el mes anterior y el mismo mes del año pasado. La variación contra cero es nula, no infinita (`D-041`). 25 tests. |
-| 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
+| 18 | F5 · Vista directorio | **Listo** | 2026-08-22 | — | Armada con supuestos explícitos (`D-044`), porque la definición no llegó. Proyección como rango con el `n` a la vista. 16 tests. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
 | 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
 | 21 | B7 · Migrar el seguimiento histórico | **Listo** | 2026-08-21 | — | 384 movimientos en 112 canjes. La bandeja pasó a 146 + 48. |
@@ -116,6 +116,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-22 · Sprint 18 (F5) — Listo · vista directorio · serie F completa
+
+**Se armó con supuestos, y eso queda dicho en la pantalla** (`D-044`). Se preguntó cinco veces qué quiere ver el directorio y la respuesta no llegó; seguir bloqueado era peor servicio que entregar algo concreto que se pueda corregir. La vista lleva un aviso propio que dice que es una primera versión y pide qué sacar y qué agregar.
+
+Los cinco supuestos, para poder discutirlos uno por uno: cuánto entró (año corrido y últimos 12 meses, no el mes), de dónde vino (mezcla por modelo y por alianza), qué hay por delante (el pipeline), qué se perdió y cuánto valía, y una proyección.
+
+**La proyección va como rango y con el `n` al lado, nunca como cifra.** La tasa de conversión es 7 de 17, o sea 41,2%, pero con ese tamaño de muestra el intervalo de confianza al 95% va de **17,8% a 64,6%**. Multiplicar el pipeline por "41%" es en realidad multiplicarlo por "algo entre un quinto y dos tercios". Un directorio decide plata leyendo esto: darle una cifra puntual sobre 17 casos sería falsa precisión, y es peor que un rango honesto. Sobre el pipeline de 1.824.272 los tres escenarios quedan en **324.720 / 751.600 / 1.178.480**.
+
+**Y la vista declara lo que no puede decir.** No hay forma de proyectar *cuándo* va a entrar esa plata: eso necesita duración de ciclo y conversión por etapa, y hoy no existe ni un dato. Aparece un aviso que lo explica y que **desaparece solo** cuando haya tres cierres con fechas de inicio y cierre distintas.
+
+**"Exportable" se resolvió con estilos de impresión**, no generando un PDF. `Ctrl+P` da una hoja limpia: se ocultan el menú, los botones y las notas de trabajo, y se aplanan sombras y fondos. Un generador de PDF sería una dependencia nueva para producir lo que el navegador ya hace bien, con dos maquetaciones que mantener en paralelo.
+
+Dos detalles de honestidad estadística que quedaron en el código: el ticket se muestra como **mediana y rango**, no como promedio, porque con una dispersión de 4x un solo negocio grande corre el promedio; y los negocios **activos no entran** en la tasa de conversión, porque un negocio abierto todavía no se ganó ni se perdió y contarlo como perdido diría que ya fracasó.
+
+16 tests nuevos, 405 en total.
 
 ### 2026-08-22 · Revisión de los pendientes: sin bugs nuevos
 

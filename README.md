@@ -77,6 +77,8 @@ Variables de entorno en Render:
 
 **Carga masiva de negocios.** Botón *Carga masiva* en la pantalla de Negocios: baja una plantilla `.xlsx` con los códigos válidos de esta base y la vuelve a subir. Una fila es un hito, las tasas van en porcentaje y **las comisiones no se escriben** — las calcula el motor (`D-039`). No es la vía para los 19 históricos: esos van con `scripts/cargar_negocios.py`, que migra fiel sin recalcular.
 
+**Vista directorio.** En *Vista directorio*, la presentación ejecutiva: cuánto entró, de dónde vino, qué hay por delante y una proyección. La proyección va como **rango** con el `n` a la vista, nunca como cifra (`D-044`). Se exporta imprimiendo: `Ctrl+P` da una hoja limpia.
+
 **Reset de contraseña.** En *Usuarios*, el botón **Resetear** genera una clave temporal, la muestra una sola vez y cierra las sesiones de esa persona. Al entrar, la app le pide elegir una propia y **la API le devuelve 403 en todo** hasta que lo haga — el bloqueo está en `get_current_user`, no en la pantalla (`D-040`). Nadie puede resetear su propia clave: para eso está *Cambiar contraseña*.
 
 **Health checks.** Son dos y miden cosas distintas (`D-035`):

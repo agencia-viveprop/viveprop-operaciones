@@ -55,6 +55,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-041](#d-041) | 2026-08-21 | La variación contra cero es nula, no infinita | 17 |
 | [D-042](#d-042) | 2026-08-22 | Un negocio tiene tres duraciones distintas, y ninguna es `actualizado_en` | — |
 | [D-043](#d-043) | 2026-08-22 | El cierre mensual se compara con ventanas móviles, no mes contra mes | 17 |
+| [D-044](#d-044) | 2026-08-22 | La vista directorio se entrega con supuestos declarados, y la proyección va como rango | 18 |
 
 ---
 
@@ -795,3 +796,23 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Se descartó** la comparación mes contra mes, que era justo el ruido a eliminar, y el "mismo mes del año anterior": la estacionalidad necesita dos o tres años de datos para ser medible, y hoy compararía 1 contra 0. Se descartó también una serie de veinticuatro meses, que responde otra pregunta y ya está en los gráficos "por mes" del dashboard.
 
 **Lo que el rediseño dejó ver, y la vista mensual escondía:** en los últimos 6 meses las liquidaciones cerradas subieron 100% (4 contra 2) mientras la comisión real bajó 19,3%. Más cierres con ticket más chico. Eso es un hecho del negocio, y ninguna comparación mes contra mes lo iba a mostrar.
+
+---
+
+## D-044 · La vista directorio se entrega con supuestos declarados, y la proyección va como rango
+
+**Contexto.** El sprint 18 pedía una presentación ejecutiva exportable, y su nota decía "pendiente de consultar: qué quiere ver el directorio, antes de diseñarla". Se preguntó **cinco veces** a lo largo de la ejecución y la respuesta no llegó.
+
+**Decisión.** Se entrega con supuestos explícitos, y la propia pantalla lo dice. Seguir bloqueado era peor servicio que dar algo concreto que se pueda corregir: es más fácil reaccionar a una versión que responder una pregunta abierta.
+
+Los cinco supuestos, para poder discutirlos uno por uno: cuánto entró (año corrido y últimos 12 meses), de dónde vino (mezcla por modelo y por alianza), qué hay por delante (el pipeline), qué se perdió y cuánto valía, y una proyección.
+
+**La proyección va como rango, nunca como cifra, y con el `n` al lado.** La tasa de conversión es 7 de 17 —41,2%— pero con ese tamaño de muestra el intervalo de confianza al 95% va de **17,8% a 64,6%**. Multiplicar el pipeline por "41%" es en realidad multiplicarlo por "algo entre un quinto y dos tercios". Un directorio decide plata leyendo esto, y darle una cifra puntual sobre 17 casos sería falsa precisión. Los tres escenarios —pesimista, esperado, optimista— **no son criterios inventados**: son el mismo dato con su margen de error.
+
+**El `n` viaja siempre junto a la tasa.** Un 41% sobre 17 casos y un 41% sobre 1.700 se leen igual en una pantalla y no valen lo mismo. La estructura de datos lo hace difícil de omitir.
+
+**La vista declara lo que no puede decir.** No hay forma de proyectar *cuándo* va a entrar la plata del pipeline: eso necesita duración de ciclo y conversión por etapa, y hoy no existe ni un dato —los históricos traen la misma fecha de inicio y de cierre porque el Excel tenía una sola, y no hay ni un movimiento de negocio registrado—. Aparece un aviso que lo explica, y **desaparece solo** cuando haya al menos tres cierres con fechas distintas. Informar la carencia es mejor que rellenarla con una estimación que nadie podría auditar.
+
+**Dos decisiones de honestidad estadística más.** El ticket se muestra como **mediana y rango**, no como promedio: con una dispersión de 4x —de 516.304 a 2.110.526— un solo negocio grande corre el promedio y da una cifra que no representa a ninguno. Y los negocios **activos no entran** en la tasa de conversión: un negocio abierto todavía no se ganó ni se perdió, y contarlo del lado perdido diría que ya fracasó.
+
+**"Exportable" se resolvió con estilos de impresión**, no generando un PDF. `Ctrl+P` produce una hoja limpia: se ocultan el menú, los botones y las notas de trabajo, y se aplanan sombras y fondos, que en papel solo gastan tinta. Se descartó un generador de PDF: sería una dependencia nueva para producir lo que el navegador ya hace bien, y obligaría a mantener dos maquetaciones en paralelo que se desincronizan a la primera de cambio.

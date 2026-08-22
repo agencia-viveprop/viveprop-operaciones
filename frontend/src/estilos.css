@@ -73,3 +73,37 @@
   background: var(--mantine-color-gray-6);
 }
 
+/* Impresión de la vista directorio.
+ *
+ * "Exportable" se resolvió así en vez de generando un PDF: `Ctrl+P` ya produce
+ * una hoja limpia, y un generador de PDF sería una dependencia nueva para hacer
+ * lo que el navegador hace bien, con dos maquetaciones que mantener en paralelo.
+ *
+ * Lo que se saca al imprimir es todo lo que no es contenido: el menú lateral, la
+ * cabecera de la aplicación, los botones y las notas de trabajo. Lo que se
+ * aplana son las sombras y los fondos, que en papel solo gastan tinta.
+ */
+@media print {
+  .mantine-AppShell-navbar,
+  .mantine-AppShell-header,
+  .sin-imprimir {
+    display: none !important;
+  }
+
+  .mantine-AppShell-main {
+    padding: 0 !important;
+  }
+
+  /* Sin sombras ni fondos: en papel no aportan y consumen tinta. */
+  .hoja-imprimible [class*='mantine-Paper-root'] {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    background: transparent !important;
+    break-inside: avoid;
+  }
+
+  /* Que un panel no quede partido entre dos páginas. */
+  .hoja-imprimible > * {
+    break-inside: avoid;
+  }
+}
