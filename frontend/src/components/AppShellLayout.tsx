@@ -16,6 +16,7 @@ import {
 import {
   IconArrowsExchange,
   IconBriefcase,
+  IconCalendarMonth,
   IconCalendarStats,
   IconCoin,
   IconHome2,
@@ -95,6 +96,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Reporte semanal"
               leftSection={<IconCalendarStats size={18} />}
               active={location.pathname === '/reportes/semanal'}
+              variant="filled"
+            />
+            <NavLink
+              component={Link}
+              to="/reportes/mensual"
+              label="Reporte mensual"
+              leftSection={<IconCalendarMonth size={18} />}
+              active={location.pathname === '/reportes/mensual'}
               variant="filled"
             />
           </Stack>

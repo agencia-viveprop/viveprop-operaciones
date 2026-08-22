@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (20 listos + G2 en curso; reset de contraseña listo)
+**Última actualización:** 2026-08-21 (21 listos + G2 en curso; solo falta la vista directorio)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 23 |
-| Listos | 20 |
+| Listos | 21 |
 | En curso | 1 |
-| Pendientes | 2 |
+| Pendientes | 1 |
 | Bloqueados | 0 |
 
-**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: los dos reportes que faltan (17–18). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: la vista directorio (18), que espera saber qué quiere ver el directorio. El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,8 +29,8 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 20 | 23 | 87,0% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 29 | 32 | 90,6% |
+| Plan completo | 21 | 23 | 91,3% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 30 | 32 | 93,8% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
@@ -78,7 +78,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 14 | E1 · Plantilla de negocios | **Listo** | 2026-08-21 | — | 32 columnas en grupos, hoja de instrucciones y códigos válidos leídos de la base. |
 | 15 | E2 · Importador de negocios | **Listo** | 2026-08-21 | — | Una fila es un hito (`D-039`). Idempotente, y no escribe nada si hay un solo error. 32 tests. |
 | 16 | F3 · Reporte semanal | **Listo** | 2026-08-21 | — | Los dos dominios. 30 tests. "Avanzó" es toda actividad (`D-031`); umbral como control (`D-032`). |
-| 17 | F4 · Reporte mensual comparativo | Pendiente | — | — | |
+| 17 | F4 · Reporte mensual comparativo | **Listo** | 2026-08-21 | — | Contra el mes anterior y el mismo mes del año pasado. La variación contra cero es nula, no infinita (`D-041`). 25 tests. |
 | 18 | F5 · Vista directorio | Pendiente | — | — | Decisión pendiente: contenido para el directorio. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
 | 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
@@ -116,6 +116,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 17 (F4) — Listo · reporte mensual comparativo
+
+Pantalla nueva en `/reportes/mensual`: el mes contra **dos** referencias.
+
+**Las dos van juntas porque responden cosas distintas.** El mes anterior dice si la tendencia corta sube o baja; el mismo mes del año pasado dice si eso es tendencia o es estacionalidad. Con una sola no se distingue "vamos mal" de "agosto siempre es flojo".
+
+**La variación contra cero es nula, no infinita** (`D-041`). Es exactamente el criterio del sprint: un mes sin datos no rompe la comparación. Si el mes de referencia estuvo en cero no hay porcentaje que calcular, así que se devuelve nulo y la pantalla muestra "nuevo" con la diferencia absoluta, que sí significa algo. Poner "+300%" o "+∞" sería inventar un número.
+
+**No hay serie de veinticuatro meses acá**, a propósito: eso ya está en los gráficos "por mes" del dashboard y responde otra pregunta.
+
+**Cada dominio se mide por lo que le corresponde.** Negocios: lo cerrado por `fecha_cierre` (cuándo entró la plata) y lo iniciado por `fecha_inicio` (el indicador que se adelanta), contando el negocio una vez, en el mes de su hito más antiguo. Canjes: solicitudes por `fecha_solicitud`, cierres por `fecha_cierre`.
+
+**Un límite del dato que hay que decir:** los canjes cancelados se cuentan **por fecha de solicitud**, no por fecha de cancelación, porque `canjes` no guarda cuándo se canceló. La pregunta que responde es "de los que entraron este mes, cuántos terminaron cancelados". Y ahora, después de la limpieza, esa cifra es **igual a la de solicitados en todos los meses pasados**, porque todo lo que entró quedó cancelado. Es cierto y es consecuencia de la limpieza, pero como métrica de historia no informa nada hasta que entren canjes nuevos.
+
+Sobre los datos reales de junio 2026 contra mayo: comisión real −9,8%, liquidaciones sin cambio, canjes solicitados −53,6%. El caso "sin base" aparece solo, en canjes cerrados: 0 contra 0.
+
+25 tests nuevos, 346 en total.
 
 ### 2026-08-21 · Sprint 22 (G1) — Listo · reset de contraseña
 

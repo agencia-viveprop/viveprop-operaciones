@@ -114,3 +114,43 @@ export function aISO(d: Date): string {
   const dia = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${mes}-${dia}`
 }
+
+
+// --------------------------------------------- reporte mensual comparativo
+
+export type MetricasMes = {
+  etiqueta: string
+  hitos_cerrados: number
+  comision_real_vp: string
+  comision_total: string
+  negocios_iniciados: number
+  canjes_solicitados: number
+  canjes_cerrados: number
+  canjes_cancelados: number
+}
+
+export type Variacion = {
+  metrica: string
+  actual: string
+  referencia: string
+  absoluta: string
+  /** Nulo cuando la referencia fue cero: no hay porcentaje que calcular. */
+  pct: string | null
+}
+
+export type Comparacion = {
+  contra: MetricasMes
+  variaciones: Variacion[]
+}
+
+export type ReporteMensual = {
+  mes: MetricasMes
+  mes_anterior: Comparacion
+  mismo_mes_anio_anterior: Comparacion
+}
+
+export function obtenerReporteMensual(anio: number, mes: number): Promise<ReporteMensual> {
+  return fetch(`/api/reportes/mensual?anio=${anio}&mes=${mes}`, {
+    credentials: 'include',
+  }).then(parseOrThrow)
+}

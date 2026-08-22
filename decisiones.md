@@ -52,6 +52,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-038](#d-038) | 2026-08-21 | Cargar UF es solo de admin; consultar su estado, de todos | 23 |
 | [D-039](#d-039) | 2026-08-21 | La plantilla de negocios pide entradas, no resultados | 14, 15 |
 | [D-040](#d-040) | 2026-08-21 | El cambio forzado de clave lo aplica la API, no la pantalla | 22 |
+| [D-041](#d-041) | 2026-08-21 | La variación contra cero es nula, no infinita | 17 |
 
 ---
 
@@ -728,3 +729,19 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Lo que sigue sin hacerse, a propósito:** no hay política mínima de contraseñas — `cambiar-clave` acepta `"1"`. Está en la lista de diferidos por decisión del usuario y no se tocó. Vale decir que debilita esto: el cambio forzado obliga a elegir una clave, no a elegir una buena.
 
 **De paso, una deuda de tests que esto destrabó.** `sesiones` no se creaba en la base de test porque su clave primaria usaba el `UUID` del dialecto de Postgres, y eso dejaba **toda la capa de autenticación sin cubrir**. Se cambió a `sa.Uuid`, que en Postgres emite el mismo tipo nativo —verificado comparando el DDL compilado— y en SQLite un `CHAR(32)` con la conversión incluida. No cambia nada en producción y ahora la cadena completa se prueba.
+
+---
+
+## D-041 · La variación contra cero es nula, no infinita
+
+**Contexto.** El reporte mensual compara el mes con el anterior y con el mismo mes del año pasado. Con siete cierres repartidos en siete meses distintos, los meses de referencia en cero no son un caso raro: son lo habitual.
+
+**Decisión.** Cuando la referencia es cero, el porcentaje se devuelve **nulo**. La pantalla muestra "nuevo" y la diferencia absoluta.
+
+**Motivo.** Si el mes pasado hubo 0 y este hay 3, eso no es "+300%" ni "+∞": no hay base contra la que comparar, y cualquier número que se ponga ahí está inventado. Un porcentaje falso en un reporte que alguien va a mirar para decidir es peor que un guión honesto. La diferencia absoluta sí significa algo y es lo que se muestra.
+
+**Es el criterio del sprint, no un detalle.** "Listo cuando: un mes sin datos no rompe la comparación" se cumple así, y hay tests que lo fijan en las dos direcciones: sin base da nulo, con base da el porcentaje.
+
+**Dos comparaciones y no una.** El mes anterior dice si la tendencia corta sube o baja; el mismo mes del año pasado dice si eso es tendencia o estacionalidad. Con una sola no se distingue "vamos mal" de "agosto siempre es flojo". Se descartó una serie de veinticuatro meses: eso ya está en los gráficos "por mes" del dashboard y responde otra pregunta.
+
+**Un límite del dato, dicho donde se ve.** Los canjes cancelados se cuentan por **fecha de solicitud**, porque `canjes` no guarda cuándo se canceló. Lo que se responde es "de los que entraron este mes, cuántos terminaron cancelados". Y después de la limpieza del 2026-08-21 esa cifra coincide con la de solicitados en todos los meses pasados, porque todo lo que entró quedó cancelado: es cierto, pero como métrica de historia no informa nada hasta que entren canjes nuevos.

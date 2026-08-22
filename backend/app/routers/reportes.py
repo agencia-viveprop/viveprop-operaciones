@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.models.usuario import Usuario
+from app.services.reporte_mensual import ReporteMensual, obtener_reporte_mensual
 from app.services.reporte_semanal import (
     DIAS_ESTANCADO_DEFECTO,
     ReporteSemanal,
@@ -59,3 +60,24 @@ def semanal(
             )
 
     return obtener_reporte_semanal(db, desde, hasta, dias_estancado)
+
+
+@router.get("/mensual", response_model=ReporteMensual)
+def mensual(
+    anio: int | None = Query(None, ge=2022, le=2100, description="Año. Por defecto, el actual."),
+    mes: int | None = Query(None, ge=1, le=12, description="Mes. Por defecto, el actual."),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """El mes contra el anterior y contra el mismo mes del año pasado.
+
+    Los dos van juntos porque responden cosas distintas: el mes anterior dice si
+    la tendencia corta sube o baja, y el mismo mes del año pasado dice si eso es
+    tendencia o es estacionalidad.
+    """
+    if (anio is None) != (mes is None):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Hay que indicar 'anio' y 'mes' juntos, o ninguno de los dos.",
+        )
+    return obtener_reporte_mensual(db, anio, mes)

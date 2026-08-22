@@ -44,7 +44,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 14 | 14 | E1 · Plantilla de negocios | ✅ **Listo** |
 | 15 | 15 | E2 · Importador de negocios | ✅ **Listo** |
 | 16 | 16 | F3 · Reporte semanal | ✅ **Listo** los dos dominios |
-| 17 | 17 | F4 · Reporte mensual comparativo | Contra mes anterior y mismo mes del año anterior |
+| 17 | 17 | F4 · Reporte mensual comparativo | ✅ **Listo** |
 | 18 | 18 | F5 · Vista directorio | Presentación ejecutiva exportable |
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
 | 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
@@ -268,11 +268,11 @@ Es lo contrario del dashboard. El dashboard responde "cómo vamos" y mira el est
 
 - **Listo cuando:** una semana con gestión registrada pero sin cambios de etapa aparece con actividad, no vacía (`D-031`), y el umbral de estancado es un control visible, no una constante escondida (`D-032`). ✅ 30 tests; verificado contra `dev`.
 
-### 17 · F4 — Reporte mensual comparativo
+### 17 · F4 — Reporte mensual comparativo ✅ Listo
 
-Mes actual contra mes anterior y contra el mismo mes del año anterior, con variación.
+Mes actual contra mes anterior y contra el mismo mes del año anterior, con variación. Las dos comparaciones van juntas porque responden cosas distintas: la primera dice si sube o baja, la segunda si es tendencia o estacionalidad.
 
-- **Listo cuando:** un mes sin datos no rompe la comparación, muestra vacío.
+- **Listo cuando:** un mes sin datos no rompe la comparación, muestra vacío. ✅ La variación contra cero es nula y se muestra como "nuevo" con la diferencia absoluta, no como un porcentaje inventado (`D-041`). 25 tests.
 
 ### 18 · F5 — Vista directorio
 
