@@ -51,3 +51,18 @@ export function fecha(valor: string | null | undefined): string {
   const [a, m, d] = valor.slice(0, 10).split('-')
   return `${d}-${m}-${a}`
 }
+
+/** Días como texto legible. **`null` es "sin dato", no cero.**
+ *
+ * Los 7 negocios históricos tienen la misma fecha de inicio y de cierre porque
+ * el Excel traía una sola, así que su duración es desconocida. Mostrar "0 días"
+ * ahí sería presentar un dato malo como un hecho; el guión dice la verdad.
+ */
+export function duracion(dias: number | null | undefined): string {
+  if (dias === null || dias === undefined) return '—'
+  if (dias === 0) return 'hoy'
+  if (dias === 1) return '1 día'
+  if (dias < 45) return `${dias} días`
+  const meses = Math.round(dias / 30)
+  return `${meses} ${meses === 1 ? 'mes' : 'meses'}`
+}

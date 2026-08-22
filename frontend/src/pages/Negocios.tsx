@@ -26,7 +26,7 @@ import PageHeader from '../components/PageHeader'
 import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
 import CargaMasivaModal from '../components/CargaMasivaModal'
-import { COLOR_ESTADO, clp, MODELO_CORTO } from '../components/negociosFormato'
+import { COLOR_ESTADO, clp, duracion, fecha, MODELO_CORTO } from '../components/negociosFormato'
 
 /** Un negocio con hitos en estados distintos no tiene "un" estado. */
 function estadosResumidos(estados: EstadoNegocio[]) {
@@ -137,6 +137,8 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Th>Etapa</Table.Th>
                 <Table.Th>Alianza</Table.Th>
                 <Table.Th>Estado</Table.Th>
+                <Table.Th ta="right">Abierto</Table.Th>
+                <Table.Th ta="right">Última gestión</Table.Th>
                 <Table.Th ta="right">Comisión total</Table.Th>
                 <Table.Th ta="right">Real VP</Table.Th>
                 <Table.Th />
@@ -177,6 +179,25 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                       ))}
                     </Group>
                   </Table.Td>
+                  <Table.Td ta="right">
+                    <Text size="xs">{duracion(n.duraciones.dias_abierto)}</Text>
+                    {n.fecha_inicio && (
+                      <Text size="xs" c="dimmed">
+                        desde {fecha(n.fecha_inicio)}
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td ta="right">
+                    {/* Nulo es "nunca se registró un movimiento", no cero. Hoy es
+                        el caso de todos: el pipeline nunca se usó. */}
+                    {n.duraciones.dias_sin_gestion === null ? (
+                      <Text size="xs" c="dimmed">
+                        sin gestión
+                      </Text>
+                    ) : (
+                      <Text size="xs">hace {duracion(n.duraciones.dias_sin_gestion)}</Text>
+                    )}
+                  </Table.Td>
                   <Table.Td ta="right" ff="monospace">{clp(n.comision_total)}</Table.Td>
                   <Table.Td ta="right" ff="monospace" fw={600}>{clp(n.comision_real_vp)}</Table.Td>
                   <Table.Td>
@@ -190,7 +211,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
             {negocios.length > 0 && (
               <Table.Tfoot>
                 <Table.Tr>
-                  <Table.Th colSpan={6}>Total</Table.Th>
+                  <Table.Th colSpan={8}>Total</Table.Th>
                   <Table.Th ta="right" ff="monospace">{clp(totales.total)}</Table.Th>
                   <Table.Th ta="right" ff="monospace">{clp(totales.realVp)}</Table.Th>
                   <Table.Th />

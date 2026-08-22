@@ -12,7 +12,9 @@ import {
   Table,
   Text,
 } from '@mantine/core'
+import { IconArrowsExchange, IconBriefcase } from '@tabler/icons-react'
 import { obtenerBandeja, type FilaBandeja, type NivelSemaforo } from '../api/canjes'
+import BandejaNegocios from '../components/BandejaNegocios'
 import PageHeader from '../components/PageHeader'
 import SeguimientoModal from '../components/SeguimientoModal'
 import { fecha } from '../components/negociosFormato'
@@ -51,11 +53,64 @@ function espera(f: FilaBandeja): string {
   return `${Math.floor(h / 24)} días`
 }
 
+/**
+ * "Qué me toca hoy", para los dos dominios.
+ *
+ * Van con selector y no apilados, igual que los dashboards de Inicio: son dos
+ * tipos de gestión con relojes distintos --canjes se mide en horas, negocios en
+ * meses-- y juntarlos invitaría a compararlos.
+ */
 export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
+  const [vista, setVista] = useState('canjes')
   const [filtro, setFiltro] = useState<string>('atencion')
   const [seguimientoId, setSeguimientoId] = useState<number | null>(null)
 
-  const { data, isLoading } = useQuery({ queryKey: ['bandeja'], queryFn: obtenerBandeja })
+  const { data, isLoading } = useQuery({
+    queryKey: ['bandeja'],
+    queryFn: obtenerBandeja,
+    enabled: vista === 'canjes',
+  })
+
+  const selector = (
+    <SegmentedControl
+      color="accent"
+      value={vista}
+      onChange={setVista}
+      data={[
+        {
+          value: 'canjes',
+          label: (
+            <Group gap={6} wrap="nowrap">
+              <IconArrowsExchange size={15} />
+              Canjes
+            </Group>
+          ),
+        },
+        {
+          value: 'negocios',
+          label: (
+            <Group gap={6} wrap="nowrap">
+              <IconBriefcase size={15} />
+              Negocios
+            </Group>
+          ),
+        },
+      ]}
+    />
+  )
+
+  if (vista === 'negocios') {
+    return (
+      <Stack gap="md">
+        <PageHeader
+          title="Qué me toca hoy"
+          subtitle="Negocios con liquidaciones abiertas, ordenados por cuánto llevan sin moverse."
+          action={selector}
+        />
+        <BandejaNegocios puedeEditar={puedeEditar} />
+      </Stack>
+    )
+  }
 
   if (isLoading) {
     return (
@@ -82,6 +137,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
       <PageHeader
         title="Qué me toca hoy"
         subtitle={`${requierenAtencion} de ${filas.length} canjes abiertos requieren atención. Los umbrales son los de CONFIG: ${data.umbral_critico_horas} horas es crítico, ${data.umbral_advertencia_horas} es advertencia.`}
+        action={selector}
       />
 
       <SimpleGrid cols={{ base: 2, sm: 4 }}>

@@ -79,6 +79,16 @@ export type Negocio = {
 }
 
 /** Fila del listado: sin los hitos, con sus montos ya sumados. */
+/** Las cuatro duraciones. **Nulo significa "no se sabe", no cero**: los 7
+ *  históricos tienen la misma fecha de inicio y de cierre porque el Excel traía
+ *  una sola, así que su duración es desconocida. */
+export type Duraciones = {
+  dias_abierto: number | null
+  dias_sin_gestion: number | null
+  dias_en_etapa: number | null
+  dias_hasta_el_cierre: number | null
+}
+
 export type NegocioResumen = {
   id: number
   codigo: string
@@ -92,6 +102,36 @@ export type NegocioResumen = {
   estados: EstadoNegocio[]
   comision_total: number
   comision_real_vp: number
+  fecha_inicio: string | null
+  duraciones: Duraciones
+}
+
+export type NivelNegocio = 'sin_gestion' | 'critico' | 'advertencia' | 'al_dia'
+
+export type FilaBandejaNegocio = {
+  negocio_id: number
+  codigo: string
+  etapa: string | null
+  modelo: ModeloNegocio
+  direccion: string | null
+  comuna: string | null
+  fecha_inicio: string | null
+  comision_real_vp: string | null
+  nivel: NivelNegocio
+  duraciones: Duraciones
+  ultimo_movimiento: string | null
+  ultimo_movimiento_nombre: string | null
+}
+
+export type BandejaNegocios = {
+  resumen: Record<NivelNegocio, number>
+  filas: FilaBandejaNegocio[]
+  umbral_critico_dias: number
+  umbral_advertencia_dias: number
+}
+
+export function obtenerBandejaNegocios(): Promise<BandejaNegocios> {
+  return fetch('/api/negocios/bandeja', { credentials: 'include' }).then(parseOrThrow)
 }
 
 export type FiltrosNegocios = {

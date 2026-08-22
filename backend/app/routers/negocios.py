@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
@@ -16,6 +16,13 @@ from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
 from app.services.movimientos import MovimientoError, crear_movimiento_negocio
 from app.services.negocios import NegocioError
+from app.services.bandeja_negocios import (
+    BandejaNegocios,
+    Duraciones,
+    duraciones_de,
+    obtener_bandeja_negocios,
+    ultimos_movimientos,
+)
 from app.services.importar_negocios import (
     ArchivoInvalido,
     ResumenCargaNegocios,
@@ -32,6 +39,32 @@ from app.services.reportes_negocios import (
 router = APIRouter(prefix="/negocios", tags=["negocios"])
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _hoy_utc() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def _ultimos_movimientos_negocio(db: Session):
+    """Reusa el cálculo de la bandeja para no tener dos versiones del mismo dato."""
+    return ultimos_movimientos(db)
+
+
+def _inicio_de(negocio: Negocio) -> date | None:
+    """El hito más antiguo. Un negocio empieza cuando empieza su primer hito."""
+    return min((h.fecha_inicio for h in negocio.hitos if h.fecha_inicio), default=None)
+
+
+def _cierre_de(negocio: Negocio) -> date | None:
+    """La fecha de cierre solo si **todos** los hitos cerraron.
+
+    Con una liquidación abierta el negocio sigue en curso, aunque la promesa ya
+    esté cobrada.
+    """
+    if not negocio.hitos or any(h.estado == EstadoNegocio.ACTIVO for h in negocio.hitos):
+        return None
+    cierres = [h.fecha_cierre for h in negocio.hitos if h.fecha_cierre]
+    return max(cierres) if cierres else None
 
 
 # ------------------------------------------------------------------- esquemas
@@ -177,6 +210,11 @@ class NegocioResumen(BaseModel):
     estados: list[EstadoNegocio]
     comision_total: Decimal
     comision_real_vp: Decimal
+    # Las duraciones van en el listado para que la tabla pueda mostrar antigüedad
+    # y última gestión: antes no tenía ninguna columna de fecha, así que no se
+    # podía saber si un negocio llevaba una semana o siete meses.
+    fecha_inicio: date | None
+    duraciones: Duraciones
 
 
 class MovimientoOut(BaseModel):
@@ -291,6 +329,20 @@ def reportes_resumen(
 
 # Va antes de "/{negocio_id}": FastAPI resuelve por orden de registro, y si
 # esta ruta quedara despues, "tipos-movimiento" se interpretaria como un id.
+@router.get("/bandeja", response_model=BandejaNegocios)
+def bandeja(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Qué negocio hay que tocar hoy, ordenado por urgencia.
+
+    El equivalente de la bandeja de canjes, con umbrales en días en vez de horas:
+    acá los procesos duran de un mes a varios, así que medir en horas no
+    distingue nada.
+    """
+    return obtener_bandeja_negocios(db)
+
+
 @router.get("/reportes/por-mes", response_model=NegociosPorMes)
 def reporte_por_mes(
     modelo: ModeloNegocio | None = Query(None, description="Filtra por modelo de negocio."),
@@ -346,6 +398,8 @@ def listar(
         negocios = [n for n in negocios if any(h.estado == estado for h in n.hitos)]
 
     cero = Decimal("0")
+    hoy = _hoy_utc()
+    ultimo_mov, ultimo_etapa = _ultimos_movimientos_negocio(db)
     return [
         NegocioResumen(
             id=n.id,
@@ -361,6 +415,14 @@ def listar(
             # Sumar los hitos es la unica forma correcta de totalizar (D-020).
             comision_total=sum((h.comision_total or cero for h in n.hitos), cero),
             comision_real_vp=sum((h.comision_real_vp or cero for h in n.hitos), cero),
+            fecha_inicio=_inicio_de(n),
+            duraciones=duraciones_de(
+                _inicio_de(n),
+                _cierre_de(n),
+                ultimo_mov.get(n.id),
+                ultimo_etapa.get(n.id),
+                hoy,
+            ),
         )
         for n in negocios
     ]

@@ -117,6 +117,32 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Duraciones de negocios y bandeja de negocios
+
+Pedido del usuario, después de notar que el mes calendario no es la unidad natural de este negocio: los procesos duran de un mes a varios, así que hacía falta ver **desde cuándo** viene cada negocio y **cuánto lleva sin moverse**.
+
+**El hueco era grande y medible:** la tabla de Negocios no tenía **ninguna** columna de fecha. Código, propiedad, modelo, etapa, alianza, estado, comisión. No había forma de saber si un negocio llevaba una semana o siete meses.
+
+**Tres duraciones, no una** (`D-042`). Un negocio puede llevar seis meses abierto y estar avanzando perfecto; otro puede llevar dos meses y estar muerto. Una sola cifra no distingue esos casos:
+
+| Cuál | Cómo sale | Qué responde |
+|---|---|---|
+| Abierto | hoy − fecha de inicio | "lleva 4 meses" |
+| Sin gestión | hoy − último movimiento | "3 semanas que nadie lo toca" |
+| En la etapa | hoy − último cambio de etapa | "2 meses trabado en E4" |
+
+**La "última gestión" es la del último movimiento, no `actualizado_en`.** Esa columna existe y se mueve con cualquier edición: corregir una dirección mal escrita haría que un negocio parezca activo sin que haya pasado nada. Un timestamp técnico disfrazado de señal de negocio es peor que no tenerlo, porque nadie sospecha de él.
+
+**Bandeja de negocios**, dentro de "Qué me toca hoy" con un selector Canjes / Negocios — el mismo patrón que los dashboards de Inicio. Van separados porque los relojes son distintos: canjes se mide en horas, negocios en meses. Los umbrales son **30 y 14 días**, y son una estimación mía, igual que el de estancado del reporte semanal; por eso viven en el código y no en `CONFIG`.
+
+**Un error propio, encontrado al mirar el resultado real.** El listado devolvía `dias_abierto = 0` para VVP-1, que empezó en agosto de 2025, y la tabla lo pintaba como "hoy". La causa: cuando inicio y cierre coinciden yo daba la duración del cierre como desconocida pero la de "abierto" como cero — la misma mentira con otro nombre. **No sabemos que cerró el día que empezó; sabemos que el Excel traía una sola fecha.** Ahora las dos son nulas, y el test que decía lo contrario quedó corregido con la explicación.
+
+**Lo que el dato honesto deja a la vista:** de los 18 negocios, **15 no tienen duración calculable** y solo 3 sí. Y aparece un dato verdadero que estaba escondido: **VVP-3 tardó 83 días** de la promesa a la escritura, porque es el único histórico con dos fechas distintas. Los 2 activos llevan 228 y 120 días abiertos, ambos sin una sola gestión registrada.
+
+Eso último no es un defecto de la app: es que el pipeline nunca se usó. Y es exactamente el incentivo para empezar a usarlo, porque de ahí sale la duración de ciclo y la conversión por etapa que le faltan al reporte mensual y a la proyección del directorio.
+
+24 tests nuevos, 370 en total.
+
 ### 2026-08-21 · Sprint 17 (F4) — Listo · reporte mensual comparativo
 
 Pantalla nueva en `/reportes/mensual`: el mes contra **dos** referencias.

@@ -53,6 +53,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-039](#d-039) | 2026-08-21 | La plantilla de negocios pide entradas, no resultados | 14, 15 |
 | [D-040](#d-040) | 2026-08-21 | El cambio forzado de clave lo aplica la API, no la pantalla | 22 |
 | [D-041](#d-041) | 2026-08-21 | La variación contra cero es nula, no infinita | 17 |
+| [D-042](#d-042) | 2026-08-22 | Un negocio tiene tres duraciones distintas, y ninguna es `actualizado_en` | — |
 
 ---
 
@@ -745,3 +746,29 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Dos comparaciones y no una.** El mes anterior dice si la tendencia corta sube o baja; el mismo mes del año pasado dice si eso es tendencia o estacionalidad. Con una sola no se distingue "vamos mal" de "agosto siempre es flojo". Se descartó una serie de veinticuatro meses: eso ya está en los gráficos "por mes" del dashboard y responde otra pregunta.
 
 **Un límite del dato, dicho donde se ve.** Los canjes cancelados se cuentan por **fecha de solicitud**, porque `canjes` no guarda cuándo se canceló. Lo que se responde es "de los que entraron este mes, cuántos terminaron cancelados". Y después de la limpieza del 2026-08-21 esa cifra coincide con la de solicitados en todos los meses pasados, porque todo lo que entró quedó cancelado: es cierto, pero como métrica de historia no informa nada hasta que entren canjes nuevos.
+
+---
+
+## D-042 · Un negocio tiene tres duraciones distintas, y ninguna es `actualizado_en`
+
+**Contexto.** Los procesos de negocio duran de un mes a varios, y algunos siguen abiertos. La tabla de Negocios no tenía **ninguna** columna de fecha, así que no se podía saber si un negocio llevaba una semana o siete meses. El usuario pidió ver fecha de inicio por un lado y última actualización por el otro.
+
+**Decisión.** Tres duraciones, no una:
+
+| Cuál | Cómo sale | Qué responde |
+|---|---|---|
+| `dias_abierto` | hoy − fecha de inicio | "lleva 4 meses abierto" |
+| `dias_sin_gestion` | hoy − último movimiento | "3 semanas que nadie lo toca" |
+| `dias_en_etapa` | hoy − último cambio de etapa | "2 meses trabado en E4" |
+
+**Motivo.** Un negocio puede llevar seis meses abierto y estar avanzando perfecto; otro puede llevar dos meses y estar muerto. Una sola cifra no distingue esos casos. Y la tercera es la más valiosa: dice **dónde** se atascan los procesos, que es lo que va a permitir proyectar cierres cuando haya historia.
+
+**"Cuándo se hizo algo" y "cuándo cambió de etapa" son dos consultas separadas** a propósito: un negocio puede tener diez movimientos de gestión sin salir de E4, y ahí está justamente el atasco que interesa ver.
+
+**La última gestión es la del último movimiento, no `actualizado_en`.** Esa columna existe y era la opción obvia, pero se mueve con cualquier edición: corregir una dirección mal escrita haría que un negocio parezca activo sin que haya pasado nada. Un timestamp técnico disfrazado de señal de negocio es peor que no tenerlo, porque nadie sospecha de él. Es la misma distinción del reporte semanal: el estado dice dónde estás, el movimiento dice qué cambió.
+
+**El nulo significa "no se sabe", no cero.** Y esto costó una corrección: la primera versión devolvía `dias_abierto = 0` para los negocios donde inicio y cierre coinciden, y la tabla los mostraba como "hoy" — incluido uno de agosto de 2025. El razonamiento equivocado era "cerró el día que empezó, eso sí se sabe". No se sabe: lo que se sabe es que el Excel traía una sola fecha y la migración la puso en las dos columnas. Un cierre el mismo día existe en teoría, pero en un negocio de ciclo largo es tan raro que conviene equivocarse del lado de "no se sabe" antes que mostrar un cero que se lee como un hecho.
+
+**Consecuencia, y es información:** de los 18 negocios, 15 no tienen duración calculable. El único histórico que sí la tiene es `VVP-3`, con 83 días entre la promesa y la escritura, porque es el único con dos fechas distintas. Que 15 muestren un guión no es un defecto de la pantalla: es el estado real del dato, y hacerlo visible es lo que justifica empezar a usar el pipeline.
+
+**Los umbrales del semáforo son en días, no en horas.** Los 48/24 horas de `CONFIG` son de canjes, donde el ciclo es de días. Acá 30 y 14 días, y son una estimación, igual que el umbral de estancado del reporte semanal: viven en el código y no en `CONFIG` porque no son una regla que alguien haya acordado.
