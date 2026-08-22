@@ -79,5 +79,5 @@ Variables de entorno en Render:
 
 **Health checks.** Son dos y miden cosas distintas (`D-035`):
 
-- `GET /api/health` — el proceso está vivo. No toca la base a propósito: Neon suspende la rama sin tráfico y un despertar lento se leería como servicio caído. Es el que mira Render (`healthCheckPath`).
+- `GET /api/health` — el proceso está vivo, **y qué commit está corriendo**. No toca la base a propósito: Neon suspende la rama sin tráfico y un despertar lento se leería como servicio caído. Es el que mira Render (`healthCheckPath`). El `commit` sale de `RENDER_GIT_COMMIT` y sirve para confirmar en un segundo si lo desplegado es lo que se subió — cuando un deploy no cambia el frontend, el hash del bundle no alcanza para distinguirlo.
 - `GET /api/health/db` — la base responde. `SELECT 1`, con 503 si falla. Para diagnosticar cuando la app carga pero ninguna pantalla trae datos.

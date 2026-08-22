@@ -117,6 +117,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · `/api/health` dice qué commit está corriendo
+
+Chico, y sale de una molestia repetida: **tres veces en el día hubo que adivinar si lo desplegado era lo que se había subido, y dos de esas la respuesta fue "no"** — el backend local sin `--reload`, y el `200` con HTML que se leyó como endpoint desplegado. Cuando un deploy no cambia el frontend, el hash del bundle no sirve para distinguir nada y no queda ninguna señal.
+
+Ahora `/api/health` devuelve `{"status": "ok", "commit": "abc1234"}`, del `RENDER_GIT_COMMIT` que Render pone en el ambiente. En local dice `local`, que es la respuesta correcta: no hay commit desplegado que reportar.
+
+Se expone sin sesión, como el resto del endpoint. En un repositorio privado un SHA no abre ninguna puerta, y poder verificar un despliegue en un segundo vale más que esconderlo.
+
 ### 2026-08-21 · Los datos históricos van a producción por migración
 
 El hueco más grande que quedaba: producción tenía los canjes y la UF, pero **Negocios vacío**. Los 18 negocios, sus 19 hitos, sus 114 obligaciones y los 384 movimientos del seguimiento del Excel vivían solo en `dev`, así que nueve sprints de funcionalidad no tenían nada que mostrar allá.

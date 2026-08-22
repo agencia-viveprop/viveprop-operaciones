@@ -70,7 +70,19 @@ def test_health_no_toca_la_base(cliente):
     rama se leería como servicio caído."""
     r = cliente.get("/api/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok"}
+    assert r.json()["status"] == "ok"
+
+
+def test_health_dice_que_commit_esta_corriendo(cliente):
+    """Sin esto no hay forma de saber si lo desplegado es lo que se subio, y ya
+    hubo que adivinarlo tres veces en un dia."""
+    from app.routers.health import COMMIT
+
+    cuerpo = cliente.get("/api/health").json()
+
+    assert cuerpo["commit"] == COMMIT
+    # En local no hay commit desplegado; en Render son los 7 primeros del SHA.
+    assert len(cuerpo["commit"]) <= 7
 
 
 def test_health_db_confirma_que_la_base_responde(cliente):
