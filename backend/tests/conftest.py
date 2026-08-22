@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 from app.models.canje import Canje
 from app.models.catalogo import Catalogo, Etapa
 from app.models.movimiento import Movimiento, TipoMovimiento
+from app.models.intento_login import IntentoLogin
 from app.models.usuario import RolUsuario, Sesion, Usuario
 from app.models.negocio import (
     Negocio,
@@ -52,7 +53,7 @@ def db():
         conexion.execute("PRAGMA foreign_keys=ON")
 
     for tabla in (
-        Usuario, Sesion, Canje, UFDiaria, Catalogo, Etapa,
+        Usuario, Sesion, IntentoLogin, Canje, UFDiaria, Catalogo, Etapa,
         Propiedad, Negocio, NegocioHito, NegocioObligacion,
         TipoMovimiento, Movimiento,
     ):

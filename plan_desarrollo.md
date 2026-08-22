@@ -340,11 +340,11 @@ Ninguna bloquea el arranque.
 
 Fuera del plan, registrado para cuando se retome tras ver el funcionamiento:
 
-- Límite de intentos de login (hoy `/auth/login` acepta intentos infinitos).
-- Política mínima de contraseñas (`cambiar-clave` acepta `"1"`).
-- Restricción de dominio de email al crear usuarios.
-- Fuga de tiempos en el login que revela qué emails tienen cuenta.
-- Limpiar `SESSION_SECRET`: declarada en `config.py`, README y `render.yaml`, nunca leída por el código.
+- ~~Límite de intentos de login~~ ✅ **hecho el 2026-08-22** (`D-045`): 5 por email, 20 por IP, bloqueo de 15 minutos, y el corte es **antes** de verificar el hash.
+- ~~Política mínima de contraseñas~~ ✅ **hecho**: 10 caracteres y lista corta de las peores. Sin exigir mayúsculas ni símbolos.
+- ~~Restricción de dominio de email~~ ✅ **hecho**, por `DOMINIOS_EMAIL`, con `viveprop.com` por defecto.
+- ~~Fuga de tiempos en el login~~ ✅ **cerrada**: de ~70x de diferencia a 1,02x, medido en vivo.
+- ~~Limpiar `SESSION_SECRET`~~ ✅ **eliminada**. Queda sacarla del panel de Render a mano.
 - Rol super admin y guardas contra autodesactivación del admin: **descartados**. Rescate ante bloqueo total: `backend/app/scripts/seed_admin.py` con el `DATABASE_URL`.
 
 ---

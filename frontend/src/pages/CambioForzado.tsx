@@ -12,7 +12,7 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { cambiarClave, logout, type Usuario } from '../api/auth'
+import { cambiarClave, LARGO_MINIMO_CLAVE, logout, type Usuario } from '../api/auth'
 
 /**
  * La pantalla que tapa la app cuando la contraseña es temporal.
@@ -44,6 +44,7 @@ export default function CambioForzado({ usuario }: { usuario: Usuario }) {
 
   const noCoinciden = confirmar.length > 0 && nueva !== confirmar
   const igualALaTemporal = nueva.length > 0 && nueva === actual
+  const muyCorta = nueva.length > 0 && nueva.length < LARGO_MINIMO_CLAVE
 
   return (
     <Center h="100vh">
@@ -60,7 +61,7 @@ export default function CambioForzado({ usuario }: { usuario: Usuario }) {
           <form
             onSubmit={(e) => {
               e.preventDefault()
-              if (!noCoinciden && !igualALaTemporal) cambiar.mutate()
+              if (!noCoinciden && !igualALaTemporal && !muyCorta) cambiar.mutate()
             }}
           >
             <Stack gap="sm">
@@ -73,10 +74,17 @@ export default function CambioForzado({ usuario }: { usuario: Usuario }) {
               />
               <PasswordInput
                 label="Tu contraseña nueva"
+                description={`Al menos ${LARGO_MINIMO_CLAVE} caracteres. Una frase que recuerdes sirve mejor que algo corto con símbolos.`}
                 required
                 value={nueva}
                 onChange={(e) => setNueva(e.currentTarget.value)}
-                error={igualALaTemporal ? 'Tiene que ser distinta de la temporal' : undefined}
+                error={
+                  igualALaTemporal
+                    ? 'Tiene que ser distinta de la temporal'
+                    : muyCorta
+                      ? `Le faltan ${LARGO_MINIMO_CLAVE - nueva.length} caracteres`
+                      : undefined
+                }
               />
               <PasswordInput
                 label="Repetila"
@@ -96,7 +104,7 @@ export default function CambioForzado({ usuario }: { usuario: Usuario }) {
                 type="submit"
                 color="accent"
                 loading={cambiar.isPending}
-                disabled={noCoinciden || igualALaTemporal}
+                disabled={noCoinciden || igualALaTemporal || muyCorta}
               >
                 Guardar y entrar
               </Button>

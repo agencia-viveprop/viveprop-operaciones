@@ -9,7 +9,35 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.usuario import RolUsuario, Sesion, Usuario
+from app.config import settings
 from app.security import hash_password
+from app.services.intentos_login import ClaveDebil, validar_clave
+
+
+def _validar_email(email: str) -> None:
+    """El dominio tiene que estar permitido.
+
+    No es paranoia: en una app con las comisiones adentro, un dedazo en el correo
+    al crear una cuenta le da acceso a un desconocido. Si `DOMINIOS_EMAIL` esta
+    vacio no se restringe nada, para no dejar a nadie encerrado si cambia el
+    dominio de la empresa.
+    """
+    permitidos = settings.dominios_email_lista
+    if not permitidos:
+        return
+    dominio = email.rsplit("@", 1)[-1].strip().lower()
+    if dominio not in permitidos:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"El email tiene que ser de {' o '.join(permitidos)}.",
+        )
+
+
+def _validar_clave_o_400(clave: str) -> None:
+    try:
+        validar_clave(clave)
+    except ClaveDebil as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 # Sin I, l, 1, O ni 0: la clave se dicta por telefono o se copia de un chat, y
 # esos cinco caracteres se confunden entre si.
@@ -67,6 +95,8 @@ def listar(db: Session = Depends(get_db)):
 
 @router.post("", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
 def crear(payload: UsuarioCreate, db: Session = Depends(get_db)):
+    _validar_email(payload.email)
+    _validar_clave_o_400(payload.password)
     if db.scalar(select(Usuario).where(Usuario.email == payload.email)) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya tiene una cuenta")
 
@@ -89,6 +119,7 @@ def actualizar(usuario_id: int, payload: UsuarioUpdate, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
     if payload.email is not None and payload.email != usuario.email:
+        _validar_email(payload.email)
         if db.scalar(select(Usuario).where(Usuario.email == payload.email)) is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya tiene una cuenta")
         usuario.email = payload.email
@@ -99,6 +130,7 @@ def actualizar(usuario_id: int, payload: UsuarioUpdate, db: Session = Depends(ge
     if payload.activo is not None:
         usuario.activo = payload.activo
     if payload.password:
+        _validar_clave_o_400(payload.password)
         usuario.password_hash = hash_password(payload.password)
 
     db.commit()

@@ -1,3 +1,8 @@
+/** Espejo de `LARGO_MINIMO` del backend. La validación de verdad está allá; esto
+ *  es para no dejar que alguien escriba ocho caracteres y recién al enviar se
+ *  entere. */
+export const LARGO_MINIMO_CLAVE = 10
+
 export type Usuario = {
   id: number
   email: string

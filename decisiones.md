@@ -56,6 +56,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-042](#d-042) | 2026-08-22 | Un negocio tiene tres duraciones distintas, y ninguna es `actualizado_en` | — |
 | [D-043](#d-043) | 2026-08-22 | El cierre mensual se compara con ventanas móviles, no mes contra mes | 17 |
 | [D-044](#d-044) | 2026-08-22 | La vista directorio se entrega con supuestos declarados, y la proyección va como rango | 18 |
+| [D-045](#d-045) | 2026-08-22 | El límite de intentos corta antes de verificar el hash | — |
 
 ---
 
@@ -167,7 +168,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 
 **Decisión.** No se toca por ahora. Se retoma después, viendo el funcionamiento. Lo único que entra al plan es la recuperación de contraseña (sprint 22), porque el cambio voluntario ya existía.
 
-**Diferido explícitamente:** límite de intentos de login, política mínima de contraseñas, restricción de dominio de email, fuga de tiempos que revela qué emails tienen cuenta, y limpiar `SESSION_SECRET` (declarada en `config.py`, README y `render.yaml`, nunca leída por el código).
+**Diferido en su momento y hecho el 2026-08-22** (`D-045`): límite de intentos de login, política mínima de contraseñas, restricción de dominio de email, fuga de tiempos que revelaba qué emails tienen cuenta, y `SESSION_SECRET`, que se eliminó. La condición que el usuario había puesto —"después y viendo el funcionamiento"— se cumplió cuando la app quedó completa y en producción con datos reales.
 
 **Disparador para retomarlo:** antes de que la app quede en manos de seis personas y un directorio.
 
@@ -816,3 +817,27 @@ Los cinco supuestos, para poder discutirlos uno por uno: cuánto entró (año co
 **Dos decisiones de honestidad estadística más.** El ticket se muestra como **mediana y rango**, no como promedio: con una dispersión de 4x —de 516.304 a 2.110.526— un solo negocio grande corre el promedio y da una cifra que no representa a ninguno. Y los negocios **activos no entran** en la tasa de conversión: un negocio abierto todavía no se ganó ni se perdió, y contarlo del lado perdido diría que ya fracasó.
 
 **"Exportable" se resolvió con estilos de impresión**, no generando un PDF. `Ctrl+P` produce una hoja limpia: se ocultan el menú, los botones y las notas de trabajo, y se aplanan sombras y fondos, que en papel solo gastan tinta. Se descartó un generador de PDF: sería una dependencia nueva para producir lo que el navegador ya hace bien, y obligaría a mantener dos maquetaciones en paralelo que se desincronizan a la primera de cambio.
+
+---
+
+## D-045 · El límite de intentos corta antes de verificar el hash
+
+**Contexto.** `/auth/login` aceptaba intentos infinitos. Se había diferido con una condición: *"después y viendo el funcionamiento incorporamos límites y seguridad"*. Con la app completa y en producción con datos reales, la condición se cumplió.
+
+**Y había un número.** Cada intento cuesta **70 ms de CPU** verificando el hash Argon2id, medido. Eso convierte la falta de límite en dos problemas distintos: fuerza bruta contra una contraseña que hasta ese día podía ser `"1"`, y **saturación**, porque unos cientos de peticiones por segundo dejan el proceso moliendo hashes y la app deja de responder.
+
+**Decisión.** El límite se evalúa **antes** de verificar la contraseña.
+
+**Motivo, y es el punto entero.** Un límite aplicado después habría frenado la fuerza bruta y no la saturación: el atacante seguiría gastando 70 ms de CPU por intento aunque el resultado se descartara. Cortando antes, un intento bloqueado no toca el hash. Hay un test que cuenta las llamadas a `verify_password` y exige que sean **cero** cuando la clave está bloqueada.
+
+**Se cuenta por email y por IP, y las dos hacen falta.** Por email protege la cuenta —alguien que conoce un correo y prueba claves—, umbral 5. Por IP protege el servidor —alguien que prueba correos al azar, que después de cerrar la fuga de tiempos también consume CPU—, umbral 20, más alto porque una oficina comparte salida y varias personas pueden equivocarse el mismo día. Una sola de las dos deja el otro flanco abierto.
+
+**En la base, no en memoria.** Un contador en memoria se reinicia con cada deploy y no sirve si alguna vez hay más de una instancia. La tabla se limpia sola: entrar bien borra la fila, y la tarea diaria saca las que quedaron sin actividad.
+
+**El bloqueo es una ventana, no un contador que se descarta.** Pasados los 15 minutos se vuelve a contar de cero. Es más fácil de explicar a quien se quedó afuera que una curva exponencial, y para dos usuarios internos alcanza.
+
+**La política de contraseñas es largo mínimo —10— más una lista corta de las peores.** No se exigen mayúsculas ni símbolos: esas reglas producen `Viveprop2026!`, que cumple todo y es adivinable, en vez de contraseñas mejores. El largo es lo único que correlaciona de verdad con resistencia. En la lista de prohibidas va `viveprop` y sus variantes, porque es exactamente lo que alguien elige cuando tiene que inventar una clave en el momento — y ya se había predicho ese nombre al diseñar el reset.
+
+**La fuga de tiempos se cerró y se midió.** Antes, un email desconocido volvía sin tocar ningún hash y uno real gastaba 70 ms: la diferencia decía qué correos tienen cuenta. Ahora siempre se verifica un hash, contra un señuelo calculado una vez al importar cuando el usuario no existe. Medido en vivo: **1,02x de diferencia**, contra ~70x antes.
+
+**Dos errores propios que atrapó `alembic check`,** y que justifican haberlo dejado limpio el día anterior: el modelo nuevo no estaba importado en `app/models/__init__.py`, así que `autogenerate` proponía **borrar la tabla** que la migración acababa de crear; y el índice llevaba en la migración un nombre distinto del que genera `index=True` en el modelo.

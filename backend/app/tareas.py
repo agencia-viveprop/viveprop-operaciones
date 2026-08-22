@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 
 from app.db import SessionLocal
 from app.services.importar_uf import estado_serie
+from app.services.intentos_login import limpiar_viejos
 from app.services.uf_sii import SIINoDisponible, actualizar_desde_sii
 
 log = logging.getLogger(__name__)
@@ -64,8 +65,25 @@ def actualizar_uf_si_hace_falta() -> None:
     )
 
 
+def limpiar_intentos_login() -> None:
+    """Borra los contadores de login sin actividad reciente.
+
+    Va en el mismo ciclo diario que la UF en vez de en su propia tarea: son dos
+    cosas que hay que hacer una vez al día y una tarea más sería un timer más que
+    mantener. Si falla, se registra y se sigue: no dejar de limpiar una tabla de
+    contadores no puede tumbar nada.
+    """
+    try:
+        with SessionLocal() as db:
+            borrados = limpiar_viejos(db)
+        if borrados:
+            log.info("Login: %s contadores viejos borrados", borrados)
+    except Exception:
+        log.exception("Login: falla al limpiar los contadores de intentos")
+
+
 async def ciclo_uf() -> None:
-    """Chequea la UF cada día hasta que se cancele.
+    """Chequea la UF y limpia los contadores de login, cada día.
 
     El trabajo va en un hilo porque `httpx.get` y SQLAlchemy son síncronos:
     llamarlos directo acá bloquearía el event loop y con él todas las
@@ -74,4 +92,5 @@ async def ciclo_uf() -> None:
     await asyncio.sleep(ESPERA_INICIAL)
     while True:
         await asyncio.to_thread(actualizar_uf_si_hace_falta)
+        await asyncio.to_thread(limpiar_intentos_login)
         await asyncio.sleep(INTERVALO)

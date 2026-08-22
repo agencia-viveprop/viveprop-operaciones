@@ -117,6 +117,30 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Se cierra la lista de seguridad diferida
+
+El usuario había diferido cinco cosas con una condición: *"lo vamos a dejar como está, después y viendo el funcionamiento incorporamos límites y seguridad"*. Con la app completa y en producción con datos reales, esa condición se cumplió. Se hicieron las cinco.
+
+**1. Límite de intentos de login** (`D-045`), que era la única con un número medible: `/auth/login` aceptaba intentos infinitos, y cada intento cuesta **70 ms de CPU** verificando el hash Argon2id. Eran dos problemas en uno — fuerza bruta contra una contraseña que hasta hoy podía ser `"1"`, y saturación, porque unos cientos de peticiones por segundo dejan el proceso moliendo hashes.
+
+**El límite corta antes de verificar el hash**, y eso es lo que lo hace servir para las dos cosas. Un límite evaluado después habría frenado la fuerza bruta y no la saturación. Hay un test que cuenta las llamadas a `verify_password` y exige que sean cero cuando la clave está bloqueada.
+
+Se cuenta por email —protege la cuenta, umbral 5— y por IP —protege el servidor, umbral 20, más alto porque una oficina comparte salida—. Bloqueo de 15 minutos, y pasada la ventana el contador arranca de cero. Va en la base y no en memoria: un contador en memoria se reinicia con cada deploy.
+
+**2. Política de contraseñas**: 10 caracteres mínimo, más una lista corta de las peores. **No se piden mayúsculas ni símbolos** a propósito: esas reglas producen `Viveprop2026!` —que cumple todo y es adivinable— en vez de contraseñas mejores. En la lista va `viveprop` y sus variantes, porque es exactamente lo que alguien elige cuando tiene que inventar una clave en el momento.
+
+**3. La fuga de tiempos, cerrada y medida.** Antes un email desconocido volvía en microsegundos y uno real en ~70 ms, y esa diferencia decía qué correos tienen cuenta. Ahora siempre se verifica un hash, contra un señuelo si el usuario no existe. Medido en vivo: **1,02x de diferencia**, cuando antes era ~70x.
+
+**4. Restricción de dominio al crear usuarios**, configurable por `DOMINIOS_EMAIL` y con `viveprop.com` por defecto. Un dedazo en el correo al crear una cuenta le daba acceso a un desconocido.
+
+**5. `SESSION_SECRET` eliminada** de `config.py`, `render.yaml`, `.env.example` y el README. Se verificó que ninguna línea de código la leía. Ojo: sacarla de `render.yaml` no la borra del ambiente de Render — eso hay que hacerlo en el panel.
+
+**Dos cosas que salieron al construir esto.** El modelo nuevo no estaba importado en `app/models/__init__.py`, así que `alembic check` proponía **borrar la tabla** que la migración acababa de crear; y el índice tenía distinto nombre en la migración que el que genera `index=True`. Las dos las atrapó `alembic check`, que ahora sirve justamente para eso.
+
+Y una optimización: el login gastaba seis viajes de red por intento entre las consultas de verificación y de registro. Agrupadas, son tres.
+
+24 tests nuevos, 429 en total.
+
 ### 2026-08-22 · Sprint 18 (F5) — Listo · vista directorio · serie F completa
 
 **Se armó con supuestos, y eso queda dicho en la pantalla** (`D-044`). Se preguntó cinco veces qué quiere ver el directorio y la respuesta no llegó; seguir bloqueado era peor servicio que entregar algo concreto que se pueda corregir. La vista lleva un aviso propio que dice que es una primera versión y pide qué sacar y qué agregar.
