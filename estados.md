@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-22 (22 listos + G2 en curso; auditoría: se arregló que guardar un negocio histórico le moviera la comisión)
+**Última actualización:** 2026-08-22 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
 
 ---
 
@@ -17,7 +17,16 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | Pendientes | 0 |
 | Bloqueados | 0 |
 
-**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. No queda nada pendiente del plan: solo el dominio propio del sprint 2, que el usuario dejó fuera por ahora. El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS y que quedó fuera por ahora por decisión tuya.
+
+**La auditoría del 22-08 quedó cerrada**, con sus cuatro puntos arreglados, verificados y en producción:
+
+1. **La app no permitía cerrar un negocio** desde ninguna pantalla. Se construyó el formulario de liquidación, y al probarlo apareció que **guardar un negocio histórico le movía la comisión** — el hallazgo más grande. Reproducen su plata 18 de 19 hitos, contra 1 de 19 antes (`D-046`).
+2. **Trece pantallas no contemplaban un error de la API**: spinner eterno o pantalla en blanco (`D-047`).
+3. **Umbrales escritos a mano** en los textos, mientras el backend los decidía y ya los devolvía (`D-048`).
+4. **El importador de canjes iba dos veces a la base por fila**: 84,50 s → 1,07 s, medido (`D-049`).
+
+Lo que sigue esperando algo tuyo: qué quiere ver el directorio, con qué UF se valoriza un negocio abierto, qué base es la correcta en `VVP-2`, y el export de Dataprop con los canjes #364 y #367. Sin fechas límite ni bloqueos.
 
 ---
 
