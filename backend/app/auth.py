@@ -50,11 +50,24 @@ def clear_session_cookie(response: Response) -> None:
     response.delete_cookie(key=COOKIE_NAME, path="/")
 
 
-def get_current_user(
+# El detalle viaja tal cual al front, que lo usa para distinguir "tu sesion se
+# vencio" de "tenes que cambiar la clave". Sin una marca estable habria que
+# comparar textos.
+CLAVE_VENCIDA = "debe_cambiar_password"
+
+
+def resolver_usuario(
     response: Response,
     db: Session = Depends(get_db),
     session_id: str | None = Cookie(default=None, alias=COOKIE_NAME),
 ) -> Usuario:
+    """El usuario de la sesion, **sin** exigir que la clave este al dia.
+
+    La usan los tres endpoints que tienen que funcionar con una clave temporal:
+    `/me` para que el front sepa que hay que cambiarla, `cambiar-clave` para
+    poder cambiarla, y `logout` para poder salir. Cualquier otro endpoint usa
+    `get_current_user`, que si lo exige.
+    """
     unauthorized = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No autenticado")
     if not session_id:
         raise unauthorized
@@ -88,6 +101,21 @@ def get_current_user(
         db.commit()
         set_session_cookie(response, sesion.id)
 
+    return usuario
+
+
+def get_current_user(usuario: Usuario = Depends(resolver_usuario)) -> Usuario:
+    """El usuario, exigiendo que su contrasena este al dia.
+
+    **La guarda vive aca y no en la pantalla.** Si solo la aplicara el front, la
+    clave temporal serviria para usar toda la API con un cliente cualquiera, y el
+    cambio forzado seria decorativo.
+    """
+    if usuario.debe_cambiar_password:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=CLAVE_VENCIDA,
+        )
     return usuario
 
 

@@ -2,16 +2,29 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
+  Badge,
   Button,
+  Code,
+  CopyButton,
+  Group,
   Modal,
   PasswordInput,
   Select,
   Stack,
   Switch,
   Table,
+  Text,
   TextInput,
 } from '@mantine/core'
-import { actualizarUsuario, crearUsuario, listarUsuarios, type RolUsuario } from '../api/usuarios'
+import { IconKey } from '@tabler/icons-react'
+import {
+  actualizarUsuario,
+  crearUsuario,
+  listarUsuarios,
+  resetearClave,
+  type ClaveReseteada,
+  type RolUsuario,
+} from '../api/usuarios'
 import PageHeader from '../components/PageHeader'
 
 const ROLES: { value: RolUsuario; label: string }[] = [
@@ -24,6 +37,7 @@ export default function AdminUsuarios() {
   const queryClient = useQueryClient()
   const { data: usuarios, isLoading } = useQuery({ queryKey: ['admin-usuarios'], queryFn: listarUsuarios })
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [claveNueva, setClaveNueva] = useState<ClaveReseteada | null>(null)
   const [form, setForm] = useState({ email: '', nombre: '', password: '', rol: 'operaciones' as RolUsuario })
 
   const crear = useMutation({
@@ -41,6 +55,14 @@ export default function AdminUsuarios() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] }),
   })
 
+  const resetear = useMutation({
+    mutationFn: resetearClave,
+    onSuccess: (r) => {
+      setClaveNueva(r)
+      queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] })
+    },
+  })
+
   return (
     <Stack p="xl" gap="md">
       <PageHeader title="Usuarios" action={<Button color="accent" onClick={() => setModalAbierto(true)}>Nuevo usuario</Button>} />
@@ -54,6 +76,7 @@ export default function AdminUsuarios() {
             <Table.Th>Nombre</Table.Th>
             <Table.Th>Rol</Table.Th>
             <Table.Th>Activo</Table.Th>
+            <Table.Th>Contraseña</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -85,10 +108,66 @@ export default function AdminUsuarios() {
                     onChange={(e) => actualizar.mutate({ id: u.id, payload: { activo: e.currentTarget.checked } })}
                   />
                 </Table.Td>
+                <Table.Td>
+                  <Group gap="xs" wrap="nowrap">
+                    <Button
+                      size="xs"
+                      variant="light"
+                      leftSection={<IconKey size={14} />}
+                      loading={resetear.isPending && resetear.variables === u.id}
+                      onClick={() => resetear.mutate(u.id)}
+                    >
+                      Resetear
+                    </Button>
+                    {u.debe_cambiar_password && (
+                      <Badge color="warning" variant="light" size="sm">
+                        Temporal
+                      </Badge>
+                    )}
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
         </Table.Tbody>
       </Table>
+
+      {resetear.isError && (
+        <Alert color="critical" variant="light">
+          {(resetear.error as Error).message}
+        </Alert>
+      )}
+
+      {/* La temporal se muestra una sola vez: lo que queda guardado es su hash.
+          Si se cierra sin copiarla, hay que resetear de nuevo. */}
+      <Modal
+        opened={claveNueva !== null}
+        onClose={() => setClaveNueva(null)}
+        title="Contraseña temporal"
+      >
+        {claveNueva && (
+          <Stack gap="sm">
+            <Text size="sm">
+              Pasale esta contraseña a <strong>{claveNueva.email}</strong>. Al entrar, la app
+              le va a pedir que elija una propia; hasta que lo haga no puede hacer nada más.
+            </Text>
+            <Group>
+              <Code fz="md" style={{ letterSpacing: 1 }}>
+                {claveNueva.clave_temporal}
+              </Code>
+              <CopyButton value={claveNueva.clave_temporal}>
+                {({ copied, copy }) => (
+                  <Button size="xs" variant={copied ? 'filled' : 'light'} onClick={copy}>
+                    {copied ? 'Copiada' : 'Copiar'}
+                  </Button>
+                )}
+              </CopyButton>
+            </Group>
+            <Alert color="warning" variant="light">
+              Se muestra una sola vez. Sus sesiones abiertas ya se cerraron.
+            </Alert>
+          </Stack>
+        )}
+      </Modal>
 
       <Modal opened={modalAbierto} onClose={() => setModalAbierto(false)} title="Nuevo usuario">
         <form

@@ -1,8 +1,10 @@
 """Fixtures de test.
 
-La base de test es SQLite en memoria y se crean todas las tablas menos
-`sesiones`, que es la unica incompatible: usa el tipo UUID del dialecto de
-Postgres. `usuarios` si se crea, porque `movimientos.autor_id` la referencia.
+La base de test es SQLite en memoria y se crean **todas** las tablas. `sesiones`
+quedaba afuera porque su clave primaria usa el UUID del dialecto de Postgres;
+ahora el modelo declara una variante `String(36)` para SQLite, y eso permite
+probar la cadena de autenticacion completa -- cookie, sesion y guarda de cambio
+forzado -- que antes no se podia cubrir.
 
 Las claves foraneas se activan con un PRAGMA: SQLite las ignora por defecto, y
 sin eso los tests de integridad referencial pasarian sin probar nada.
@@ -23,7 +25,7 @@ from sqlalchemy.pool import StaticPool
 from app.models.canje import Canje
 from app.models.catalogo import Catalogo, Etapa
 from app.models.movimiento import Movimiento, TipoMovimiento
-from app.models.usuario import RolUsuario, Usuario
+from app.models.usuario import RolUsuario, Sesion, Usuario
 from app.models.negocio import (
     Negocio,
     NegocioHito,
@@ -50,7 +52,7 @@ def db():
         conexion.execute("PRAGMA foreign_keys=ON")
 
     for tabla in (
-        Usuario, Canje, UFDiaria, Catalogo, Etapa,
+        Usuario, Sesion, Canje, UFDiaria, Catalogo, Etapa,
         Propiedad, Negocio, NegocioHito, NegocioObligacion,
         TipoMovimiento, Movimiento,
     ):

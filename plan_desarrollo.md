@@ -49,7 +49,7 @@ Las letras son la etiqueta de serie (continúan la convención del repo: `A1–A
 | 19 | 19 | B5 · Registrar movimientos en canjes | ✅ **Listo** ya estaba desde B3 |
 | 20 | 20 | B6 · Semáforo y bandeja diaria | ✅ **Listo** |
 | 21 | 21 | B7 · Migrar el seguimiento histórico | ✅ **Listo** |
-| 22 | 22 | G1 · Recuperación de contraseña | Reset con cambio forzado |
+| 22 | 22 | G1 · Recuperación de contraseña | ✅ **Listo** |
 | 23 | 23 | C5 · UF automática desde el SII | ✅ **Listo** se actualiza sola, sin carga manual |
 
 **Dos cambios de orden respecto de v4**, aprobados el 2026-08-21:

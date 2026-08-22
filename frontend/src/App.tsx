@@ -3,6 +3,7 @@ import { Center, Loader, Text } from '@mantine/core'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { fetchMe } from './api/auth'
 import Login from './pages/Login'
+import CambioForzado from './pages/CambioForzado'
 import Home from './pages/Home'
 import AdminUsuarios from './pages/AdminUsuarios'
 import Canjes from './pages/Canjes'
@@ -30,6 +31,12 @@ function App() {
 
   if (!usuario) {
     return <Login />
+  }
+
+  // La API ya bloquea todo lo demas; esto evita que la persona choque contra un
+  // 403 en cada pantalla sin saber por que.
+  if (usuario.debe_cambiar_password) {
+    return <CambioForzado usuario={usuario} />
   }
 
   return (

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-21 (19 listos + G2 en curso; carga masiva de negocios lista, serie E completa)
+**Última actualización:** 2026-08-21 (20 listos + G2 en curso; reset de contraseña listo)
 
 ---
 
@@ -12,12 +12,12 @@ Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseñ
 | | Cantidad |
 |---|---|
 | Sprints del plan | 23 |
-| Listos | 19 |
+| Listos | 20 |
 | En curso | 1 |
-| Pendientes | 3 |
+| Pendientes | 2 |
 | Bloqueados | 0 |
 
-**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: los dos reportes que faltan (17–18) y contraseñas (22). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
+**Sprint actual:** 2 (G2), en curso: el código está y falta solo el dominio propio, que necesita que agregues el registro DNS. Diecinueve sprints listos. Lo que queda: los dos reportes que faltan (17–18). El 18 sigue esperando qué quiere ver el directorio. Sin fechas límite ni bloqueos.
 
 ---
 
@@ -29,13 +29,13 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | Lectura | Listos | Total | % |
 |---|---:|---:|---:|
 | **Camino crítico** (1, 3–13) | 12 | 12 | **100%** |
-| Plan completo | 19 | 23 | 82,6% |
-| Proyecto entero (incluye los 9 sprints previos en producción) | 28 | 32 | 87,5% |
+| Plan completo | 20 | 23 | 87,0% |
+| Proyecto entero (incluye los 9 sprints previos en producción) | 29 | 32 | 90,6% |
 
 | Serie | Listos | Total | % | Sprints |
 |---|---:|---:|---:|---|
 | **C** · Cimientos | 5 | 5 | **100%** | 1, 3, 4, 5, 23 |
-| **G** · Acceso y despliegue | 0 | 2 | 0% | 2, 22 |
+| **G** · Acceso y despliegue | 1 | 2 | 50% | 2, 22 |
 | **D** · Negocios | 6 | 6 | **100%** | 6–11 |
 | **F** · Reportería | 3 | 5 | 60% | 12, 13, 16–18 |
 | **E** · Carga masiva | 2 | 2 | **100%** | 14, 15 |
@@ -83,7 +83,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
 | 20 | B6 · Semáforo y bandeja diaria | **Listo** | 2026-08-21 | — | Cuatro niveles (`D-029`), 194 canjes en la bandeja. 22 tests. |
 | 21 | B7 · Migrar el seguimiento histórico | **Listo** | 2026-08-21 | — | 384 movimientos en 112 canjes. La bandeja pasó a 146 + 48. |
-| 22 | G1 · Recuperación de contraseña | Pendiente | — | — | Disparador: antes de crear la tercera cuenta de usuario. |
+| 22 | G1 · Recuperación de contraseña | **Listo** | 2026-08-21 | — | Reset por admin con cambio forzado. La guarda está en la API (`D-040`). 21 tests. |
 | 23 | C5 · UF automática desde el SII | **Listo** | 2026-08-21 | — | Fuente verificada en 617 fechas (`D-036`). Tarea de fondo diaria (`D-037`). 27 tests. |
 
 ---
@@ -116,6 +116,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-21 · Sprint 22 (G1) — Listo · reset de contraseña
+
+Reset por admin con cambio forzado en el primer ingreso, como se aprobó. **Sin correos**: no hace falta proveedor de mail ni credenciales de nada.
+
+**La decisión que sostiene todo: la guarda está en la API, no en la pantalla** (`D-040`). Con la clave temporal puesta, `get_current_user` devuelve 403 en **todos** los endpoints salvo tres: ver quién soy, cambiar la clave y salir. Si el bloqueo lo aplicara solo el front, la clave temporal serviría para usar toda la API con cualquier cliente y el sprint entero sería decorativo.
+
+Los tres exentos usan una dependencia aparte, `resolver_usuario`. El caso que obliga a separarlas: con la dependencia estricta, la persona quedaría bloqueada **del único endpoint que la desbloquea**.
+
+**El reset cierra las sesiones abiertas de esa persona.** Sin eso, una pestaña ya logueada seguiría con todos los permisos hasta doce horas y el cambio forzado no se aplicaría nunca — el flag solo se mira al resolver la sesión.
+
+**La clave la genera el sistema**, 12 caracteres, sin `I`, `l`, `1`, `O` ni `0` porque se dicta por teléfono o se copia de un chat. Se muestra una sola vez; lo guardado es su hash. La elige el sistema y no el admin porque una inventada en el momento termina siendo "viveprop2026", y hay que transmitirla por un canal aparte igual.
+
+**Nadie puede resetear su propia clave.** Si el único admin se reseteara y perdiera el texto que aparece una vez, quedaría fuera de la app sin nadie que pueda ayudarlo.
+
+**De paso se destrabó una deuda de tests.** `sesiones` quedaba fuera de la base de test porque su clave primaria usaba el `UUID` del dialecto de Postgres, así que **toda la capa de autenticación estaba sin cubrir**. Se cambió a `sa.Uuid`, que emite el mismo `UUID` nativo en Postgres —verificado comparando el DDL— y un `CHAR(32)` en SQLite. Ahora la cadena completa se prueba: cookie, sesión, ventana deslizante y guarda.
+
+Verificado además punta a punta contra `dev`: sesión viva antes del reset, muerta después, login con la temporal, 403 en todo, cambio, y 200. 21 tests nuevos, 321 en total.
+
+**Anotado y no arreglado:** `alembic check` reporta desalineamiento preexistente entre modelos y base — `BigInteger` en los modelos contra `Integer` en varias columnas, e índices declarados en migraciones pero no en los modelos. Ninguno es de este sprint y ninguno rompe nada hoy; queda dicho para no redescubrirlo.
 
 ### 2026-08-21 · `/api/health` dice qué commit está corriendo
 

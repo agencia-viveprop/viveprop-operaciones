@@ -5,7 +5,13 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import COOKIE_NAME, clear_session_cookie, crear_sesion, get_current_user, set_session_cookie
+from app.auth import (
+    COOKIE_NAME,
+    clear_session_cookie,
+    crear_sesion,
+    resolver_usuario,
+    set_session_cookie,
+)
 from app.db import get_db
 from app.models.usuario import Sesion, Usuario
 from app.security import hash_password, verify_password
@@ -23,6 +29,10 @@ class UsuarioOut(BaseModel):
     email: str
     nombre: str
     rol: str
+    # El front lo usa para tapar la app con el formulario de cambio de clave. La
+    # guarda de verdad esta en la API (ver `get_current_user`); esto solo evita
+    # que la persona choque contra un 403 en cada pantalla sin saber por que.
+    debe_cambiar_password: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -57,7 +67,7 @@ def logout(response: Response, db: Session = Depends(get_db), session_id: str | 
 
 
 @router.get("/me", response_model=UsuarioOut)
-def me(usuario: Usuario = Depends(get_current_user)):
+def me(usuario: Usuario = Depends(resolver_usuario)):
     return usuario
 
 
@@ -67,10 +77,26 @@ class CambiarClaveRequest(BaseModel):
 
 
 @router.post("/cambiar-clave")
-def cambiar_clave(payload: CambiarClaveRequest, db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+def cambiar_clave(
+    payload: CambiarClaveRequest,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(resolver_usuario),
+):
+    """Cambia la propia clave, y limpia la marca de cambio forzado.
+
+    Usa `resolver_usuario` y no `get_current_user` porque tiene que funcionar
+    **justamente** cuando la clave esta marcada como temporal: con la dependencia
+    estricta, la persona quedaria bloqueada del unico endpoint que la desbloquea.
+    """
     if not verify_password(usuario.password_hash, payload.clave_actual):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="La contraseña actual no es correcta")
+    if payload.clave_nueva == payload.clave_actual:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La contraseña nueva tiene que ser distinta de la actual",
+        )
 
     usuario.password_hash = hash_password(payload.clave_nueva)
+    usuario.debe_cambiar_password = False
     db.commit()
     return {"ok": True}

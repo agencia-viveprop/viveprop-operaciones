@@ -6,6 +6,7 @@ export type UsuarioAdmin = {
   nombre: string
   rol: RolUsuario
   activo: boolean
+  debe_cambiar_password: boolean
 }
 
 async function parseOrThrow(res: Response) {
@@ -35,5 +36,21 @@ export function actualizarUsuario(id: number, payload: Partial<{ email: string; 
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify(payload),
+  }).then(parseOrThrow)
+}
+
+export type ClaveReseteada = {
+  usuario_id: number
+  email: string
+  clave_temporal: string
+}
+
+/** Genera una clave temporal, cierra las sesiones de esa persona y la obliga a
+ *  elegir una nueva al entrar. La temporal se devuelve **una sola vez**: lo que
+ *  queda guardado es su hash. */
+export function resetearClave(id: number): Promise<ClaveReseteada> {
+  return fetch(`/api/admin/usuarios/${id}/resetear-clave`, {
+    method: 'POST',
+    credentials: 'include',
   }).then(parseOrThrow)
 }

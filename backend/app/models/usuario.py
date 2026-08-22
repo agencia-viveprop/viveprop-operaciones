@@ -2,8 +2,7 @@ import enum
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Uuid, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -34,6 +33,11 @@ class Usuario(Base):
         Enum(RolUsuario, name="user_role"), nullable=False, default=RolUsuario.operaciones
     )
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Lo pone un reset de clave y lo limpia el cambio. Mientras este en true, la
+    # sesion existe pero no sirve para nada mas que cambiar la contrasena.
+    debe_cambiar_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     ultimo_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -43,7 +47,12 @@ class Usuario(Base):
 class Sesion(Base):
     __tablename__ = "sesiones"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # `sa.Uuid` en vez del `UUID` del dialecto de Postgres: en Postgres emite el
+    # mismo tipo nativo, y en SQLite un CHAR(32) con la conversion incluida. Eso
+    # es lo que permite crear esta tabla en los tests y probar la cadena de
+    # autenticacion completa -- cookie, sesion y guarda de cambio forzado -- que
+    # antes quedaba sin cubrir. No cambia el DDL en produccion.
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
     usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     expira_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

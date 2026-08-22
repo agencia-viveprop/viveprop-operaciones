@@ -3,6 +3,9 @@ export type Usuario = {
   email: string
   nombre: string
   rol: 'gerencia' | 'operaciones' | 'admin'
+  /** Clave temporal puesta por un admin. Mientras sea true, la API devuelve 403
+   *  en todo salvo ver quién soy, cambiar la clave y salir. */
+  debe_cambiar_password: boolean
 }
 
 async function parseOrThrow(res: Response) {

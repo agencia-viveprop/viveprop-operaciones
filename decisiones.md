@@ -51,6 +51,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-037](#d-037) | 2026-08-21 | La descarga corre en el propio servicio, no en un Cron Job | 23 |
 | [D-038](#d-038) | 2026-08-21 | Cargar UF es solo de admin; consultar su estado, de todos | 23 |
 | [D-039](#d-039) | 2026-08-21 | La plantilla de negocios pide entradas, no resultados | 14, 15 |
+| [D-040](#d-040) | 2026-08-21 | El cambio forzado de clave lo aplica la API, no la pantalla | 22 |
 
 ---
 
@@ -703,3 +704,27 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Los errores de contenido vuelven con 200, no con 4xx.** Son decenas de mensajes por fila y el front los lista; un 400 obligaría a inventar una forma aparte de transportarlos. Lo que sí es 400 es un archivo que no se puede leer o al que le faltan columnas: ahí no hay nada que listar.
 
 **Y las tres reglas heredadas de la carga de UF**, por los mismos motivos: si hay un solo error no se escribe nada, cargar dos veces actualiza en vez de duplicar, y **nunca borra** — si la base tiene dos hitos y el archivo trae uno, el otro se queda. Un import que borra lo que no menciona convierte un archivo incompleto en pérdida de datos.
+
+---
+
+## D-040 · El cambio forzado de clave lo aplica la API, no la pantalla
+
+**Contexto.** Un admin resetea la clave de alguien, esa persona recibe una temporal y tiene que elegir una propia antes de usar la app. La pregunta es dónde se impide "usar la app".
+
+**Decisión.** En `get_current_user`. Con el flag `debe_cambiar_password` puesto, **todos** los endpoints devuelven 403 salvo tres: `/auth/me`, `/auth/cambiar-clave` y `/auth/logout`.
+
+**Motivo.** Si el bloqueo lo aplicara solo el front, la clave temporal serviría para usar toda la API con `curl` y el cambio forzado sería decorativo. La pantalla que tapa la app existe igual, pero para que la persona entienda qué pasa en vez de chocar contra un 403 en cada vista.
+
+**Los tres exentos usan una dependencia aparte**, `resolver_usuario`, que resuelve la sesión sin exigir la clave al día. Separarlas no es elegancia: con la dependencia estricta en `cambiar-clave`, la persona quedaría bloqueada **del único endpoint que la desbloquea**. Hay un test que fija exactamente eso.
+
+**El reset cierra las sesiones abiertas de esa persona.** El flag se mira al resolver la sesión, así que una pestaña ya logueada seguiría operando con todos los permisos hasta doce horas y el cambio forzado no se aplicaría nunca. Se borran sus sesiones, no las de quien resetea.
+
+**La clave temporal la genera el sistema.** Doce caracteres, sin `I`, `l`, `1`, `O` ni `0`: se dicta por teléfono o se copia de un chat y esos cinco se confunden entre sí. Se devuelve **una sola vez** y lo que queda en la base es su hash. Se descartó que la eligiera el admin: una inventada en el momento termina siendo "viveprop2026", y hay que transmitirla por un canal aparte igual.
+
+**Nadie puede resetear su propia clave.** Para eso está "cambiar contraseña". Si el único admin se reseteara a sí mismo y perdiera el texto que aparece una sola vez, quedaría fuera de la app sin nadie que pueda ayudarlo.
+
+**La clave nueva no puede ser igual a la actual.** Sin eso, "cambiar" la temporal por sí misma limpiaría el flag sin cambiar nada.
+
+**Lo que sigue sin hacerse, a propósito:** no hay política mínima de contraseñas — `cambiar-clave` acepta `"1"`. Está en la lista de diferidos por decisión del usuario y no se tocó. Vale decir que debilita esto: el cambio forzado obliga a elegir una clave, no a elegir una buena.
+
+**De paso, una deuda de tests que esto destrabó.** `sesiones` no se creaba en la base de test porque su clave primaria usaba el `UUID` del dialecto de Postgres, y eso dejaba **toda la capa de autenticación sin cubrir**. Se cambió a `sa.Uuid`, que en Postgres emite el mismo tipo nativo —verificado comparando el DDL compilado— y en SQLite un `CHAR(32)` con la conversión incluida. No cambia nada en producción y ahora la cadena completa se prueba.
