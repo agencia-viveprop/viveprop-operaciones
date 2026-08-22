@@ -7,6 +7,7 @@ import {
   Group,
   Loader,
   Paper,
+  SegmentedControl,
   SimpleGrid,
   Stack,
   Table,
@@ -17,6 +18,7 @@ import {
 import { IconChevronLeft, IconChevronRight, IconMinus } from '@tabler/icons-react'
 import {
   obtenerReporteMensual,
+  VENTANAS,
   type Comparacion,
   type Variacion,
 } from '../api/reportes'
@@ -32,6 +34,13 @@ const MESES = [
 const EN_PESOS = new Set(['Comisión real ViveProp', 'Comisión total'])
 
 function rotulo(etiqueta: string): string {
+  // Las ventanas vienen como '2026-03 a 2026-08'; un mes suelto, como '2026-08'.
+  if (etiqueta.includes(' a ')) {
+    return etiqueta
+      .split(' a ')
+      .map((e) => rotulo(e))
+      .join(' — ')
+  }
   const [anio, mes] = etiqueta.split('-')
   return `${MESES[Number(mes) - 1]} ${anio}`
 }
@@ -44,9 +53,9 @@ function valor(v: Variacion, campo: 'actual' | 'referencia'): string {
 /**
  * La variación, con su signo y su color.
  *
- * **`pct` nulo no es cero ni infinito: es que no hay base.** Si el mes de
+ * **`pct` nulo no es cero ni infinito: es que no hay base.** Si el período de
  * referencia tuvo cero, no existe porcentaje que calcular, y mostrar uno sería
- * inventarlo. Se dice "sin base" y se muestra la diferencia absoluta, que sí
+ * inventarlo. Se dice "nuevo" y se muestra la diferencia absoluta, que sí
  * significa algo.
  */
 function Delta({ v }: { v: Variacion }) {
@@ -69,7 +78,7 @@ function Delta({ v }: { v: Variacion }) {
   return (
     <Group gap={6} justify="flex-end" wrap="nowrap">
       {sinBase ? (
-        <Tooltip label="El mes de referencia estuvo en cero: no hay porcentaje que calcular">
+        <Tooltip label="El período de referencia estuvo en cero: no hay porcentaje que calcular">
           <Badge color={color} variant="light" size="sm">
             nuevo
           </Badge>
@@ -93,15 +102,16 @@ function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string;
     <Paper withBorder radius="md" p="md">
       <Title order={5}>{titulo}</Title>
       <Text size="xs" c="dimmed" mb="sm">
-        {ayuda} · contra {rotulo(c.contra.etiqueta)}
+        {ayuda} · <strong>{rotulo(c.actual.etiqueta)}</strong> contra{' '}
+        {rotulo(c.contra.etiqueta)}
       </Text>
       <div className="tabla-scroll-x">
         <Table striped fz="xs" className="tabla-una-linea">
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Métrica</Table.Th>
-              <Table.Th ta="right">Este mes</Table.Th>
-              <Table.Th ta="right">{rotulo(c.contra.etiqueta)}</Table.Th>
+              <Table.Th ta="right">Período</Table.Th>
+              <Table.Th ta="right">Referencia</Table.Th>
               <Table.Th ta="right">Variación</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -128,12 +138,20 @@ function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string;
 }
 
 /**
- * El mes contra dos referencias.
+ * El reporte de cierre, con ventanas móviles.
  *
- * **Las dos comparaciones responden cosas distintas**, y por eso van las dos: el
- * mes anterior dice si la tendencia corta sube o baja, y el mismo mes del año
- * pasado dice si eso es tendencia o es estacionalidad. Con una sola no se
- * distingue "vamos mal" de "agosto siempre es flojo".
+ * **El mes calendario no es la unidad natural de este negocio.** Los procesos
+ * duran de un mes a varios, así que un mes en cero no es un mes malo: es que
+ * ningún proceso terminó de madurar. Sobre los datos reales, 4 de 11 meses
+ * estuvieron vacíos y el ticket varía cuatro veces. Con ~1 cierre por mes y esa
+ * dispersión, la comparación mes contra mes mide ruido, no desempeño.
+ *
+ * Por eso el titular es una **ventana móvil** contra la anterior del mismo largo,
+ * el **año corrido** va contra el mismo tramo del año pasado, y el mes queda
+ * arriba como detalle de qué cerró.
+ *
+ * El largo de la ventana es un control y no una constante: el horizonte correcto
+ * depende de qué se esté mirando, y quien lee el reporte lo sabe mejor.
  *
  * No hay serie de veinticuatro meses acá: eso ya está en los gráficos "por mes"
  * del dashboard y responde otra pregunta.
@@ -141,21 +159,22 @@ function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string;
 export default function ReporteMensual() {
   const ahora = new Date()
   const [desplazamiento, setDesplazamiento] = useState(0)
+  const [ventana, setVentana] = useState('6')
 
   const cursor = new Date(ahora.getFullYear(), ahora.getMonth() + desplazamiento, 1)
   const anio = cursor.getFullYear()
   const mes = cursor.getMonth() + 1
 
   const { data, isLoading } = useQuery({
-    queryKey: ['reporte-mensual', anio, mes],
-    queryFn: () => obtenerReporteMensual(anio, mes),
+    queryKey: ['reporte-mensual', anio, mes, ventana],
+    queryFn: () => obtenerReporteMensual(anio, mes, Number(ventana)),
   })
 
   return (
     <Stack gap="md">
       <PageHeader
         title="Reporte mensual"
-        subtitle="El mes contra el anterior y contra el mismo mes del año pasado. El primero dice si sube o baja; el segundo, si es tendencia o estacionalidad."
+        subtitle="En un negocio donde los procesos duran de un mes a varios, un mes en cero no es un mes malo. Por eso el titular es una ventana móvil, y el mes queda como detalle."
         action={
           <Group gap="xs">
             <Tooltip label="Mes anterior">
@@ -224,16 +243,35 @@ export default function ReporteMensual() {
             </Paper>
           </SimpleGrid>
 
+          <Group gap="xs">
+            <Text size="xs" c="dimmed">
+              Ventana móvil de
+            </Text>
+            <SegmentedControl
+              size="xs"
+              color="accent"
+              value={ventana}
+              onChange={setVentana}
+              data={VENTANAS.map((v) => ({ value: String(v), label: `${v} meses` }))}
+            />
+          </Group>
+
           <TablaComparacion
-            titulo="Contra el mes anterior"
-            ayuda="Si la tendencia corta sube o baja"
-            c={data.mes_anterior}
+            titulo={`Últimos ${data.ventana_meses} meses`}
+            ayuda="Contra los mismos meses inmediatamente anteriores, sin solaparse"
+            c={data.movil}
           />
           <TablaComparacion
-            titulo="Contra el mismo mes del año pasado"
-            ayuda="Si eso es tendencia o es estacionalidad"
-            c={data.mismo_mes_anio_anterior}
+            titulo="Año corrido"
+            ayuda="Contra el mismo tramo del año pasado, no contra el año entero"
+            c={data.anio_corrido}
           />
+
+          <Text size="xs" c="dimmed">
+            El mes calendario está arriba, como detalle de qué cerró. No se compara contra el
+            mes anterior a propósito: con procesos que duran meses, esa variación mide ruido.
+            Sobre los datos reales, 4 de 11 meses estuvieron vacíos.
+          </Text>
         </>
       )}
     </Stack>

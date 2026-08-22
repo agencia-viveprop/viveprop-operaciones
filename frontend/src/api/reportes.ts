@@ -139,18 +139,29 @@ export type Variacion = {
 }
 
 export type Comparacion = {
+  /** Los dos lados van explícitos: la ventana móvil no coincide con el mes. */
+  actual: MetricasMes
   contra: MetricasMes
   variaciones: Variacion[]
 }
 
 export type ReporteMensual = {
+  /** El mes calendario, como detalle de "qué pasó". No es el titular. */
   mes: MetricasMes
-  mes_anterior: Comparacion
-  mismo_mes_anio_anterior: Comparacion
+  ventana_meses: number
+  /** El titular: la ventana móvil contra la anterior del mismo largo. */
+  movil: Comparacion
+  anio_corrido: Comparacion
 }
 
-export function obtenerReporteMensual(anio: number, mes: number): Promise<ReporteMensual> {
-  return fetch(`/api/reportes/mensual?anio=${anio}&mes=${mes}`, {
+export const VENTANAS = [3, 6, 12] as const
+
+export function obtenerReporteMensual(
+  anio: number,
+  mes: number,
+  ventana: number,
+): Promise<ReporteMensual> {
+  return fetch(`/api/reportes/mensual?anio=${anio}&mes=${mes}&ventana=${ventana}`, {
     credentials: 'include',
   }).then(parseOrThrow)
 }

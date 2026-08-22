@@ -12,7 +12,12 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.db import get_db
 from app.models.usuario import Usuario
-from app.services.reporte_mensual import ReporteMensual, obtener_reporte_mensual
+from app.services.reporte_mensual import (
+    VENTANA_DEFECTO,
+    VENTANAS_VALIDAS,
+    ReporteMensual,
+    obtener_reporte_mensual,
+)
 from app.services.reporte_semanal import (
     DIAS_ESTANCADO_DEFECTO,
     ReporteSemanal,
@@ -66,18 +71,30 @@ def semanal(
 def mensual(
     anio: int | None = Query(None, ge=2022, le=2100, description="Año. Por defecto, el actual."),
     mes: int | None = Query(None, ge=1, le=12, description="Mes. Por defecto, el actual."),
+    ventana: int = Query(
+        VENTANA_DEFECTO,
+        description=f"Largo de la ventana móvil, en meses. Uno de {list(VENTANAS_VALIDAS)}.",
+    ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    """El mes contra el anterior y contra el mismo mes del año pasado.
+    """Una ventana móvil contra la anterior, más el año corrido contra el pasado.
 
-    Los dos van juntos porque responden cosas distintas: el mes anterior dice si
-    la tendencia corta sube o baja, y el mismo mes del año pasado dice si eso es
-    tendencia o es estacionalidad.
+    El mes calendario va como detalle y no como titular: en un negocio donde los
+    procesos duran de un mes a varios, un mes en cero no es un mes malo, y la
+    comparación mes contra mes mide ruido. Sobre los datos reales, 4 de 11 meses
+    estuvieron vacíos.
     """
     if (anio is None) != (mes is None):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
             "Hay que indicar 'anio' y 'mes' juntos, o ninguno de los dos.",
         )
-    return obtener_reporte_mensual(db, anio, mes)
+    if ventana not in VENTANAS_VALIDAS:
+        # 422 y no 400: es un valor fuera del conjunto permitido, igual que lo
+        # que devolvería la validación del propio Query si fuera un enum.
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"La ventana tiene que ser una de {list(VENTANAS_VALIDAS)}.",
+        )
+    return obtener_reporte_mensual(db, anio, mes, ventana)

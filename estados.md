@@ -117,6 +117,36 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · El reporte mensual pasa a ventanas móviles
+
+Segundo paso de lo que pidió el usuario. El reporte que se había entregado el día anterior comparaba mes contra mes, y **medía ruido**: de 11 meses con actividad, 4 estuvieron vacíos (36%), y el ticket varía cuatro veces —entre 516.304 y 2.110.526—. Con ~1 cierre por mes y esa dispersión, la variación mensual no dice nada del desempeño.
+
+**El argumento en una tabla**, con los datos reales:
+
+| Mes | Cierre del mes | Móvil 6 meses |
+|---|---:|---:|
+| 2025-11 | **0** | 3.154.681 |
+| 2025-12 | 2.110.526 | 5.265.206 |
+| 2026-01 | **0** | 5.265.206 |
+| 2026-02 | **0** | 3.497.130 |
+| 2026-03 | 1.057.477 | 4.554.607 |
+
+La columna del mes es ilegible. La de seis meses cuenta algo: subió a 5,2M en diciembre y viene bajando.
+
+**Lo que quedó** (`D-043`):
+
+- **Titular: ventana móvil** contra la anterior del mismo largo, **sin solaparse** — si se solaparan, el mismo cierre contaría en los dos lados y la variación saldría diluida. El largo es un control de 3, 6 o 12 meses, porque el horizonte correcto depende de qué se mire.
+- **Año corrido** contra el **mismo tramo** del año pasado, no contra el año entero: comparar ocho meses contra doce diría que el año viene mal cuando solo viene incompleto.
+- **El mes calendario baja a detalle** de "qué cerró".
+
+**Lo que se sacó: la comparación mes contra mes**, que era justo el ruido a eliminar. Y el "mismo mes del año pasado" tampoco quedó: la estacionalidad necesita dos o tres años para ser medible, hoy compararía 1 contra 0.
+
+**Y el rediseño mostró algo que el mensual no podía:** en los últimos 6 meses las liquidaciones subieron 100% (4 contra 2) mientras la comisión real bajó 19,3%. Más cierres con ticket más chico — un hecho del negocio que la vista mensual escondía.
+
+De paso: `HTTP_422_UNPROCESSABLE_ENTITY` está deprecado en esta versión de Starlette; se cambió al nombre nuevo. Salió de un warning en los tests, que fallan ante SAWarnings pero no ante estos.
+
+42 tests en el archivo del mensual, 387 en total más el `xfail` conocido.
+
 ### 2026-08-22 · Duraciones de negocios y bandeja de negocios
 
 Pedido del usuario, después de notar que el mes calendario no es la unidad natural de este negocio: los procesos duran de un mes a varios, así que hacía falta ver **desde cuándo** viene cada negocio y **cuánto lleva sin moverse**.

@@ -54,6 +54,7 @@ Formato de cada entrada: **contexto** (qué obligó a decidir), **decisión** (q
 | [D-040](#d-040) | 2026-08-21 | El cambio forzado de clave lo aplica la API, no la pantalla | 22 |
 | [D-041](#d-041) | 2026-08-21 | La variación contra cero es nula, no infinita | 17 |
 | [D-042](#d-042) | 2026-08-22 | Un negocio tiene tres duraciones distintas, y ninguna es `actualizado_en` | — |
+| [D-043](#d-043) | 2026-08-22 | El cierre mensual se compara con ventanas móviles, no mes contra mes | 17 |
 
 ---
 
@@ -772,3 +773,25 @@ La Comisión Total se bajó a mano por el ajuste de costo de crédito que mencio
 **Consecuencia, y es información:** de los 18 negocios, 15 no tienen duración calculable. El único histórico que sí la tiene es `VVP-3`, con 83 días entre la promesa y la escritura, porque es el único con dos fechas distintas. Que 15 muestren un guión no es un defecto de la pantalla: es el estado real del dato, y hacerlo visible es lo que justifica empezar a usar el pipeline.
 
 **Los umbrales del semáforo son en días, no en horas.** Los 48/24 horas de `CONFIG` son de canjes, donde el ciclo es de días. Acá 30 y 14 días, y son una estimación, igual que el umbral de estancado del reporte semanal: viven en el código y no en `CONFIG` porque no son una regla que alguien haya acordado.
+
+---
+
+## D-043 · El cierre mensual se compara con ventanas móviles, no mes contra mes
+
+**Contexto.** El sprint 17 se entregó comparando el mes con el mes anterior y con el mismo mes del año pasado. El usuario señaló que este negocio no va mes a mes: cada proceso dura entre un mes y muchos, y algunos siguen abiertos.
+
+**Los datos le dan la razón.** De 11 meses con actividad, **4 estuvieron vacíos** (36%). El ticket varía cuatro veces, entre 516.304 y 2.110.526. Con ~1 cierre por mes y esa dispersión, la variación mes contra mes no mide desempeño: mide ruido. Un mes en cero no es un mes malo, es que ningún proceso terminó de madurar.
+
+**Decisión.** El titular pasa a ser una **ventana móvil** contra la ventana equivalente inmediatamente anterior, más el **año corrido** contra el mismo tramo del año pasado. El mes calendario se queda, pero como detalle de "qué cerró".
+
+**El contraste, con los datos reales:** la serie mensual de comisión real es 0 / 2,1M / 0 / 0 / 1,05M —no se puede leer una tendencia ahí—. La de seis meses dice que subió hasta 5,2M en diciembre y viene bajando a 2,8M.
+
+**Las ventanas no se solapan.** La referencia de marzo-agosto es septiembre-febrero, no octubre-marzo. Si se solaparan, el mismo cierre contaría en los dos lados y la variación saldría diluida hacia cero.
+
+**El año corrido compara el mismo tramo**, enero-agosto contra enero-agosto. Comparar ocho meses contra doce diría que el año viene mal cuando solo viene incompleto.
+
+**El largo de la ventana es un control** —3, 6 o 12 meses— y no una constante: el horizonte correcto depende de qué se esté mirando, y quien lee el reporte lo sabe mejor. Es el mismo criterio del umbral de estancado del reporte semanal.
+
+**Se descartó** la comparación mes contra mes, que era justo el ruido a eliminar, y el "mismo mes del año anterior": la estacionalidad necesita dos o tres años de datos para ser medible, y hoy compararía 1 contra 0. Se descartó también una serie de veinticuatro meses, que responde otra pregunta y ya está en los gráficos "por mes" del dashboard.
+
+**Lo que el rediseño dejó ver, y la vista mensual escondía:** en los últimos 6 meses las liquidaciones cerradas subieron 100% (4 contra 2) mientras la comisión real bajó 19,3%. Más cierres con ticket más chico. Eso es un hecho del negocio, y ninguna comparación mes contra mes lo iba a mostrar.

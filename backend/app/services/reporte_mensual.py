@@ -1,10 +1,28 @@
-"""Reporte mensual comparativo: el mes contra dos referencias.
+"""Reporte mensual comparativo, con ventanas móviles.
 
-**Tres períodos, no una serie.** La pregunta es "cómo venimos", y se responde
-comparando el mes con dos cosas distintas: el **mes anterior**, que dice si la
-tendencia corta sube o baja, y el **mismo mes del año anterior**, que dice si es
-tendencia o es estacionalidad. Un gráfico de veinticuatro meses responde otra
-pregunta y ya está cubierto por los de "por mes" del dashboard.
+**El mes calendario no es la unidad natural de este negocio.** Los procesos duran
+de un mes a varios, así que un mes en cero no es un mes malo: es que ningún
+proceso terminó de madurar. Medido sobre los datos reales: de 11 meses con
+actividad, **4 estuvieron vacíos** (36%), y el ticket varía cuatro veces --entre
+516.304 y 2.110.526--. Con ~1 cierre por mes y esa dispersión, la comparación mes
+contra mes no mide desempeño, mide ruido.
+
+Por eso el titular es una **ventana móvil** contra la ventana equivalente
+anterior, y el mes calendario queda como detalle de "qué pasó". Sobre los mismos
+datos, la serie mensual es 0 / 2,1M / 0 / 0 / 1,05M --ilegible-- y la de seis
+meses cuenta algo: subió hasta 5,2M en diciembre y viene bajando a 2,8M.
+
+**La ventana entra por parámetro** (3, 6 o 12 meses) porque el horizonte correcto
+depende de qué se está mirando, y quien lee el reporte lo sabe mejor. El default
+es 6.
+
+**El acumulado del año va aparte**, contra el mismo tramo del año anterior. Es la
+comparación que pide un cierre anual, y no es lo mismo que la ventana móvil.
+
+**Lo que se descartó: el "mismo mes del año anterior" como titular.** La
+estacionalidad necesita dos o tres años para ser medible; hoy compararía 1 contra
+0. Y un gráfico de veinticuatro meses responde otra pregunta, ya cubierta por los
+de "por mes" del dashboard.
 
 **La variación contra cero no es infinito: es "sin base".** Si el año pasado
 hubo 0 cierres y este hay 3, eso no es "+300%" ni "+∞" -- no hay contra qué
@@ -68,14 +86,21 @@ class Variacion(BaseModel):
 
 
 class Comparacion(BaseModel):
+    # Los dos lados van explícitos: la ventana móvil no coincide con el mes
+    # calendario, así que `actual` no se puede deducir del resto del reporte.
+    actual: MetricasMes
     contra: MetricasMes
     variaciones: list[Variacion]
 
 
 class ReporteMensual(BaseModel):
+    # El mes calendario, como detalle de "qué pasó". Ya no es el titular.
     mes: MetricasMes
-    mes_anterior: Comparacion
-    mismo_mes_anio_anterior: Comparacion
+    ventana_meses: int
+    # El titular: la ventana móvil contra la ventana equivalente anterior.
+    movil: Comparacion
+    # El acumulado del año contra el mismo tramo del año anterior.
+    anio_corrido: Comparacion
 
 
 # Qué se compara, y con qué nombre se muestra. El orden es el de lectura: la
@@ -100,8 +125,42 @@ def mes_anterior(anio: int, mes: int) -> tuple[int, int]:
     return (anio - 1, 12) if mes == 1 else (anio, mes - 1)
 
 
-def _metricas(db: Session, anio: int, mes: int) -> MetricasMes:
-    desde, hasta = limites(anio, mes)
+VENTANAS_VALIDAS = (3, 6, 12)
+VENTANA_DEFECTO = 6
+
+
+def correr_meses(anio: int, mes: int, cuantos: int) -> tuple[int, int]:
+    """El mes que está `cuantos` meses antes (o después, si es positivo)."""
+    total = (anio * 12 + (mes - 1)) + cuantos
+    return total // 12, total % 12 + 1
+
+
+def rango_ventana(anio: int, mes: int, meses: int) -> tuple[date, date]:
+    """La ventana de N meses que **termina** en ese mes, con el mes incluido.
+
+    Una ventana de 6 que termina en agosto va del 1 de marzo al 31 de agosto.
+    """
+    a_inicio, m_inicio = correr_meses(anio, mes, -(meses - 1))
+    return date(a_inicio, m_inicio, 1), limites(anio, mes)[1]
+
+
+def rango_anio_corrido(anio: int, mes: int) -> tuple[date, date]:
+    """De enero al último día de ese mes.
+
+    Se compara contra el **mismo tramo** del año anterior, no contra el año
+    entero: enero-agosto contra enero-agosto. Comparar ocho meses contra doce
+    diría que el año viene mal cuando solo viene incompleto.
+    """
+    return date(anio, 1, 1), limites(anio, mes)[1]
+
+
+def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasMes:
+    """Las métricas de un rango cualquiera de fechas, con los dos bordes incluidos.
+
+    Trabaja con un rango y no con un mes porque las ventanas móviles y el
+    acumulado del año son rangos de varios meses. El mes calendario es un rango
+    como cualquier otro.
+    """
     # Los canjes guardan fecha con hora, así que el rango va como instantes para
     # que el último día entre completo.
     inicio = datetime.combine(desde, time.min, tzinfo=timezone.utc)
@@ -161,7 +220,7 @@ def _metricas(db: Session, anio: int, mes: int) -> MetricasMes:
     )
 
     return MetricasMes(
-        etiqueta=f"{anio:04d}-{mes:02d}",
+        etiqueta=etiqueta,
         hitos_cerrados=cerrados[0],
         comision_real_vp=cerrados[1],
         comision_total=cerrados[2],
@@ -188,22 +247,47 @@ def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
                 pct=None if r == CERO else ((a - r) / r * 100).quantize(Decimal("0.1")),
             )
         )
-    return Comparacion(contra=referencia, variaciones=variaciones)
+    return Comparacion(actual=actual, contra=referencia, variaciones=variaciones)
+
+
+def _rotulo_ventana(desde: date, hasta: date) -> str:
+    return f"{desde:%Y-%m} a {hasta:%Y-%m}"
 
 
 def obtener_reporte_mensual(
-    db: Session, anio: int | None = None, mes: int | None = None, hoy: date | None = None
+    db: Session,
+    anio: int | None = None,
+    mes: int | None = None,
+    ventana: int = VENTANA_DEFECTO,
+    hoy: date | None = None,
 ) -> ReporteMensual:
     hoy = hoy or datetime.now(timezone.utc).date()
     anio = anio or hoy.year
     mes = mes or hoy.month
+    if ventana not in VENTANAS_VALIDAS:
+        raise ValueError(f"La ventana tiene que ser una de {VENTANAS_VALIDAS}.")
 
-    actual = _metricas(db, anio, mes)
-    anterior = _metricas(db, *mes_anterior(anio, mes))
-    anio_pasado = _metricas(db, anio - 1, mes)
+    # El mes calendario, como detalle.
+    desde_mes, hasta_mes = limites(anio, mes)
+    detalle = _metricas(db, desde_mes, hasta_mes, f"{anio:04d}-{mes:02d}")
+
+    # La ventana móvil y la inmediatamente anterior, del mismo largo.
+    desde_v, hasta_v = rango_ventana(anio, mes, ventana)
+    a_prev, m_prev = correr_meses(anio, mes, -ventana)
+    desde_p, hasta_p = rango_ventana(a_prev, m_prev, ventana)
+
+    movil = _metricas(db, desde_v, hasta_v, _rotulo_ventana(desde_v, hasta_v))
+    movil_prev = _metricas(db, desde_p, hasta_p, _rotulo_ventana(desde_p, hasta_p))
+
+    # El año corrido contra el mismo tramo del año anterior.
+    desde_a, hasta_a = rango_anio_corrido(anio, mes)
+    desde_ap, hasta_ap = rango_anio_corrido(anio - 1, mes)
+    corrido = _metricas(db, desde_a, hasta_a, _rotulo_ventana(desde_a, hasta_a))
+    corrido_prev = _metricas(db, desde_ap, hasta_ap, _rotulo_ventana(desde_ap, hasta_ap))
 
     return ReporteMensual(
-        mes=actual,
-        mes_anterior=_comparar(actual, anterior),
-        mismo_mes_anio_anterior=_comparar(actual, anio_pasado),
+        mes=detalle,
+        ventana_meses=ventana,
+        movil=_comparar(movil, movil_prev),
+        anio_corrido=_comparar(corrido, corrido_prev),
     )
