@@ -306,8 +306,15 @@ def test_el_endpoint_sin_parametros_toma_el_mes_actual(cliente):
 
     assert r.status_code == 200
     cuerpo = r.json()
-    assert set(cuerpo) == {"mes", "ventana_meses", "movil", "anio_corrido"}
+    assert set(cuerpo) == {
+        "mes", "ventana_meses", "movil", "anio_corrido",
+        "meses_sin_cierres", "meses_de_la_ventana",
+    }
     assert cuerpo["ventana_meses"] == 6
+    # Sin datos, los seis meses de la ventana estan vacios. Es el numero que la
+    # pantalla usa para explicar un mes en cero, y antes iba escrito a mano.
+    assert cuerpo["meses_de_la_ventana"] == 6
+    assert cuerpo["meses_sin_cierres"] == 6
 
 
 def test_el_endpoint_acepta_un_mes_puntual(cliente, db):
@@ -338,3 +345,27 @@ def test_el_endpoint_acepta_las_tres_ventanas(cliente, ventana):
 ])
 def test_el_endpoint_rechaza_periodos_imposibles(cliente, params, codigo):
     assert cliente.get("/api/reportes/mensual", params=params).status_code == codigo
+
+
+def test_cuenta_los_meses_vacios_de_su_propia_ventana(cliente, db):
+    """El numero que la pantalla usa para explicar un mes en cero.
+
+    Iba escrito a mano --"4 de 11 meses estuvieron vacios"-- y eso deja de ser
+    cierto el mes siguiente sin que nada falle. Un dato que envejece mal es peor
+    que ninguno, porque nadie se entera de que dejo de valer.
+    """
+    # Dos cierres dentro de la ventana de seis meses que termina en junio: abril
+    # y junio. Quedan cuatro meses sin ningun cierre.
+    _negocio(db, "V-1", [_hito(date(2026, 4, 1), date(2026, 4, 20), real=D("100"))])
+    _negocio(db, "V-2", [_hito(date(2026, 6, 1), date(2026, 6, 15), real=D("200"))])
+
+    cuerpo = cliente.get("/api/reportes/mensual?anio=2026&mes=6&ventana=6").json()
+
+    assert cuerpo["meses_de_la_ventana"] == 6
+    assert cuerpo["meses_sin_cierres"] == 4
+
+    # Y sigue al dia cuando cambia la ventana: en tres meses --abril, mayo,
+    # junio-- solo mayo esta vacio.
+    corto = cliente.get("/api/reportes/mensual?anio=2026&mes=6&ventana=3").json()
+    assert corto["meses_de_la_ventana"] == 3
+    assert corto["meses_sin_cierres"] == 1

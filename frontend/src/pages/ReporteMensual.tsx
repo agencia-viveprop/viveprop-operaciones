@@ -141,9 +141,10 @@ function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string;
  *
  * **El mes calendario no es la unidad natural de este negocio.** Los procesos
  * duran de un mes a varios, así que un mes en cero no es un mes malo: es que
- * ningún proceso terminó de madurar. Sobre los datos reales, 4 de 11 meses
- * estuvieron vacíos y el ticket varía cuatro veces. Con ~1 cierre por mes y esa
- * dispersión, la comparación mes contra mes mide ruido, no desempeño.
+ * ningún proceso terminó de madurar. Cuántos meses de la ventana estuvieron
+ * vacíos lo cuenta la API --antes era un número escrito acá que envejecía-- y el
+ * ticket varía cuatro veces. Con ~1 cierre por mes y esa dispersión, la
+ * comparación mes contra mes mide ruido, no desempeño.
  *
  * Por eso el titular es una **ventana móvil** contra la anterior del mismo largo,
  * el **año corrido** va contra el mismo tramo del año pasado, y el mes queda
@@ -288,9 +289,9 @@ export default function ReporteMensual() {
             <Text size="sm" mt={6}>
               {data.mes.hitos_cerrados === 0 ? (
                 <>
-                  No se cerró ninguna liquidación en el mes. Con procesos que duran de un mes
-                  a varios eso es normal: sobre los datos reales, 4 de 11 meses estuvieron
-                  vacíos.
+                  No se cerró ninguna liquidación en el mes. Con procesos que duran de un
+                  mes a varios eso es normal: {data.meses_sin_cierres} de los últimos{' '}
+                  {data.meses_de_la_ventana} meses estuvieron vacíos.
                 </>
               ) : (
                 <>

@@ -25,15 +25,34 @@ import EstadoConsulta from './EstadoConsulta'
  * ciclo de días, y acá los procesos duran de un mes a varios. En horas no
  * distinguirían nada.
  */
-const NIVELES: Record<NivelNegocio, { texto: string; color: string; ayuda: string }> = {
-  sin_gestion: {
-    texto: 'Sin gestión',
-    color: 'gray',
-    ayuda: 'Nunca se registró un movimiento',
-  },
-  critico: { texto: 'Crítico', color: 'critical', ayuda: 'Más de 30 días sin gestión' },
-  advertencia: { texto: 'Advertencia', color: 'warning', ayuda: 'Entre 14 y 30 días' },
-  al_dia: { texto: 'Al día', color: 'good', ayuda: 'Menos de 14 días' },
+const NIVELES: Record<NivelNegocio, { texto: string; color: string }> = {
+  sin_gestion: { texto: 'Sin gestión', color: 'gray' },
+  critico: { texto: 'Crítico', color: 'critical' },
+  advertencia: { texto: 'Advertencia', color: 'warning' },
+  al_dia: { texto: 'Al día', color: 'good' },
+}
+
+/**
+ * La explicación de cada nivel, armada con los umbrales que manda la API.
+ *
+ * Los números venían escritos a mano en el texto --"Más de 30 días", "Entre 14 y
+ * 30"-- mientras el backend los decide en `UMBRAL_CRITICO` y
+ * `UMBRAL_ADVERTENCIA` y **ya los devolvía en la respuesta**. Dos copias del
+ * mismo umbral: el día que se ajuste uno, la pantalla seguiría explicando el
+ * viejo y nada fallaría. Un cartel que miente sobre la regla que aplica es peor
+ * que no tener cartel.
+ */
+function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): string {
+  switch (nivel) {
+    case 'sin_gestion':
+      return 'Nunca se registró un movimiento'
+    case 'critico':
+      return `Más de ${critico} días sin gestión`
+    case 'advertencia':
+      return `Entre ${advertencia} y ${critico} días`
+    case 'al_dia':
+      return `Menos de ${advertencia} días`
+  }
 }
 
 const ORDEN: NivelNegocio[] = ['sin_gestion', 'critico', 'advertencia', 'al_dia']
@@ -76,7 +95,7 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
               {data.resumen[nivel]}
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
-              {NIVELES[nivel].ayuda}
+              {ayudaDe(nivel, data.umbral_critico_dias, data.umbral_advertencia_dias)}
             </Text>
           </Paper>
         ))}

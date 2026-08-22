@@ -117,6 +117,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Auditoría · los umbrales que la pantalla explicaba de memoria
+
+Tercer punto de la auditoría. Las dos bandejas explicaban su semáforo con números escritos a mano —*"Más de 30 días sin gestión"*, *"Entre 24 y 48 horas"*— mientras el backend los decide y **ya los devolvía en la respuesta**: la pantalla los ignoraba. Y el reporte mensual afirmaba *"sobre los datos reales, 4 de 11 meses estuvieron vacíos"*, que era cierto el día que se escribió y deja de serlo al mes siguiente.
+
+Ahora el texto se arma con lo que manda la API, y donde el dato no venía se agregó: el reporte mensual devuelve `meses_sin_cierres` y `meses_de_la_ventana`, así que la frase cambia con el selector. Sobre los datos de `dev`: **2 de 3**, **2 de 6** y **6 de 12** según la ventana. Ver `D-048`.
+
+Se dejaron como estaban los `14`/`30 días` del selector del semanal —ahí el número *es* el valor del control, no explica una regla— y el tope de 25 filas, que ya se declara en pantalla con *"Se muestran N de M"*.
+
+**Verificado:** 486 tests, `alembic check` limpio, build y lint sin hallazgos.
+
 ### 2026-08-22 · Auditoría · trece pantallas que no contemplaban un error de la API
 
 Segundo punto de la auditoría. **Trece pantallas pedían datos y ninguna manejaba una falla.** Tres dejaban el spinner girando para siempre —`isLoading || !data ? <Loader/>` nunca se resuelve si la petición falla— y las otras diez quedaban en blanco con `if (!data) return null`. Una sesión vencida, Neon despertando o un 500 se veían igual que "cargando", sin nada que hacer salvo recargar a ciegas.

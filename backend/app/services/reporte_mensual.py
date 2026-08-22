@@ -101,6 +101,13 @@ class ReporteMensual(BaseModel):
     movil: Comparacion
     # El acumulado del año contra el mismo tramo del año anterior.
     anio_corrido: Comparacion
+    # Cuántos meses de la ventana no tuvieron ni un cierre, y sobre cuántos.
+    # Va calculado y no escrito en la pantalla: el texto que explica un mes en
+    # cero decía "4 de 11 meses" a mano, y eso deja de ser cierto el mes
+    # siguiente. Un dato que envejece mal es peor que ninguno, porque nadie se
+    # entera de que dejó de valer.
+    meses_sin_cierres: int
+    meses_de_la_ventana: int
 
 
 # Qué se compara, y con qué nombre se muestra. El orden es el de lectura: la
@@ -285,9 +292,21 @@ def obtener_reporte_mensual(
     corrido = _metricas(db, desde_a, hasta_a, _rotulo_ventana(desde_a, hasta_a))
     corrido_prev = _metricas(db, desde_ap, hasta_ap, _rotulo_ventana(desde_ap, hasta_ap))
 
+    # Se recorre la ventana mes por mes solo para contar los vacíos. Son tres,
+    # seis o doce consultas cortas; la alternativa era un GROUP BY por mes que
+    # duplicaría la lógica de `_metricas`.
+    vacios = 0
+    for atras in range(ventana):
+        a_i, m_i = correr_meses(anio, mes, -atras)
+        d_i, h_i = limites(a_i, m_i)
+        if _metricas(db, d_i, h_i, "").hitos_cerrados == 0:
+            vacios += 1
+
     return ReporteMensual(
         mes=detalle,
         ventana_meses=ventana,
         movil=_comparar(movil, movil_prev),
         anio_corrido=_comparar(corrido, corrido_prev),
+        meses_sin_cierres=vacios,
+        meses_de_la_ventana=ventana,
     )

@@ -899,3 +899,22 @@ if (!data) return <EstadoConsulta de={consulta} alto={300} />
 **El error trae qué hacer, no solo qué pasó.** Se muestra el mensaje de la API, un botón *Reintentar* que vuelve a lanzar la consulta, y una línea que distingue los dos casos frecuentes: si dice que la sesión venció hay que entrar de nuevo, y si no, suele ser la base despertando y reintentar alcanza.
 
 **Tres pantallas quedan como estaban, a propósito.** `AvisoUF` es un banner: si su consulta falla lo correcto es que no aparezca, no que grite. `App.tsx` consulta `/me` y un fallo ahí *significa* que no hay sesión, así que muestra el login —que es la respuesta correcta, no un error—. Y `AppShellLayout` no consulta nada.
+
+---
+
+## D-048 · Los números que la interfaz explica los manda la API, no los escribe la pantalla
+
+**Contexto.** La auditoría encontró umbrales y cifras escritos a mano en los textos de la interfaz, mientras el backend los decidía —y en dos casos **ya los devolvía en la respuesta y la pantalla los ignoraba**:
+
+- Las dos bandejas explicaban su semáforo con números fijos: *"Más de 30 días sin gestión"*, *"Entre 24 y 48 horas"*. El backend los tiene en `UMBRAL_CRITICO` y `UMBRAL_ADVERTENCIA` —de la hoja `CONFIG`— y los mandaba como `umbral_critico_dias` / `umbral_critico_horas`.
+- El reporte mensual, al explicar un mes sin cierres, afirmaba *"sobre los datos reales, 4 de 11 meses estuvieron vacíos"*.
+
+**Decisión.** El texto se arma con lo que manda la API. Donde el dato no venía —los meses vacíos— se agregó al reporte (`meses_sin_cierres`, `meses_de_la_ventana`) en vez de dejarlo escrito.
+
+**Motivo.** Dos copias del mismo umbral no fallan: divergen. El día que se ajuste el semáforo a 45 días, la pantalla va a seguir explicando 30 y nada va a avisar. **Un cartel que miente sobre la regla que aplica es peor que no tener cartel**, porque se le cree.
+
+El caso del reporte mensual es aún más claro: *"4 de 11 meses"* era cierto el día que se escribió y deja de serlo al mes siguiente, sin que nada falle. Ahora dice cuántos meses de **la ventana que el usuario está mirando** estuvieron vacíos, así que cambia con el selector: 2 de 3, 2 de 6, 6 de 12 sobre los datos de hoy. Un dato que envejece mal es peor que ninguno, porque nadie se entera de que dejó de valer.
+
+**Se recorre la ventana mes por mes para contarlo.** Son tres, seis o doce consultas cortas. La alternativa —un `GROUP BY` por mes— habría duplicado la lógica de `_metricas`, que es justamente el tipo de duplicación que esta decisión evita.
+
+**Lo que se dejó como está, y por qué no es lo mismo.** Los `14 días` / `30 días` del selector del reporte semanal **son** los valores del control: el número no explica una regla, la elige. Y el tope de 25 filas de las listas del semanal ya se declara en pantalla —*"Se muestran 25 de 41"*— así que no hay recorte silencioso.

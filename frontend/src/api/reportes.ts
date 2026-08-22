@@ -149,6 +149,8 @@ export type ReporteMensual = {
   /** El mes calendario, como detalle de "qué pasó". No es el titular. */
   mes: MetricasMes
   ventana_meses: number
+  meses_sin_cierres: number
+  meses_de_la_ventana: number
   /** El titular: la ventana móvil contra la anterior del mismo largo. */
   movil: Comparacion
   anio_corrido: Comparacion
