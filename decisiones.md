@@ -918,3 +918,21 @@ El caso del reporte mensual es aún más claro: *"4 de 11 meses"* era cierto el 
 **Se recorre la ventana mes por mes para contarlo.** Son tres, seis o doce consultas cortas. La alternativa —un `GROUP BY` por mes— habría duplicado la lógica de `_metricas`, que es justamente el tipo de duplicación que esta decisión evita.
 
 **Lo que se dejó como está, y por qué no es lo mismo.** Los `14 días` / `30 días` del selector del reporte semanal **son** los valores del control: el número no explica una regla, la elige. Y el tope de 25 filas de las listas del semanal ya se declara en pantalla —*"Se muestran 25 de 41"*— así que no hay recorte silencioso.
+
+---
+
+## D-049 · El importador de canjes hace una consulta y un commit, no dos por fila
+
+**Contexto.** `importar_canjes` iba a la base dos veces por cada fila del archivo: un `db.get` para ver si el canje existía y un `db.commit` para guardarlo. Con las 297 filas del export real de Dataprop son **~594 idas y vueltas**, y para nada: el archivo se conoce entero de antemano.
+
+**Medido contra `dev` en Neon, con 100 filas: 84,50 s contra 1,07 s.** Setenta y nueve veces. La latencia desde la máquina de desarrollo es de ~190 ms por viaje, así que el export completo tardaba minutos; dentro de Render, a ~10 ms, eran unos seis segundos contra menos de uno. En los dos casos el costo era latencia, no trabajo.
+
+**Decisión.** Tres pasos: parsear todo, **una** consulta con todos los IDs, **un** commit.
+
+**Parsear primero no es solo orden.** Los errores de formato —un `ESTADO` que no está en el mapa, una fecha ilegible— salen sin gastar una sola consulta. Son además los que de verdad ocurren: el test de la fila inválida que ya existía falla en el parseo y nunca llegaba a la base.
+
+**El commit por fila protegía algo, y se conserva como camino de excepción.** Si el lote falla, se rehace fila por fila para que el error quede atribuido a su fila y las buenas se guarden igual. Deja de ser el camino normal, que es lo que costaba los 594 viajes, y pasa a ser el que se toma cuando algo salió mal de verdad.
+
+**Un ID repetido dentro del mismo archivo actualiza, no duplica.** El mapa de existentes se va poblando con lo que se crea. Sin eso, la segunda aparición intentaría insertar de nuevo, el commit del lote fallaría, y **las 297 filas se irían al camino lento por una sola fila repetida**. Hay un test para ese caso.
+
+**El test cuenta las llamadas, no solo el resultado.** Un test que verificara únicamente que las 30 filas quedaron cargadas habría pasado igual con la versión lenta. Se exige `commit == 1` y `get == 0`: si alguien vuelve a meter un commit en el bucle, falla.

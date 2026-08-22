@@ -117,6 +117,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Auditoría · el importador de canjes iba dos veces a la base por fila
+
+Cuarto y último punto de la auditoría. `importar_canjes` hacía un `db.get` y un `db.commit` por fila: **~594 viajes** para las 297 del export real, cuando el archivo se conoce entero de antemano.
+
+**Medido contra `dev` en Neon con 100 filas: 84,50 s contra 1,07 s.** Setenta y nueve veces. Ahora son tres pasos —parsear todo, una consulta con todos los IDs, un commit—, y el commit por fila queda como camino de excepción para que un lote fallido no pierda las filas buenas. Ver `D-049`.
+
+Dos tests nuevos: uno **cuenta las llamadas** (`commit == 1`, `get == 0`), porque uno que solo verificara el resultado habría pasado igual con la versión lenta; y otro cubre un ID repetido en el mismo archivo, que sin el arreglo habría mandado las 297 filas al camino lento por una sola fila.
+
+**Verificado:** 488 tests, `alembic check` limpio.
+
 ### 2026-08-22 · Auditoría · los umbrales que la pantalla explicaba de memoria
 
 Tercer punto de la auditoría. Las dos bandejas explicaban su semáforo con números escritos a mano —*"Más de 30 días sin gestión"*, *"Entre 24 y 48 horas"*— mientras el backend los decide y **ya los devolvía en la respuesta**: la pantalla los ignoraba. Y el reporte mensual afirmaba *"sobre los datos reales, 4 de 11 meses estuvieron vacíos"*, que era cierto el día que se escribió y deja de serlo al mes siguiente.

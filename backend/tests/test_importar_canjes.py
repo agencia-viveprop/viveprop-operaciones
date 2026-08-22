@@ -107,3 +107,42 @@ def test_etapa_vacia_cae_en_sin_etapa(db, fila, construir_xlsx):
     importar_canjes(db, construir_xlsx([f]))
 
     assert db.get(Canje, 701).etapa == CanjeEtapa.SIN_ETAPA
+
+
+def test_una_consulta_y_un_commit_para_todo_el_archivo(db, fila, construir_xlsx, monkeypatch):
+    """Fija el numero de viajes a la base, que es lo que se vino a arreglar.
+
+    Antes eran dos por fila -un db.get y un db.commit-, o sea ~594 para las 297
+    filas del export real. Un test que solo verificara el resultado habria pasado
+    igual con la version lenta, asi que se cuentan las llamadas.
+    """
+    llamadas = {"commit": 0, "get": 0}
+    commit_real, get_real = db.commit, db.get
+    monkeypatch.setattr(db, "commit", lambda: (llamadas.__setitem__("commit", llamadas["commit"] + 1), commit_real())[1])
+    monkeypatch.setattr(db, "get", lambda *a, **k: (llamadas.__setitem__("get", llamadas["get"] + 1), get_real(*a, **k))[1])
+
+    resumen = importar_canjes(db, construir_xlsx([fila(900 + i) for i in range(30)]))
+
+    assert resumen.nuevas == 30
+    assert resumen.errores == []
+    assert llamadas["commit"] == 1, "un commit para todo el archivo, no uno por fila"
+    assert llamadas["get"] == 0, "el chequeo de existencia va en una sola consulta"
+
+
+def test_un_id_repetido_en_el_archivo_no_rompe_el_lote(db, fila, construir_xlsx):
+    """Dos filas con el mismo ID: la segunda actualiza a la primera.
+
+    Sin esto la segunda no encontraria el canje en el mapa, intentaria insertarlo
+    de nuevo y haria fallar el commit del lote entero, mandando las 297 filas al
+    camino lento por una sola fila repetida.
+    """
+    primera = fila(950)
+    segunda = fila(950)
+    segunda["COMUNA_PROPIEDAD"] = "Ñuñoa"
+
+    resumen = importar_canjes(db, construir_xlsx([primera, segunda]))
+
+    assert resumen.errores == []
+    # Una alta y una actualizacion, no dos altas ni un error.
+    assert (resumen.nuevas, resumen.actualizadas) == (1, 1)
+    assert db.get(Canje, 950).comuna == "Ñuñoa"
