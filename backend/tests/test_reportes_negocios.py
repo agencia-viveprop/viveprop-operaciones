@@ -8,10 +8,15 @@ from datetime import date
 from decimal import Decimal as D
 
 import pytest
+from sqlalchemy import select
 
 from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
 from app.models.negocio import Negocio, NegocioHito, Propiedad
-from app.services.reportes_negocios import ResumenNegocios, obtener_resumen_negocios
+from app.services.reportes_negocios import (
+    ResumenNegocios,
+    negocios_por_mes,
+    obtener_resumen_negocios,
+)
 
 
 @pytest.fixture
@@ -198,3 +203,104 @@ def test_el_resumen_exige_sesion(db):
             assert c.get("/api/negocios/reportes/resumen").status_code == 401
     finally:
         app.dependency_overrides.clear()
+
+
+# --------------------------------------------------- negocios por mes
+#
+# La pregunta que responde es "cuanto entro", distinta de la de
+# `ganado_por_mes`, que es "cuanto se cobro". Confundirlas seria dar el mismo
+# numero a dos preguntas distintas.
+
+
+def test_cuenta_negocios_no_liquidaciones(cartera):
+    """G-2 tiene dos hitos: es un negocio, no dos."""
+    r = negocios_por_mes(cartera)
+
+    assert r.total_negocios == 5
+    assert sum(m.negocios for m in r.meses) == 5
+
+
+def test_un_negocio_cae_en_el_mes_de_su_hito_mas_antiguo(cartera):
+    """Todos los de la cartera arrancan en enero, incluidos los de dos hitos."""
+    r = negocios_por_mes(cartera)
+
+    assert [m.etiqueta for m in r.meses] == ["2026-01"]
+    assert r.meses[0].negocios == 5
+
+
+def test_incluye_los_perdidos(cartera):
+    """Un negocio que se perdio igual entro ese mes.
+
+    Si se excluyeran, el pasado se encogeria cada vez que algo se cae.
+    """
+    r = negocios_por_mes(cartera)
+
+    # P-1 perdido y P-2 desistido estan entre los cinco.
+    assert r.total_negocios == 5
+
+
+def test_mira_el_inicio_y_no_el_cierre(cartera):
+    """`ganado_por_mes` reparte los cierres en marzo y abril; esto no."""
+    resumen = obtener_resumen_negocios(cartera)
+    por_mes = negocios_por_mes(cartera)
+
+    assert len(resumen.ganado_por_mes) > 1          # varios meses de cierre
+    assert [m.etiqueta for m in por_mes.meses] == ["2026-01"]  # un solo mes de inicio
+
+
+def test_filtra_por_modelo(cartera):
+    r = negocios_por_mes(cartera, modelo="MERCADO_PRIMARIO")
+
+    assert r.total_negocios == 2   # G-1 y G-2
+    assert r.modelo == "MERCADO_PRIMARIO"
+
+
+def test_filtra_por_tipo_de_operacion(cartera):
+    """El filtro va por codigo de catalogo, no por id."""
+    venta = Catalogo(tipo="tipo_operacion", codigo="VENTA", nombre="Venta", orden=1)
+    cartera.add(venta)
+    cartera.flush()
+    cartera.scalar(select(Negocio).where(Negocio.codigo == "G-1")).tipo_operacion_id = venta.id
+    cartera.commit()
+
+    assert negocios_por_mes(cartera, tipo_operacion="VENTA").total_negocios == 1
+
+    vacio = negocios_por_mes(cartera, tipo_operacion="ARRIENDO")
+    assert vacio.total_negocios == 0
+    assert vacio.meses == []
+
+
+def test_los_dos_filtros_se_combinan(cartera):
+    r = negocios_por_mes(cartera, modelo="SECUNDARIO_CONCENTRADORES")
+
+    assert r.total_negocios == 3   # A-1, P-1, P-2
+
+
+def test_una_cartera_vacia_no_rompe(db):
+    r = negocios_por_mes(db)
+
+    assert r.total_negocios == 0
+    assert r.meses == []
+
+
+def test_el_endpoint_responde(cliente, cartera):
+    r = cliente.get("/api/negocios/reportes/por-mes")
+
+    assert r.status_code == 200
+    cuerpo = r.json()
+    assert cuerpo["total_negocios"] == 5
+    assert cuerpo["meses"][0]["etiqueta"] == "2026-01"
+
+
+def test_el_endpoint_filtra(cliente, cartera):
+    r = cliente.get("/api/negocios/reportes/por-mes", params={"modelo": "MERCADO_PRIMARIO"})
+
+    assert r.status_code == 200
+    assert r.json()["total_negocios"] == 2
+
+
+def test_el_endpoint_rechaza_un_modelo_inventado(cliente, cartera):
+    """Lo ataja la validacion del enum, antes de llegar al servicio."""
+    r = cliente.get("/api/negocios/reportes/por-mes", params={"modelo": "INVENTADO"})
+
+    assert r.status_code == 422

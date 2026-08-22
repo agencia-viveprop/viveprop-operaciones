@@ -56,6 +56,23 @@ class Corte(BaseModel):
     comision_real_vp: Decimal
 
 
+class CorteMes(BaseModel):
+    """Un mes con cuántos negocios arrancaron y cuánta comisión real llevan."""
+
+    etiqueta: str
+    negocios: int
+    comision_real_vp: Decimal
+
+
+class NegociosPorMes(BaseModel):
+    meses: list[CorteMes]
+    total_negocios: int
+    # Se devuelven los filtros aplicados para que el front pueda mostrar qué se
+    # está mirando sin tener que reconstruirlo desde su propio estado.
+    modelo: str | None = None
+    tipo_operacion: str | None = None
+
+
 class ResumenNegocios(BaseModel):
     ganado: Bucket
     pipeline: Bucket
@@ -205,4 +222,67 @@ def obtener_resumen_negocios(db: Session) -> ResumenNegocios:
         ganado_por_modelo=_cortes(db, por_modelo),
         pipeline_por_etapa=_cortes(db, por_etapa),
         hitos_sin_valorizar=sin_valorizar or 0,
+    )
+
+
+def negocios_por_mes(
+    db: Session,
+    modelo: str | None = None,
+    tipo_operacion: str | None = None,
+) -> NegociosPorMes:
+    """Cuántos negocios arrancaron cada mes, con filtros por modelo y operación.
+
+    **Cuenta negocios, no liquidaciones**, y cada uno cae en el mes de su hito
+    más antiguo. `VVP-3` tiene una promesa y una escritura en meses distintos;
+    contarlo dos veces diría que hubo dos negocios cuando hubo uno.
+
+    **Mira `fecha_inicio`, no `fecha_cierre`.** Es el equivalente de "solicitudes
+    por mes" en canjes: mide cuánto entró, no cuánto se cobró. Lo cobrado ya está
+    en `ganado_por_mes`, que agrupa por cierre y responde otra pregunta.
+
+    **Incluye todos los estados**, ganados, activos y perdidos. Un negocio que se
+    perdió igual entró ese mes, y sacarlo haría que el pasado se encogiera cada
+    vez que algo se cae.
+
+    El agrupamiento va en Python por la misma razón que en `_por_mes`: `to_char`
+    es de Postgres y dejaría esto sin poder testearse contra SQLite.
+    """
+    consulta = (
+        select(
+            Negocio.id,
+            NegocioHito.fecha_inicio,
+            func.coalesce(NegocioHito.comision_real_vp, 0),
+        )
+        .join(Negocio, Negocio.id == NegocioHito.negocio_id)
+    )
+    if modelo:
+        consulta = consulta.where(Negocio.modelo == modelo)
+    if tipo_operacion:
+        consulta = consulta.join(
+            Catalogo, Catalogo.id == Negocio.tipo_operacion_id
+        ).where(Catalogo.codigo == tipo_operacion)
+
+    # Por negocio: su fecha mas antigua y la suma de lo que lleva cobrado.
+    por_negocio: dict[int, list] = {}
+    for negocio_id, inicio, real in db.execute(consulta).all():
+        fila = por_negocio.setdefault(negocio_id, [inicio, CERO])
+        if inicio is not None and (fila[0] is None or inicio < fila[0]):
+            fila[0] = inicio
+        fila[1] += real or CERO
+
+    acumulado: dict[str, list] = {}
+    for inicio, real in por_negocio.values():
+        clave = inicio.strftime("%Y-%m") if inicio is not None else "Sin fecha"
+        fila = acumulado.setdefault(clave, [0, CERO])
+        fila[0] += 1
+        fila[1] += real
+
+    return NegociosPorMes(
+        meses=[
+            CorteMes(etiqueta=mes, negocios=n, comision_real_vp=r)
+            for mes, (n, r) in sorted(acumulado.items())
+        ],
+        total_negocios=len(por_negocio),
+        modelo=modelo,
+        tipo_operacion=tipo_operacion,
     )

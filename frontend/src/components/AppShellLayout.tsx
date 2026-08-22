@@ -17,7 +17,6 @@ import {
   IconArrowsExchange,
   IconBriefcase,
   IconCalendarStats,
-  IconChartBar,
   IconCoin,
   IconHome2,
   IconInbox,
@@ -55,6 +54,7 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               component={Link}
               to="/"
               label="Inicio"
+              description="Dashboards de canjes y negocios"
               leftSection={<IconHome2 size={18} />}
               active={location.pathname === '/'}
               variant="filled"
@@ -87,14 +87,6 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Negocios"
               leftSection={<IconBriefcase size={18} />}
               active={location.pathname === '/negocios'}
-              variant="filled"
-            />
-            <NavLink
-              component={Link}
-              to="/negocios/dashboard"
-              label="Dashboard Negocios"
-              leftSection={<IconChartBar size={18} />}
-              active={location.pathname === '/negocios/dashboard'}
               variant="filled"
             />
             <NavLink

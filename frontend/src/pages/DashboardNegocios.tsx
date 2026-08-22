@@ -27,6 +27,7 @@ import AvisoUF from '../components/AvisoUF'
 import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
 import BarrasMontos from '../components/BarrasMontos'
+import NegociosPorMes from '../components/NegociosPorMes'
 import { clp, MODELO_CORTO } from '../components/negociosFormato'
 
 /**
@@ -90,7 +91,9 @@ function Panel({ titulo, ayuda, children }: { titulo: string; ayuda?: string; ch
   )
 }
 
-export default function DashboardNegocios() {
+/** `embebido` lo usa Inicio, que ya puso su propio encabezado: dos títulos
+ *  seguidos se leen como un error de maquetación. */
+export default function DashboardNegocios({ embebido = false }: { embebido?: boolean }) {
   const esquema = useComputedColorScheme('light')
   const { data: r, isLoading } = useQuery({
     queryKey: ['resumen-negocios'],
@@ -114,10 +117,12 @@ export default function DashboardNegocios() {
 
   return (
     <Stack gap="lg">
-      <PageHeader
-        title="Dashboard de Negocios"
-        subtitle="Los tres montos son plata, pero no la misma plata. No se suman entre sí."
-      />
+      {!embebido && (
+        <PageHeader
+          title="Dashboard de Negocios"
+          subtitle="Los tres montos son plata, pero no la misma plata. No se suman entre sí."
+        />
+      )}
 
       <AvisoUF />
 
@@ -165,6 +170,10 @@ export default function DashboardNegocios() {
           todavía, así que no aportan a ningún monto de arriba.
         </Alert>
       )}
+
+      {/* Primero cuántos entraron, después cuánto se cobró. Son dos preguntas
+          distintas sobre el mismo mes y el orden ayuda a no confundirlas. */}
+      <NegociosPorMes />
 
       <Panel
         titulo="Comisión real ViveProp por mes de cierre"

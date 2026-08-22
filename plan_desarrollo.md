@@ -254,6 +254,12 @@ Van juntos porque son la misma herramienta partida en dos: bajar la plantilla y 
 
 - **Listo cuando:** un archivo con 3 filas malas reporta las 3 y no carga ninguna. ✅ Verificado, más la vuelta completa por HTTP contra `dev`: bajar la plantilla real, llenarla, subirla, y subirla otra vez sin duplicar. 32 tests.
 
+### Ajuste posterior · Los dos dashboards en Inicio ✅ Listo
+
+Pedido del 2026-08-21. Inicio hospeda los dos con un selector Canjes / Negocios; se sacó "Dashboard Negocios" del menú y la ruta vieja sigue viva para links guardados. No van apilados a propósito: son dos gestiones con métricas que no se comparan.
+
+Se agregó **"Negocios por mes"**, el equivalente de "Solicitudes por mes" de canjes, con filtros por modelo y por tipo de operación. Cuenta negocios y no liquidaciones, agrupa por fecha de inicio —mide lo que entró, no lo que se cobró— e incluye los perdidos.
+
 ### 16 · F3 — Reporte semanal ✅ Listo
 
 Qué se cerró, qué avanzó, qué se cayó, qué está estancado. **En los dos dominios**: un reporte de la semana que ignore los 194 canjes abiertos sería medio reporte, y quien lo lee opera los dos.

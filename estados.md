@@ -117,6 +117,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Los dos dashboards en Inicio, y "Negocios por mes"
+
+Pedido del usuario. **Inicio hospeda los dos dashboards** con un selector Canjes / Negocios, y desapareció "Dashboard Negocios" del menú porque ya vive ahí. La ruta `/negocios/dashboard` sigue funcionando para links guardados, con su propio encabezado.
+
+**No van uno debajo del otro, y eso fue deliberado.** Son dos tipos de gestión con métricas que no se comparan entre sí; apilarlos invitaría a leerlos como un solo tablero. El selector los mantiene separados.
+
+**Gráfico nuevo: "Negocios por mes"**, el equivalente de "Solicitudes por mes" de canjes, con filtros por modelo de negocio y por tipo de operación.
+
+Tres decisiones que definen qué mide:
+
+- **Cuenta negocios, no liquidaciones.** `VVP-3` tiene promesa y escritura en meses distintos; contarlo dos veces diría que hubo dos negocios cuando hubo uno. Cada negocio cae en el mes de su hito más antiguo.
+- **Agrupa por `fecha_inicio`, no por `fecha_cierre`.** Mide **cuánto entró**, no cuánto se cobró. Lo cobrado ya está en el gráfico de comisión por mes del mismo dashboard, que agrupa por cierre. Son dos preguntas distintas sobre el mismo mes, y por eso el nuevo va **arriba** del otro: primero cuántos entraron, después cuánto se cobró.
+- **Incluye los perdidos.** Un negocio que se cayó igual entró ese mes. Sacarlo haría que el pasado se encogiera cada vez que algo se pierde.
+
+**Interpretación que hice de "tipo de mercado y negocio":** los filtros quedaron en **modelo de negocio** —cuyos nombres ya dicen primario o secundario— y **tipo de operación** (venta / arriendo). Si querías otra cosa por "negocio", es un cambio chico.
+
+Los dos desplegables se llenan desde `/api/catalogos`, no de listas escritas en el código: una alianza o una operación nueva aparece sola.
+
+Sobre los datos reales de `dev`: 18 negocios en 9 meses, con enero de 2026 concentrando 8. Filtrado por concentradores quedan 13, por arriendo 2. 11 tests nuevos, 300 en total.
+
 ### 2026-08-21 · Limpieza de canjes: va como migración, se aplica sola en producción
 
 Pedido del usuario: en Dataprop quedan **seis solicitudes vivas** —334, 344, 359, 360, 364, 367— y la base arrastra 225 activas, así que la app muestra como pendiente trabajo que no existe.

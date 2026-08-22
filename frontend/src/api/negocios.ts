@@ -243,3 +243,28 @@ export function importarNegocios(archivo: File): Promise<ResumenCargaNegocios> {
     body: formData,
   }).then(parseOrThrow)
 }
+
+export type CorteMes = {
+  etiqueta: string
+  negocios: number
+  comision_real_vp: string
+}
+
+export type NegociosPorMes = {
+  meses: CorteMes[]
+  total_negocios: number
+  modelo: string | null
+  tipo_operacion: string | null
+}
+
+/** Cuántos negocios arrancaron cada mes. Mide lo que entró, no lo que se cobró. */
+export function obtenerNegociosPorMes(
+  filtros: { modelo?: string | null; tipo_operacion?: string | null } = {},
+): Promise<NegociosPorMes> {
+  const params = new URLSearchParams()
+  Object.entries(filtros).forEach(([k, v]) => v && params.set(k, v))
+  const qs = params.toString()
+  return fetch(`/api/negocios/reportes/por-mes${qs ? `?${qs}` : ''}`, {
+    credentials: 'include',
+  }).then(parseOrThrow)
+}

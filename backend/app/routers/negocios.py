@@ -22,7 +22,12 @@ from app.services.importar_negocios import (
     cargar_desde_xlsx,
 )
 from app.services.plantilla_negocios import generar_plantilla
-from app.services.reportes_negocios import ResumenNegocios, obtener_resumen_negocios
+from app.services.reportes_negocios import (
+    NegociosPorMes,
+    ResumenNegocios,
+    negocios_por_mes,
+    obtener_resumen_negocios,
+)
 
 router = APIRouter(prefix="/negocios", tags=["negocios"])
 
@@ -286,6 +291,22 @@ def reportes_resumen(
 
 # Va antes de "/{negocio_id}": FastAPI resuelve por orden de registro, y si
 # esta ruta quedara despues, "tipos-movimiento" se interpretaria como un id.
+@router.get("/reportes/por-mes", response_model=NegociosPorMes)
+def reporte_por_mes(
+    modelo: ModeloNegocio | None = Query(None, description="Filtra por modelo de negocio."),
+    tipo_operacion: str | None = Query(None, description="Código del catálogo: VENTA, ARRIENDO."),
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Cuántos negocios arrancaron cada mes.
+
+    Es el equivalente de "solicitudes por mes" en canjes: mide cuánto entró, no
+    cuánto se cobró. Lo cobrado está en `/reportes/resumen`, en `ganado_por_mes`,
+    que agrupa por fecha de cierre y responde otra pregunta.
+    """
+    return negocios_por_mes(db, modelo.value if modelo else None, tipo_operacion)
+
+
 @router.get("/tipos-movimiento", response_model=list[TipoMovimientoOut])
 def listar_tipos_movimiento(
     db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)
