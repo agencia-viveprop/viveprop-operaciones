@@ -28,7 +28,8 @@ from app.services.importar_negocios import (
     ResumenCargaNegocios,
     cargar_desde_xlsx,
 )
-from app.services.plantilla_negocios import generar_plantilla
+from app.services.estructura_archivo import EstructuraArchivo
+from app.services.plantilla_negocios import estructura_plantilla, generar_plantilla
 from app.services.reportes_negocios import (
     NegociosPorMes,
     ResumenNegocios,
@@ -429,6 +430,19 @@ def descargar_plantilla(
         media_type=XLSX,
         headers={"Content-Disposition": 'attachment; filename="plantilla-negocios.xlsx"'},
     )
+
+
+@router.get("/plantilla/estructura", response_model=EstructuraArchivo)
+def estructura_de_la_plantilla(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Qué columnas espera el archivo, para poder verlo sin bajarlo y abrirlo.
+
+    Sale de la misma definición que pinta la plantilla, así que la pantalla no
+    puede quedar describiendo columnas que el Excel ya no trae.
+    """
+    return estructura_plantilla(db)
 
 
 @router.post("/importar", response_model=ResumenCargaNegocios)

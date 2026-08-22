@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Button,
@@ -11,11 +11,13 @@ import {
   Text,
 } from '@mantine/core'
 import { IconDownload, IconUpload } from '@tabler/icons-react'
+import { obtenerEstructuraNegocios } from '../api/estructura'
 import {
   descargarPlantillaNegocios,
   importarNegocios,
   type ResumenCargaNegocios,
 } from '../api/negocios'
+import EstructuraArchivo from './EstructuraArchivo'
 
 /** Cuántos errores se listan antes de resumir. Con un archivo muy malo salen
  *  cientos, y una lista de cientos no se lee: se corrigen los primeros y se
@@ -45,6 +47,13 @@ export default function CargaMasivaModal({
   const resetRef = useRef<() => void>(null)
 
   const bajar = useMutation({ mutationFn: descargarPlantillaNegocios })
+  // Solo se pide cuando el modal está abierto: es la estructura de un archivo, no
+  // cambia entre sesiones, y no hay razón para traerla al cargar la página.
+  const estructura = useQuery({
+    queryKey: ['estructura-archivo', 'negocios'],
+    queryFn: obtenerEstructuraNegocios,
+    enabled: abierto,
+  })
 
   const subir = useMutation({
     mutationFn: () => importarNegocios(archivo!),
@@ -75,6 +84,8 @@ export default function CargaMasivaModal({
           Una fila es un hito. Si repetís el código, agregás otro hito al mismo negocio. Las
           comisiones no se escriben: las calcula el sistema con el valor y las tasas.
         </Text>
+
+        <EstructuraArchivo consulta={estructura} />
 
         <Group>
           <Button

@@ -936,3 +936,21 @@ El caso del reporte mensual es aún más claro: *"4 de 11 meses"* era cierto el 
 **Un ID repetido dentro del mismo archivo actualiza, no duplica.** El mapa de existentes se va poblando con lo que se crea. Sin eso, la segunda aparición intentaría insertar de nuevo, el commit del lote fallaría, y **las 297 filas se irían al camino lento por una sola fila repetida**. Hay un test para ese caso.
 
 **El test cuenta las llamadas, no solo el resultado.** Un test que verificara únicamente que las 30 filas quedaron cargadas habría pasado igual con la versión lenta. Se exige `commit == 1` y `get == 0`: si alguien vuelve a meter un commit en el bucle, falla.
+
+---
+
+## D-050 · La estructura del archivo se muestra en pantalla, y sale de la misma definición que pinta la plantilla
+
+**Contexto.** Las dos cargas masivas pedían un `.xlsx` sin decir en ninguna parte qué columnas esperaban. La de negocios tenía plantilla para bajar, así que la respuesta estaba dentro de un archivo que había que descargar y abrir en Excel; la de canjes no tenía ni eso. En los dos casos la única forma de saber si el archivo servía era subirlo y leer los errores.
+
+**Decisión.** Cada modal muestra la estructura: las columnas agrupadas, cuáles son obligatorias, qué va en cada una, los valores que se aceptan y las trampas. Se sirve por API desde la misma definición que genera el Excel.
+
+**Sale de la definición que pinta la plantilla, no de un texto aparte.** `plantilla_negocios.COLUMNAS` ya tenía grupo, obligatoriedad y ayuda para las 32 columnas —solo se usaba para pintar el encabezado del Excel—, así que se expone tal cual. Es la misma razón que `D-048`: dos copias de lo mismo no fallan, divergen, y una pantalla que describe una columna que la carga ya no pide es peor que no describir nada, porque se le cree. En canjes la lista de nombres vive en `importar_canjes.COLUMNAS_REQUERIDAS` —que es lo que la carga verifica de verdad— y las descripciones se le agregan al lado, con un test que exige que las dos digan lo mismo **y en el mismo orden**.
+
+**Va cerrado por defecto.** Con 32 columnas, mostrarlas al abrir el modal empuja el botón de cargar fuera de la vista, y quien ya sabe llenar el archivo —que va a ser el caso habitual— tendría que bajar cada vez.
+
+**Canjes ahora también tiene plantilla, y su encabezado va en una sola fila.** Acá hubo un error propio que vale registrar: se copió el estilo de la plantilla de negocios, que trae el grupo en la fila 1 y las columnas en la 2 porque `importar_negocios` lee la fila 2. Pero `importar_canjes` lee **la fila 1**, así que la plantilla recién creada era rechazada por su propio cargador con "Faltan columnas: las 16". Lo atrapó un test que sube la plantilla a la carga y exige que la acepte —una plantilla que su propio cargador rechaza es peor que no tenerla—. Quedó en una sola fila, que además es más fiel: el archivo real es el resultado de una query, y una query no devuelve encabezados agrupados. Los grupos existen solo para la pantalla.
+
+**Y esa plantilla no es para llenarla a mano.** El archivo de canjes sale de la query contra Dataprop. Se baja para **comparar encabezados** cuando la carga falla y no se entiende por qué. Está dicho así en la pantalla, para que nadie se ponga a tipear canjes en ella.
+
+**El orden de las rutas importa.** `/canjes/plantilla` va registrada antes de `/canjes/{canje_id}`, o FastAPI intenta parsear "plantilla" como un entero. Es el mismo error que ya se había cometido con `/canjes/bandeja`, y hay un test que lo fija.

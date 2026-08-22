@@ -31,6 +31,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
+from app.services.estructura_archivo import (
+    ColumnaArchivo,
+    EstructuraArchivo,
+    GrupoColumnas,
+    ValoresDeColumna,
+)
 
 HOJA = "NEGOCIOS"
 HOJA_VALORES = "Valores válidos"
@@ -237,3 +243,70 @@ def generar_plantilla(db: Session) -> bytes:
     buffer = BytesIO()
     libro.save(buffer)
     return buffer.getvalue()
+
+
+def estructura_plantilla(db: Session) -> EstructuraArchivo:
+    """Lo mismo que pinta la plantilla, para poder mostrarlo en pantalla.
+
+    Se arma desde `COLUMNAS`, que es de donde sale el Excel, así que la pantalla
+    no puede quedar describiendo columnas que la plantilla ya no trae. Los valores
+    válidos se leen de la base por el mismo motivo que en la hoja «Valores
+    válidos»: una alianza nueva aparece sola.
+    """
+    grupos: list[GrupoColumnas] = []
+    for col in COLUMNAS:
+        if not grupos or grupos[-1].nombre != col.grupo:
+            grupos.append(GrupoColumnas(nombre=col.grupo, columnas=[]))
+        grupos[-1].columnas.append(
+            ColumnaArchivo(nombre=col.nombre, obligatoria=col.obligatoria, ayuda=col.ayuda)
+        )
+
+    def codigos(tipo: str) -> list[str]:
+        return [
+            c.codigo
+            for c in db.execute(
+                select(Catalogo)
+                .where(Catalogo.tipo == tipo, Catalogo.activo.is_(True))
+                .order_by(Catalogo.orden)
+            ).scalars()
+        ]
+
+    etapas = db.execute(select(Etapa).order_by(Etapa.orden)).scalars().all()
+
+    return EstructuraArchivo(
+        titulo="Carga masiva de negocios",
+        origen=(
+            "La plantilla que se baja acá. Trae los códigos válidos de esta base, "
+            "así que no hay que adivinar si la alianza se escribe ASSETPLAN o Assetplan."
+        ),
+        fila=(
+            "Una fila es un hito, no un negocio. Si repetís el CODIGO, agregás otro "
+            "hito al mismo negocio, y los datos del negocio --propiedad, modelo, "
+            "alianza-- tienen que ser iguales en esas filas."
+        ),
+        grupos=grupos,
+        valores=[
+            ValoresDeColumna(columna="MODELO", valores=[m.value for m in ModeloNegocio]),
+            ValoresDeColumna(columna="ESTADO", valores=[e.value for e in EstadoNegocio]),
+            ValoresDeColumna(columna="MONEDA", valores=["UF", "CLP"]),
+            ValoresDeColumna(
+                columna="ETAPA",
+                valores=[e.codigo for e in etapas],
+                nota="La etapa es del negocio, no del hito.",
+            ),
+            ValoresDeColumna(columna="ALIANZA", valores=codigos("alianza")),
+            ValoresDeColumna(columna="TIPO_OPERACION", valores=codigos("tipo_operacion")),
+            ValoresDeColumna(columna="TIPO_PROPIEDAD", valores=codigos("tipo_propiedad")),
+        ],
+        notas=[
+            "Las tasas van en porcentaje: 2 es 2%, y 2,52 es 2,52%. No 0,02.",
+            "Las fechas van como 2026-08-21 o 21-08-2026. También sirve una celda "
+            "con formato de fecha de Excel.",
+            "Las comisiones no se escriben. No hay columna de comisión total, de "
+            "broker ni de real VP: las calcula el sistema con el valor y las tasas "
+            "(D-039). El valor en pesos tampoco, salvo VALOR_CLP_MANUAL: sale de "
+            "convertir la UF con la fecha de valorización.",
+            "Si el archivo trae un solo error, no se carga nada. Es a propósito: "
+            "media carga es peor que ninguna, porque no se sabe qué quedó afuera.",
+        ],
+    )

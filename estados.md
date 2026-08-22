@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Se puede ver qué columnas espera cada carga masiva
+
+Pedido tuyo: en los botones de *Importar Canjes* y *Carga masiva*, poder ver la estructura del archivo esperado. Antes las dos pedían un `.xlsx` sin decir en ninguna parte qué columnas querían; la única forma de saber si servía era subirlo y leer los errores.
+
+Ahora cada modal tiene **«Ver estructura del archivo»** --cerrado por defecto, porque con 32 columnas abrirlo empuja el botón de cargar fuera de la vista--, con las columnas agrupadas, cuáles son obligatorias, qué va en cada una, los valores que se aceptan y las trampas. Sale de la misma definición que genera el Excel, así que no puede quedar describiendo columnas que la plantilla ya no trae. **Canjes además ahora tiene plantilla para descargar**, que antes no existía.
+
+| | Canjes | Negocios |
+|---|---:|---:|
+| Columnas | 16, todas obligatorias | 32, 6 obligatorias |
+| Grupos | 5 | 7 |
+| Listas de valores | 4 | 7 |
+
+**Un error propio, atrapado por su test.** La plantilla de canjes se armó copiando el estilo de la de negocios, que trae el grupo en la fila 1 y las columnas en la 2 --porque su carga lee la fila 2--. Pero `importar_canjes` lee la fila 1, así que la plantilla nueva era rechazada por su propio cargador con «Faltan columnas: las 16». Quedó en una sola fila, que además es más fiel al export real. Ver `D-050`.
+
+**Verificado en vivo contra `dev`:** los cuatro endpoints responden, y subir la plantilla vacía a su propia carga da cero errores; con una fila escrita encima, carga 1. 500 tests, build y lint limpios.
+
 ### 2026-08-22 · Auditoría · el importador de canjes iba dos veces a la base por fila
 
 Cuarto y último punto de la auditoría. `importar_canjes` hacía un `db.get` y un `db.commit` por fila: **~594 viajes** para las 297 del export real, cuando el archivo se conoce entero de antemano.

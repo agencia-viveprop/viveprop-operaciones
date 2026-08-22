@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,11 +11,15 @@ from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, Operaci
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.bandeja_canjes import Bandeja, obtener_bandeja
+from app.services.estructura_archivo import EstructuraArchivo
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import MovimientoError, crear_movimiento_canje
+from app.services.plantilla_canjes import estructura_importacion, generar_plantilla
 from app.services.reportes_canjes import ResumenCanjes, obtener_resumen_canjes
 
 router = APIRouter(prefix="/canjes", tags=["canjes"])
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 class CanjeOut(BaseModel):
@@ -101,6 +105,27 @@ def bandeja(db: Session = Depends(get_db), usuario: Usuario = Depends(get_curren
 @router.get("/reportes/resumen", response_model=ResumenCanjes)
 def reportes_resumen(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     return obtener_resumen_canjes(db)
+
+
+# Las dos van antes de "/{canje_id}", por el mismo motivo que "/bandeja".
+@router.get("/plantilla/estructura", response_model=EstructuraArchivo)
+def estructura_del_archivo(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
+    """Qué columnas espera el export de Dataprop, para verlo antes de subir nada."""
+    return estructura_importacion()
+
+
+@router.get("/plantilla")
+def descargar_plantilla(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
+    """El .xlsx vacío con los 16 encabezados exactos.
+
+    No es para llenarlo a mano --el archivo sale de Dataprop-- sino para comparar
+    encabezados cuando la carga falla y no se entiende por qué.
+    """
+    return Response(
+        content=generar_plantilla(),
+        media_type=XLSX,
+        headers={"Content-Disposition": 'attachment; filename="plantilla-canjes.xlsx"'},
+    )
 
 
 @router.get("", response_model=list[CanjeOut])

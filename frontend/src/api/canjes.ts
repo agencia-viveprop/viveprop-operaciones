@@ -68,6 +68,24 @@ export type ImportarResumen = {
   errores: string[]
 }
 
+/**
+ * El .xlsx vacío con los 16 encabezados exactos.
+ *
+ * No es para llenarlo a mano --el archivo sale de la query contra Dataprop-- sino
+ * para comparar encabezados cuando la carga falla y no se entiende por qué.
+ */
+export async function descargarPlantillaCanjes(): Promise<void> {
+  const res = await fetch('/api/canjes/plantilla', { credentials: 'include' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'plantilla-canjes.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function importarCanjes(archivo: File): Promise<ImportarResumen> {
   const formData = new FormData()
   formData.append('archivo', archivo)

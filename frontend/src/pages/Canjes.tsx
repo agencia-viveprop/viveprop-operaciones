@@ -18,10 +18,11 @@ import {
   TextInput,
   Textarea,
 } from '@mantine/core'
-import { IconClockHour4, IconPencil } from '@tabler/icons-react'
+import { IconClockHour4, IconDownload, IconPencil } from '@tabler/icons-react'
 import {
   actualizarCanje,
   crearCanje,
+  descargarPlantillaCanjes,
   importarCanjes,
   listarCanjes,
   type Canje,
@@ -29,6 +30,8 @@ import {
   type CanjeEtapa,
   type ImportarResumen,
 } from '../api/canjes'
+import { obtenerEstructuraCanjes } from '../api/estructura'
+import EstructuraArchivo from '../components/EstructuraArchivo'
 import SeguimientoModal from '../components/SeguimientoModal'
 import PageHeader from '../components/PageHeader'
 
@@ -93,6 +96,14 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const [archivo, setArchivo] = useState<File | null>(null)
   const [resumenImport, setResumenImport] = useState<ImportarResumen | null>(null)
   const resetArchivoRef = useRef<() => void>(null)
+
+  // Solo se pide con el modal abierto: es la forma de un archivo, no cambia.
+  const estructura = useQuery({
+    queryKey: ['estructura-archivo', 'canjes'],
+    queryFn: obtenerEstructuraCanjes,
+    enabled: importAbierto,
+  })
+  const bajarPlantilla = useMutation({ mutationFn: descargarPlantillaCanjes })
 
   const importar = useMutation({
     mutationFn: () => importarCanjes(archivo!),
@@ -392,9 +403,26 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             Sube el .xlsx exportado de la query contra la base de Dataprop. Se agregan las solicitudes nuevas y se
             actualizan las que aún no se están gestionando en la app; las que ya tienen movimientos no se tocan.
           </Text>
-          <FileButton resetRef={resetArchivoRef} onChange={setArchivo} accept=".xlsx,.xlsm">
-            {(props) => <Button {...props} variant="light">{archivo ? archivo.name : 'Seleccionar archivo'}</Button>}
-          </FileButton>
+
+          <EstructuraArchivo consulta={estructura} />
+
+          <Group>
+            <Button
+              variant="light"
+              leftSection={<IconDownload size={16} />}
+              loading={bajarPlantilla.isPending}
+              onClick={() => bajarPlantilla.mutate()}
+            >
+              Descargar plantilla
+            </Button>
+            <FileButton resetRef={resetArchivoRef} onChange={setArchivo} accept=".xlsx,.xlsm">
+              {(props) => <Button {...props} variant="default">{archivo ? archivo.name : 'Seleccionar archivo'}</Button>}
+            </FileButton>
+          </Group>
+
+          {bajarPlantilla.isError && (
+            <Alert color="critical" variant="light">{(bajarPlantilla.error as Error).message}</Alert>
+          )}
           {importar.isError && <Alert color="critical" variant="filled">{(importar.error as Error).message}</Alert>}
           {resumenImport && (
             <Alert color={resumenImport.errores.length ? 'warning' : 'good'} variant="filled" title="Resultado">
