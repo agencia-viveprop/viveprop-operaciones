@@ -205,44 +205,7 @@ export default function ReporteMensual() {
         </Center>
       ) : (
         <>
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                COMISIÓN REAL VP
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {clp(data.mes.comision_real_vp)}
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                LIQUIDACIONES
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.mes.hitos_cerrados}
-              </Text>
-              <Text size="xs" c="dimmed" mt={4}>
-                cerradas en el mes
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                NEGOCIOS INICIADOS
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.mes.negocios_iniciados}
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                CANJES SOLICITADOS
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.mes.canjes_solicitados}
-              </Text>
-            </Paper>
-          </SimpleGrid>
-
+          {/* El selector va primero porque manda sobre los tiles de abajo. */}
           <Group gap="xs">
             <Text size="xs" c="dimmed">
               Ventana móvil de
@@ -256,6 +219,54 @@ export default function ReporteMensual() {
             />
           </Group>
 
+          {/* Los tiles muestran la **ventana**, no el mes.
+           *
+           * Estaban al revés: mostraban el mes calendario, arriba y en grande, en
+           * una pantalla que dice que el mes es un detalle. El resultado era que
+           * lo primero que se veía era "$0" --cierto para agosto, porque el
+           * último cierre es del 1 de junio-- y la conclusión natural era que la
+           * app estaba rota. La maquetación contradecía el mensaje. */}
+          <SimpleGrid cols={{ base: 2, sm: 4 }}>
+            <Paper withBorder radius="md" p="md">
+              <Text size="xs" fw={700} c="dimmed">
+                COMISIÓN REAL VP
+              </Text>
+              <Text size="22px" fw={800} mt={4} lh={1.1}>
+                {clp(data.movil.actual.comision_real_vp)}
+              </Text>
+              <Text size="xs" c="dimmed" mt={4}>
+                en {data.ventana_meses} meses
+              </Text>
+            </Paper>
+            <Paper withBorder radius="md" p="md">
+              <Text size="xs" fw={700} c="dimmed">
+                LIQUIDACIONES
+              </Text>
+              <Text size="22px" fw={800} mt={4} lh={1.1}>
+                {data.movil.actual.hitos_cerrados}
+              </Text>
+              <Text size="xs" c="dimmed" mt={4}>
+                cerradas en la ventana
+              </Text>
+            </Paper>
+            <Paper withBorder radius="md" p="md">
+              <Text size="xs" fw={700} c="dimmed">
+                NEGOCIOS INICIADOS
+              </Text>
+              <Text size="22px" fw={800} mt={4} lh={1.1}>
+                {data.movil.actual.negocios_iniciados}
+              </Text>
+            </Paper>
+            <Paper withBorder radius="md" p="md">
+              <Text size="xs" fw={700} c="dimmed">
+                CANJES SOLICITADOS
+              </Text>
+              <Text size="22px" fw={800} mt={4} lh={1.1}>
+                {data.movil.actual.canjes_solicitados}
+              </Text>
+            </Paper>
+          </SimpleGrid>
+
           <TablaComparacion
             titulo={`Últimos ${data.ventana_meses} meses`}
             ayuda="Contra los mismos meses inmediatamente anteriores, sin solaparse"
@@ -267,11 +278,44 @@ export default function ReporteMensual() {
             c={data.anio_corrido}
           />
 
-          <Text size="xs" c="dimmed">
-            El mes calendario está arriba, como detalle de qué cerró. No se compara contra el
-            mes anterior a propósito: con procesos que duran meses, esa variación mide ruido.
-            Sobre los datos reales, 4 de 11 meses estuvieron vacíos.
-          </Text>
+          {/* El mes, como detalle y al final.
+           *
+           * Cuando no cerró nada se dice con palabras y no con "$0": un cero en
+           * un tile grande se lee como un error, y una frase se lee como lo que
+           * es -- ningún proceso terminó de madurar ese mes. */}
+          <Paper withBorder radius="md" p="md">
+            <Title order={5} tt="capitalize">
+              {rotulo(data.mes.etiqueta)}, el mes suelto
+            </Title>
+            <Text size="sm" mt={6}>
+              {data.mes.hitos_cerrados === 0 ? (
+                <>
+                  No se cerró ninguna liquidación en el mes. Con procesos que duran de un mes
+                  a varios eso es normal: sobre los datos reales, 4 de 11 meses estuvieron
+                  vacíos.
+                </>
+              ) : (
+                <>
+                  {data.mes.hitos_cerrados}{' '}
+                  {data.mes.hitos_cerrados === 1 ? 'liquidación cerrada' : 'liquidaciones cerradas'}{' '}
+                  por {clp(data.mes.comision_real_vp)} de comisión real.
+                </>
+              )}{' '}
+              {data.mes.negocios_iniciados > 0 && (
+                <>
+                  Entraron {data.mes.negocios_iniciados}{' '}
+                  {data.mes.negocios_iniciados === 1 ? 'negocio' : 'negocios'}.{' '}
+                </>
+              )}
+              {data.mes.canjes_solicitados > 0 && (
+                <>Se solicitaron {data.mes.canjes_solicitados} canjes.</>
+              )}
+            </Text>
+            <Text size="xs" c="dimmed" mt={6}>
+              El mes no se compara contra el anterior a propósito: con esta duración de
+              procesos, esa variación mide ruido.
+            </Text>
+          </Paper>
         </>
       )}
     </Stack>

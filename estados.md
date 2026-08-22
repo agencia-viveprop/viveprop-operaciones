@@ -117,6 +117,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · El reporte mensual mostraba ceros arriba
+
+El usuario preguntó por qué las cuatro cajas del reporte mensual estaban en cero. **El dato era correcto:** agosto no tiene cierres, y el último cierre de toda la base es del 1 de junio. Los 10 canjes solicitados que sí aparecían confirmaban que la pantalla recibía datos.
+
+**El defecto era de maquetación, y era mío.** La página dice que "el mes queda como detalle" y las cuatro cajas del mes estaban **arriba, primeras y más grandes**. Lo primero que se veía era `$0`, y la conclusión natural —la que efectivamente sacó el usuario— es que la app está rota. La maquetación contradecía el mensaje.
+
+**Se dio vuelta:** las cajas ahora muestran la **ventana móvil**, que es el titular declarado, y el selector de ventana subió arriba porque manda sobre ellas. Con la ventana de 6 meses muestran 2.822.656 / 4 / 6 / 94 en vez de ceros.
+
+**Y el mes bajó al final, contado con palabras.** Cuando no cerró nada dice "no se cerró ninguna liquidación en el mes" y explica que con estos plazos es normal, en vez de mostrar un `$0` en una caja grande. Un cero destacado se lee como un error; una frase se lee como lo que es.
+
+La lección, que vale más que el arreglo: **el dato era correcto y la pantalla igual comunicaba lo contrario.** Que los tests pasen y los números cuadren no garantiza que la jerarquía visual diga la verdad.
+
 ### 2026-08-22 · Se cierra la lista de seguridad diferida
 
 El usuario había diferido cinco cosas con una condición: *"lo vamos a dejar como está, después y viendo el funcionamiento incorporamos límites y seguridad"*. Con la app completa y en producción con datos reales, esa condición se cumplió. Se hicieron las cinco.
