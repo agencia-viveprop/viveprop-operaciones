@@ -117,6 +117,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Revisión y correcciones
+
+Pasada de revisión pedida por el usuario. Cuatro cosas, la primera con riesgo real.
+
+**1. `alembic revision --autogenerate` era un arma cargada.** `alembic check` reportaba 8 `modify_type` y 4 `remove_index`, y al mirarlos de cerca el desajuste era **al revés** de lo que parecía: la base tiene `bigint` y los índices, y los **modelos** los sub-declaraban. Cualquiera que generara una migración automática hoy habría producido una que **borra 4 índices de producción y angosta 8 columnas a `integer`** — degradando en silencio la bandeja y la línea de tiempo. Se corrigió del lado de los modelos, sin migración: `BigInteger` explícito y los índices declarados en `__table_args__`. `alembic check` quedó limpio.
+
+Un detalle que salió de ahí: `BigInteger` en una clave primaria rompe el autoincremento de SQLite, porque solo `INTEGER PRIMARY KEY` es alias de rowid. Se usa `BigInteger().with_variant(Integer, "sqlite")`, verificando el DDL de los dos dialectos: `BIGSERIAL` en Postgres, `INTEGER` en SQLite.
+
+**2. `fecha_cierre` en 12 hitos que nunca cerraron.** Perseguí el defecto que había reconocido en el gráfico "Negocios por mes" y el origen resultó estar más abajo: **el Excel duplica su única fecha en las dos columnas**, en todas las filas, incluidas las 2 marcadas "Activo" y las 10 "Perdido". VVP-15, activo, dice inicio 2026-01-06 y cierre 2026-01-06. El cargador fue fiel al origen, como corresponde, así que copió la duplicación.
+
+Se limpió por migración (`d1f4a72b6e59`): 12 hitos. No se pierde nada — el valor era una copia de `fecha_inicio`, que sigue ahí — y **los tres buckets no se movieron un peso**: ganado 8.087.861,69, pipeline 1.824.272,06, potencial perdido 4.751.490,69.
+
+**3. Un negocio perdido envejecía para siempre.** Al limpiar lo anterior apareció el caso: un negocio caído en enero, sin fecha de cierre, mostraba "lleva 8 meses abierto" y el número crecía solo. Ahora hay tres casos explícitos —sigue abierto, cerró con fecha, se resolvió sin fecha— y el tercero devuelve nulo. El parámetro `abierto` va **sin valor por defecto** a propósito: con un default, pasar una fecha de cierre y olvidar el flag hace que la fecha se ignore en silencio, error que cometí al escribir el primer test de esa función.
+
+**4. El gráfico ahora avisa de su propio límite.** "Negocios por mes" agrupa por fecha de inicio, y en los migrados esa fecha es la de cierre. No se puede corregir —no hay dato con el que corregirlo— pero se cuenta: el gráfico dice "6 de 18 vienen del Excel con la fecha de inicio igual a la de cierre". El aviso **desaparece solo** cuando el número llegue a cero.
+
+**Y se borró `src/index.css`**, 111 líneas de la plantilla de Vite que nadie importaba y que contradecían el sistema de diseño —acento morado `#aa3bff`, ancho fijo de 1126px, texto centrado—. Que el hash del CSS compilado no cambiara confirmó que estaba muerto de verdad.
+
+389 tests, `alembic check` limpio.
+
 ### 2026-08-22 · El reporte mensual pasa a ventanas móviles
 
 Segundo paso de lo que pidió el usuario. El reporte que se había entregado el día anterior comparaba mes contra mes, y **medía ruido**: de 11 meses con actividad, 4 estuvieron vacíos (36%), y el ticket varía cuatro veces —entre 516.304 y 2.110.526—. Con ~1 cierre por mes y esa dispersión, la variación mensual no dice nada del desempeño.

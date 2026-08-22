@@ -53,7 +53,9 @@ class Sesion(Base):
     # autenticacion completa -- cookie, sesion y guarda de cambio forzado -- que
     # antes quedaba sin cubrir. No cambia el DDL en produccion.
     id: Mapped[uuid.UUID] = mapped_column(Uuid(), primary_key=True, default=uuid.uuid4)
-    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False)
+    usuario_id: Mapped[int] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     expira_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ip: Mapped[str | None] = mapped_column(String, nullable=True)

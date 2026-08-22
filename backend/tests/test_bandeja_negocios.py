@@ -85,20 +85,20 @@ def test_si_inicio_y_cierre_coinciden_las_dos_duraciones_son_desconocidas():
     y la tabla lo pintaba como "hoy". No sabemos que cerro el dia que empezo;
     sabemos que la migracion puso la misma fecha en las dos columnas.
     """
-    d = duraciones_de(date(2026, 3, 9), date(2026, 3, 9), None, None, HOY)
+    d = duraciones_de(date(2026, 3, 9), date(2026, 3, 9), None, None, HOY, abierto=False)
 
     assert d.dias_hasta_el_cierre is None
     assert d.dias_abierto is None
 
 
 def test_con_fechas_distintas_si_hay_duracion():
-    d = duraciones_de(date(2026, 1, 10), date(2026, 3, 9), None, None, HOY)
+    d = duraciones_de(date(2026, 1, 10), date(2026, 3, 9), None, None, HOY, abierto=False)
 
     assert d.dias_hasta_el_cierre == 58
 
 
 def test_un_negocio_abierto_cuenta_hasta_hoy():
-    d = duraciones_de(date(2026, 1, 10), None, None, None, HOY)
+    d = duraciones_de(date(2026, 1, 10), None, None, None, HOY, abierto=True)
 
     assert d.dias_abierto == 223
     assert d.dias_hasta_el_cierre is None
@@ -106,15 +106,15 @@ def test_un_negocio_abierto_cuenta_hasta_hoy():
 
 def test_un_negocio_cerrado_no_sigue_envejeciendo():
     """Llevo lo que duro, no lo que lleva desde que empezo."""
-    cerrado = duraciones_de(date(2026, 1, 10), date(2026, 3, 9), None, None, HOY)
-    abierto = duraciones_de(date(2026, 1, 10), None, None, None, HOY)
+    cerrado = duraciones_de(date(2026, 1, 10), date(2026, 3, 9), None, None, HOY, abierto=False)
+    abierto = duraciones_de(date(2026, 1, 10), None, None, None, HOY, abierto=True)
 
     assert cerrado.dias_abierto == 58
     assert abierto.dias_abierto == 223
 
 
 def test_sin_movimientos_las_dos_duraciones_de_gestion_son_nulas():
-    d = duraciones_de(date(2026, 1, 10), None, None, None, HOY)
+    d = duraciones_de(date(2026, 1, 10), None, None, None, HOY, abierto=True)
 
     assert d.dias_sin_gestion is None
     assert d.dias_en_etapa is None
@@ -288,3 +288,16 @@ def test_el_listado_no_inventa_duracion_de_cierre(cliente, db):
     fila = cliente.get("/api/negocios").json()[0]
 
     assert fila["duraciones"]["dias_hasta_el_cierre"] is None
+
+
+def test_un_negocio_resuelto_sin_fecha_de_cierre_no_envejece_para_siempre():
+    """El tercer caso, el que obliga a pasar `abierto`.
+
+    Un negocio perdido en enero no "lleva 8 meses abierto": no se sabe cuanto
+    duro, porque nadie registro cuando se cayo. Contar hasta hoy daria un numero
+    que crece solo y que alguien leeria como un negocio activo desatendido.
+    """
+    d = duraciones_de(date(2026, 1, 10), None, None, None, HOY, abierto=False)
+
+    assert d.dias_abierto is None
+    assert d.dias_hasta_el_cierre is None

@@ -67,6 +67,13 @@ class CorteMes(BaseModel):
 class NegociosPorMes(BaseModel):
     meses: list[CorteMes]
     total_negocios: int
+    # Cuántos de esos negocios tienen la fecha de inicio igual a la de cierre.
+    # En los migrados del Excel el origen traía **una sola fecha**, así que caen
+    # en el mes en que cerraron y no en el que realmente empezaron. Se cuenta y
+    # se dice en la pantalla: el gráfico sigue siendo lo mejor que se puede
+    # armar con el dato, pero quien lo lee tiene que saber qué está mirando. El
+    # número baja solo a medida que entran negocios con fechas de verdad.
+    con_inicio_aproximado: int = 0
     # Se devuelven los filtros aplicados para que el front pueda mostrar qué se
     # está mirando sin tener que reconstruirlo desde su propio estado.
     modelo: str | None = None
@@ -236,6 +243,13 @@ def negocios_por_mes(
     más antiguo. `VVP-3` tiene una promesa y una escritura en meses distintos;
     contarlo dos veces diría que hubo dos negocios cuando hubo uno.
 
+    **Ojo con la calidad de `fecha_inicio` en los migrados.** En los negocios que
+    vienen del Excel esa fecha coincide con la de cierre, porque el origen traía
+    una sola: caen en el mes en que cerraron y no en el que empezaron. No se
+    corrige --no hay dato con el que corregirlo-- pero se **cuenta** en
+    `con_inicio_aproximado` y la pantalla lo dice. El número baja solo a medida
+    que entran negocios con fechas de verdad.
+
     **Mira `fecha_inicio`, no `fecha_cierre`.** Es el equivalente de "solicitudes
     por mes" en canjes: mide cuánto entró, no cuánto se cobró. Lo cobrado ya está
     en `ganado_por_mes`, que agrupa por cierre y responde otra pregunta.
@@ -252,6 +266,7 @@ def negocios_por_mes(
             Negocio.id,
             NegocioHito.fecha_inicio,
             func.coalesce(NegocioHito.comision_real_vp, 0),
+            NegocioHito.fecha_cierre,
         )
         .join(Negocio, Negocio.id == NegocioHito.negocio_id)
     )
@@ -264,7 +279,11 @@ def negocios_por_mes(
 
     # Por negocio: su fecha mas antigua y la suma de lo que lleva cobrado.
     por_negocio: dict[int, list] = {}
-    for negocio_id, inicio, real in db.execute(consulta).all():
+    # Los que arrastran el problema de la fecha unica del Excel.
+    aproximados: set[int] = set()
+    for negocio_id, inicio, real, cierre in db.execute(consulta).all():
+        if inicio is not None and cierre == inicio:
+            aproximados.add(negocio_id)
         fila = por_negocio.setdefault(negocio_id, [inicio, CERO])
         if inicio is not None and (fila[0] is None or inicio < fila[0]):
             fila[0] = inicio
@@ -283,6 +302,7 @@ def negocios_por_mes(
             for mes, (n, r) in sorted(acumulado.items())
         ],
         total_negocios=len(por_negocio),
+        con_inicio_aproximado=len(aproximados & set(por_negocio)),
         modelo=modelo,
         tipo_operacion=tipo_operacion,
     )

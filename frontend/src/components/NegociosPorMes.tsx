@@ -144,10 +144,25 @@ export default function NegociosPorMes() {
               <Bar dataKey="negocios" fill={SERIE[esquema]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-          <Text size="xs" c="dimmed" ta="right">
-            {data?.total_negocios} {data?.total_negocios === 1 ? 'negocio' : 'negocios'}
-            {filtrado && ' con los filtros aplicados'}
-          </Text>
+          <Group justify="space-between" align="flex-start" mt={4}>
+            {/* La advertencia va acá y no en un tooltip: cambia cómo se lee el
+                gráfico, no es un detalle. Y desaparece sola cuando el número
+                llega a cero, o sea cuando todos los negocios tengan fecha de
+                inicio de verdad. */}
+            {(data?.con_inicio_aproximado ?? 0) > 0 ? (
+              <Text size="xs" c="dimmed" maw={430}>
+                Ojo: {data?.con_inicio_aproximado} de {data?.total_negocios} vienen del Excel
+                con la fecha de inicio igual a la de cierre, porque el origen traía una sola.
+                Esos caen en el mes en que cerraron, no en el que empezaron.
+              </Text>
+            ) : (
+              <span />
+            )}
+            <Text size="xs" c="dimmed" ta="right">
+              {data?.total_negocios} {data?.total_negocios === 1 ? 'negocio' : 'negocios'}
+              {filtrado && ' con los filtros aplicados'}
+            </Text>
+          </Group>
         </>
       )}
     </Paper>

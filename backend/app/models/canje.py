@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, Numeric, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Index, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -36,10 +36,21 @@ class MonedaTipo(str, enum.Enum):
 
 class Canje(Base):
     __tablename__ = "canjes"
+    # Los indices se declaran aca porque los creo la migracion `f5c0e5cb46b3` y
+    # el modelo no los conocia: `autogenerate` los veia como sobrantes y proponia
+    # borrarlos. Un `drop_index` sobre produccion degrada la bandeja en silencio.
+    __table_args__ = (
+        Index("idx_canjes_estado_etapa", "estado", "etapa"),
+        Index("idx_canjes_fecha", "fecha_solicitud"),
+    )
 
     # Mismo ID_CANJE que trae la query de Dataprop -- no es autoincremental,
     # es la clave de matching de la futura importacion (Sprint B2).
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    # `BigInteger` explicito: la migracion creo `bigint` y sin declararlo aca el
+    # modelo dice `Integer`. Ese desajuste hacia que `alembic revision
+    # --autogenerate` emitiera un `modify_type` que angostaria la columna en
+    # produccion.
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
 
     fecha_solicitud: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

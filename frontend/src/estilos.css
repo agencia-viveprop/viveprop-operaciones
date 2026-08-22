@@ -3,10 +3,11 @@
  * Se importa desde `main.tsx` DESPUES de `@mantine/core/styles.css`, para que
  * gane en los empates de especificidad.
  *
- * Ojo: `src/index.css` existe pero nadie lo importa -- es un resto de la
- * plantilla de Vite y su contenido contradice el sistema de diseño (un acento
- * morado que no es la marca, un ancho fijo de 1126px, texto centrado). No
- * agregar nada ahí.
+ * Este es el unico archivo de CSS propio. Hubo un `src/index.css` que nadie
+ * importaba --resto de la plantilla de Vite, con un acento morado que no era la
+ * marca, un ancho fijo de 1126px y texto centrado-- y se borro: 111 lineas
+ * muertas que contradecian el sistema de diseño invitaban a que alguien las
+ * editara pensando que hacian algo.
  */
 
 /* Tablas de una sola línea.

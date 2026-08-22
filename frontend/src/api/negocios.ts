@@ -293,6 +293,11 @@ export type CorteMes = {
 export type NegociosPorMes = {
   meses: CorteMes[]
   total_negocios: number
+  /** Cuántos tienen la fecha de inicio igual a la de cierre. En los migrados del
+   *  Excel el origen traía una sola fecha, así que caen en el mes en que
+   *  cerraron y no en el que empezaron. Baja solo a medida que entran negocios
+   *  con fechas de verdad. */
+  con_inicio_aproximado: number
   modelo: string | null
   tipo_operacion: string | null
 }

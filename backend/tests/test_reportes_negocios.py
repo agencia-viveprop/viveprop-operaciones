@@ -304,3 +304,24 @@ def test_el_endpoint_rechaza_un_modelo_inventado(cliente, cartera):
     r = cliente.get("/api/negocios/reportes/por-mes", params={"modelo": "INVENTADO"})
 
     assert r.status_code == 422
+
+
+def test_cuenta_los_negocios_con_fecha_de_inicio_dudosa(cartera, db):
+    """En los migrados del Excel inicio y cierre coinciden: el origen traia una
+    sola fecha, asi que esos caen en el mes en que cerraron.
+
+    No se corrige --no hay dato con el que corregirlo-- pero se cuenta, y la
+    pantalla lo dice. El numero baja solo cuando entran negocios con fechas de
+    verdad.
+    """
+    from app.models.negocio import NegocioHito
+
+    r = negocios_por_mes(cartera)
+    assert r.con_inicio_aproximado == 0   # la cartera de test tiene fechas distintas
+
+    # Se ensucia uno, como los historicos.
+    hito = db.execute(select(NegocioHito).where(NegocioHito.fecha_cierre.is_not(None))).scalars().first()
+    hito.fecha_cierre = hito.fecha_inicio
+    db.commit()
+
+    assert negocios_por_mes(cartera).con_inicio_aproximado == 1

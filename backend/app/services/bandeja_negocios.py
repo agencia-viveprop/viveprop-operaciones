@@ -126,8 +126,21 @@ def duraciones_de(
     ultimo_movimiento: datetime | None,
     ultimo_cambio_etapa: datetime | None,
     hoy: date,
+    abierto: bool,
 ) -> Duraciones:
-    """Las tres duraciones, y la del cierre cuando se puede saber."""
+    """Las tres duraciones, y la del cierre cuando se puede saber.
+
+    `abierto` dice si al negocio le queda alguna liquidacion sin resolver, y hace
+    falta para el tercer caso: un negocio **perdido sin fecha de cierre**. Ahi
+    contar hasta hoy diria que un negocio que se cayo en enero "lleva 8 meses
+    abierto" y el numero crece para siempre. No se sabe cuanto duro, asi que se
+    dice que no se sabe.
+
+    Va **sin valor por defecto** a proposito. Con un default, pasar una fecha de
+    cierre y olvidar el flag hace que la fecha se ignore en silencio -- error que
+    se cometio al escribir el primer test de esta funcion. Obligar a declararlo
+    saca esa posibilidad.
+    """
     # Si inicio y cierre son la misma fecha, la duracion es **desconocida**, y eso
     # vale para las dos: no sabemos que cerro el dia que empezo, sabemos que el
     # Excel traia una sola fecha y la migracion la puso en las dos columnas. Es el
@@ -140,11 +153,23 @@ def duraciones_de(
     if cierre is not None and inicio is not None and not sin_fechas_utiles:
         hasta_cierre = (cierre - inicio).days
 
-    # Un negocio cerrado ya no "lleva abierto": llevo lo que duro.
-    referencia = cierre if cierre is not None else hoy
+    # Tres casos, y el tercero es el que obliga a mirar `abierto`:
+    #   sigue abierto            -> cuenta hasta hoy
+    #   cerrado con fecha        -> conto hasta que cerro
+    #   resuelto sin fecha       -> no se sabe
+    if abierto:
+        referencia = hoy
+    elif cierre is not None:
+        referencia = cierre
+    else:
+        referencia = None
 
     return Duraciones(
-        dias_abierto=None if inicio is None or sin_fechas_utiles else (referencia - inicio).days,
+        dias_abierto=(
+            None
+            if inicio is None or sin_fechas_utiles or referencia is None
+            else (referencia - inicio).days
+        ),
         dias_sin_gestion=_dias(ultimo_movimiento, hoy),
         dias_en_etapa=_dias(ultimo_cambio_etapa, hoy),
         dias_hasta_el_cierre=hasta_cierre,
@@ -228,7 +253,8 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
         inicio = min((h.fecha_inicio for h in activos if h.fecha_inicio), default=None)
         real = sum((h.comision_real_vp or 0) for h in activos)
 
-        d = duraciones_de(inicio, None, cualquiera.get(n.id), con_etapa.get(n.id), hoy)
+        # La bandeja solo lista negocios con liquidaciones abiertas.
+        d = duraciones_de(inicio, None, cualquiera.get(n.id), con_etapa.get(n.id), hoy, abierto=True)
         filas.append(
             FilaBandejaNegocio(
                 negocio_id=n.id,

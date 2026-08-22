@@ -55,13 +55,22 @@ def _inicio_de(negocio: Negocio) -> date | None:
     return min((h.fecha_inicio for h in negocio.hitos if h.fecha_inicio), default=None)
 
 
+def _esta_abierto(negocio: Negocio) -> bool:
+    """Si le queda alguna liquidación sin resolver.
+
+    Un negocio sin hitos también cuenta como abierto: existe y no terminó.
+    """
+    return not negocio.hitos or any(h.estado == EstadoNegocio.ACTIVO for h in negocio.hitos)
+
+
 def _cierre_de(negocio: Negocio) -> date | None:
     """La fecha de cierre solo si **todos** los hitos cerraron.
 
     Con una liquidación abierta el negocio sigue en curso, aunque la promesa ya
-    esté cobrada.
+    esté cobrada. Y un negocio perdido no tiene fecha de cierre: la migración
+    `d1f4a72b6e59` la limpió justamente porque era una copia de la de inicio.
     """
-    if not negocio.hitos or any(h.estado == EstadoNegocio.ACTIVO for h in negocio.hitos):
+    if _esta_abierto(negocio):
         return None
     cierres = [h.fecha_cierre for h in negocio.hitos if h.fecha_cierre]
     return max(cierres) if cierres else None
@@ -422,6 +431,7 @@ def listar(
                 ultimo_mov.get(n.id),
                 ultimo_etapa.get(n.id),
                 hoy,
+                abierto=_esta_abierto(n),
             ),
         )
         for n in negocios
