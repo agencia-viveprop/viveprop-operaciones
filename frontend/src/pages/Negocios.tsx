@@ -4,9 +4,7 @@ import {
   ActionIcon,
   Badge,
   Button,
-  Center,
   Group,
-  Loader,
   Select,
   Stack,
   Table,
@@ -27,6 +25,7 @@ import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import { COLOR_ESTADO, clp, duracion, fecha, MODELO_CORTO } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 /** Un negocio con hitos en estados distintos no tiene "un" estado. */
 function estadosResumidos(estados: EstadoNegocio[]) {
@@ -40,10 +39,11 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   const [cargaAbierta, setCargaAbierta] = useState(false)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
-  const { data: negocios, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['negocios', filtros],
     queryFn: () => listarNegocios(filtros),
   })
+  const { data: negocios } = consulta
 
   const alianzas = catalogos?.alianzas ?? []
   const nombreAlianza = (id: number | null) =>
@@ -120,11 +120,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
         />
       </Group>
 
-      {isLoading && (
-        <Center h={160}>
-          <Loader />
-        </Center>
-      )}
+      {!negocios && <EstadoConsulta de={consulta} alto={160} vacio="No hay negocios que coincidan." />}
 
       {negocios && (
         <Table.ScrollContainer minWidth={1000}>

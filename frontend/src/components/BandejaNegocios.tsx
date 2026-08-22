@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
-  Center,
   Group,
-  Loader,
   Paper,
   SimpleGrid,
   Stack,
@@ -18,6 +16,7 @@ import {
 } from '../api/negocios'
 import NegocioFichaModal from './NegocioFichaModal'
 import { clp, duracion, fecha, MODELO_CORTO } from './negociosFormato'
+import EstadoConsulta from './EstadoConsulta'
 
 /**
  * Los niveles con su palabra, nunca el color solo.
@@ -49,19 +48,13 @@ const ORDEN: NivelNegocio[] = ['sin_gestion', 'critico', 'advertencia', 'al_dia'
  */
 export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean }) {
   const [fichaId, setFichaId] = useState<number | null>(null)
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['bandeja-negocios'],
     queryFn: obtenerBandejaNegocios,
   })
+  const { data } = consulta
 
-  if (isLoading) {
-    return (
-      <Center h={240}>
-        <Loader />
-      </Center>
-    )
-  }
-  if (!data) return null
+  if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
   const requieren = data.resumen.sin_gestion + data.resumen.critico + data.resumen.advertencia
 

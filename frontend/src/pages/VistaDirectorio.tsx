@@ -2,9 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Button,
-  Center,
   Group,
-  Loader,
   Paper,
   SimpleGrid,
   Stack,
@@ -16,6 +14,7 @@ import { IconInfoCircle, IconPrinter } from '@tabler/icons-react'
 import { obtenerVistaDirectorio, type Monto } from '../api/reportes'
 import PageHeader from '../components/PageHeader'
 import { clp, fecha, MODELO_CORTO } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 function Tile({
   rotulo,
@@ -107,18 +106,13 @@ function TablaMezcla({
  * ya hace bien, y encima habría que mantener dos maquetaciones.
  */
 export default function VistaDirectorio() {
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['vista-directorio'],
     queryFn: obtenerVistaDirectorio,
   })
+  const { data } = consulta
 
-  if (isLoading || !data) {
-    return (
-      <Center h={240}>
-        <Loader />
-      </Center>
-    )
-  }
+  if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
   const { conversion: c, proyeccion: p, ticket: t } = data
   const anioActual = Number(data.anio_corrido.comision_real_vp)

@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import {
   Alert,
-  Center,
   Group,
-  Loader,
   Paper,
   SimpleGrid,
   Stack,
@@ -29,6 +27,7 @@ import StatCard from '../components/StatCard'
 import BarrasMontos from '../components/BarrasMontos'
 import NegociosPorMes from '../components/NegociosPorMes'
 import { clp, MODELO_CORTO } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 /**
  * Paleta validada con el script de la guía de visualización, sobre las rampas
@@ -95,19 +94,13 @@ function Panel({ titulo, ayuda, children }: { titulo: string; ayuda?: string; ch
  *  seguidos se leen como un error de maquetación. */
 export default function DashboardNegocios({ embebido = false }: { embebido?: boolean }) {
   const esquema = useComputedColorScheme('light')
-  const { data: r, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['resumen-negocios'],
     queryFn: obtenerResumenNegocios,
   })
+  const { data: r } = consulta
 
-  if (isLoading) {
-    return (
-      <Center h={300}>
-        <Loader />
-      </Center>
-    )
-  }
-  if (!r) return null
+  if (!r) return <EstadoConsulta de={consulta} alto={300} />
 
   const colorSerie = SERIE[esquema]
   const serieMes = aSerie(r.ganado_por_mes)

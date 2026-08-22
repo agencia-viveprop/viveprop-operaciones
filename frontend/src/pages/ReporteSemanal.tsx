@@ -3,9 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
   Badge,
-  Center,
   Group,
-  Loader,
   Paper,
   SegmentedControl,
   SimpleGrid,
@@ -29,6 +27,7 @@ import {
 } from '../api/reportes'
 import PageHeader from '../components/PageHeader'
 import { clp, fecha } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 const ETAPA_LABELS: Record<string, string> = {
   SIN_ETAPA: 'Sin etapa',
@@ -310,10 +309,11 @@ export default function ReporteSemanal() {
   const desde = aISO(lunes)
   const hasta = aISO(domingo)
 
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['reporte-semanal', desde, hasta, dias],
     queryFn: () => obtenerReporteSemanal({ desde, hasta, dias_estancado: Number(dias) }),
   })
+  const { data } = consulta
 
   return (
     <Stack gap="md">
@@ -360,10 +360,8 @@ export default function ReporteSemanal() {
         />
       </Group>
 
-      {isLoading || !data ? (
-        <Center h={240}>
-          <Loader />
-        </Center>
+      {!data ? (
+        <EstadoConsulta de={consulta} alto={240} />
       ) : (
         <Stack gap="lg">
           <Dominio

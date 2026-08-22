@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Center, Loader, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core'
 import { obtenerResumenCanjes } from '../api/reportes'
 import StatCard from './StatCard'
 import BarList from './BarList'
+import EstadoConsulta from './EstadoConsulta'
 
 const ETAPA_COLORS = ['brand.2', 'brand.3', 'brand.4', 'brand.5', 'brand.6', 'brand.7']
 
@@ -13,19 +14,13 @@ const ETAPA_COLORS = ['brand.2', 'brand.3', 'brand.4', 'brand.5', 'brand.6', 'br
  * componentes hermanos en vez de entre dos ramas de un archivo largo.
  */
 export default function DashboardCanjes() {
-  const { data: resumen, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['reportes-canjes-resumen'],
     queryFn: obtenerResumenCanjes,
   })
+  const { data: resumen } = consulta
 
-  if (isLoading) {
-    return (
-      <Center h={200}>
-        <Loader />
-      </Center>
-    )
-  }
-  if (!resumen) return null
+  if (!resumen) return <EstadoConsulta de={consulta} alto={200} />
 
   return (
     <Stack gap="lg">

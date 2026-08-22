@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import {
   Center,
   Group,
-  Loader,
   Paper,
   Select,
   Text,
@@ -22,6 +21,7 @@ import {
 import { obtenerCatalogos } from '../api/catalogos'
 import { obtenerNegociosPorMes } from '../api/negocios'
 import { clp, MODELO_CORTO } from './negociosFormato'
+import EstadoConsulta from './EstadoConsulta'
 
 /** El mismo par que usa el dashboard de negocios: cada tono se validó contra su
  *  propia superficie, y el oscuro no es un volteo automático del claro. */
@@ -68,10 +68,11 @@ export default function NegociosPorMes() {
   const [operacion, setOperacion] = useState<string | null>(null)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['negocios-por-mes', modelo, operacion],
     queryFn: () => obtenerNegociosPorMes({ modelo, tipo_operacion: operacion }),
   })
+  const { data } = consulta
 
   const serie: Punto[] =
     data?.meses.map((m) => ({
@@ -121,10 +122,8 @@ export default function NegociosPorMes() {
         </Group>
       </Group>
 
-      {isLoading ? (
-        <Center h={260}>
-          <Loader size="sm" />
-        </Center>
+      {!data ? (
+        <EstadoConsulta de={consulta} alto={260} />
       ) : serie.length === 0 ? (
         <Center h={260}>
           <Text size="sm" c="dimmed">

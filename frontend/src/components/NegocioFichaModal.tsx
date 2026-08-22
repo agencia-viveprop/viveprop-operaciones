@@ -5,10 +5,8 @@ import {
   Badge,
   Button,
   Card,
-  Center,
   Divider,
   Group,
-  Loader,
   Modal,
   SimpleGrid,
   Stack,
@@ -23,6 +21,7 @@ import HitoFormModal from './HitoFormModal'
 import NegocioEditarModal from './NegocioEditarModal'
 import NegocioPipeline from './NegocioPipeline'
 import { clp, COLOR_ESTADO, fecha, MODELO_CORTO, pct, uf } from './negociosFormato'
+import EstadoConsulta from './EstadoConsulta'
 
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -183,11 +182,12 @@ export default function NegocioFichaModal({
   const [editandoNegocio, setEditandoNegocio] = useState(false)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
-  const { data: negocio, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['negocio', negocioId],
     queryFn: () => obtenerNegocio(negocioId!),
     enabled: negocioId !== null,
   })
+  const { data: negocio } = consulta
 
   const nombreCatalogo = (id: number | null) => {
     if (id === null || !catalogos) return '—'
@@ -209,11 +209,7 @@ export default function NegocioFichaModal({
       title={negocio ? `${negocio.codigo} · ${negocio.propiedad.direccion}` : 'Negocio'}
       size="xl"
     >
-      {isLoading && (
-        <Center h={200}>
-          <Loader />
-        </Center>
-      )}
+      {!negocio && <EstadoConsulta de={consulta} alto={200} vacio="No se encontró el negocio." />}
 
       {negocio && (
         <Stack gap="md">

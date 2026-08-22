@@ -117,6 +117,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Auditoría · trece pantallas que no contemplaban un error de la API
+
+Segundo punto de la auditoría. **Trece pantallas pedían datos y ninguna manejaba una falla.** Tres dejaban el spinner girando para siempre —`isLoading || !data ? <Loader/>` nunca se resuelve si la petición falla— y las otras diez quedaban en blanco con `if (!data) return null`. Una sesión vencida, Neon despertando o un 500 se veían igual que "cargando", sin nada que hacer salvo recargar a ciegas.
+
+Se resolvió con un componente compartido, `EstadoConsulta`, y cortando el render antes de tocar los datos, que además le da a TypeScript el estrechamiento y saca los `data?.` del resto del componente. El error muestra el mensaje, un botón *Reintentar* y la distinción entre sesión vencida y base despertando. Ver `D-047`.
+
+Arregladas: `ReporteMensual`, `ReporteSemanal`, `VistaDirectorio`, `BandejaNegocios`, `DashboardCanjes`, `DashboardNegocios`, `NegociosPorMes`, `Bandeja`, `Negocios` y `NegocioFichaModal`. Quedan tres consultas sin manejo de error a propósito: `AvisoUF` es un banner que debe ocultarse, `/me` en `App.tsx` falla cuando no hay sesión y mostrar el login *es* la respuesta correcta, y `AppShellLayout` no consulta nada.
+
+**Verificado:** `npm run build` y `oxlint` limpios; no queda ninguna pantalla con `useQuery` sin estado de error salvo esas tres.
+
 ### 2026-08-22 · Auditoría · guardar un negocio histórico le movía la plata
 
 **El hallazgo más grande de la auditoría, y salió de arreglar otro.** La auditoría detectó que la app no permitía cerrar un negocio desde ninguna pantalla: el motor de comisiones no tenía forma de recibir un cierre. Al construir el formulario y probarlo contra `dev`, cerrar `VVP-17` le **bajó la comisión real de 774.691,95 a 759.166,55** sin que se tocara una sola tasa.

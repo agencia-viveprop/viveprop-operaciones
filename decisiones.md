@@ -871,3 +871,31 @@ Los cinco supuestos, para poder discutirlos uno por uno: cuánto entró (año co
 **Un error propio que vale registrar.** La primera versión de `downgrade` ponía `fecha_valorizacion` en nulo en todas las filas, y **borró en `dev` las seis fechas que venían de la planilla** por confundirlas con las que la migración escribe. Se recuperaron del export versionado. La lección queda escrita en el archivo: una migración de datos que "revierte" a un valor supuesto destruye el dato real que había. Ahora `downgrade` no hace nada y explica por qué.
 
 **Queda abierto, y es de negocio:** con qué UF se valoriza un negocio **abierto**. La planilla los revalorizaba a la fecha de exportación, o sea que el pipeline se movía solo cada vez que alguien abría el archivo. Congelarlos a una fecha preserva el número pero lo deja envejecer. No se decide por cuenta propia.
+
+---
+
+## D-047 · El estado de una consulta se dibuja en un solo lugar, y el render se corta antes de tocar los datos
+
+**Contexto.** La auditoría encontró **trece pantallas que pedían datos a la API y ninguna contemplaba que la petición falle**. Salían de dos formas, las dos malas:
+
+- `{isLoading || !data ? <Loader/> : ...}` — **el spinner queda girando para siempre**. Al fallar, `isLoading` pasa a falso y `data` sigue sin existir, así que la condición nunca se resuelve.
+- `if (!data) return null` — **la pantalla queda en blanco**, sin explicación ni acción posible.
+
+En los dos casos una sesión vencida, Neon despertando o un 500 se veían exactamente igual que "todavía cargando". Lo único que quedaba era recargar a ciegas.
+
+**Decisión.** Un componente compartido, `EstadoConsulta`, dibuja los tres estados —cargando, error y vacío— y las pantallas cortan el render antes de tocar los datos:
+
+```tsx
+const consulta = useQuery({ ... })
+const { data } = consulta
+if (!data) return <EstadoConsulta de={consulta} alto={300} />
+// desde acá `data` existe
+```
+
+**Por qué cortar el render y no envolver el contenido.** El corte le da a TypeScript el estrechamiento: después de esa línea `data` deja de ser opcional y desaparecen los `data?.` y los `?? []` que ensuciaban el resto del componente. Un envoltorio no puede hacer eso, y habría dejado a cada pantalla igual de expuesta a olvidar el caso.
+
+**El componente pide una forma mínima, no el tipo de TanStack Query.** `{ isLoading, isError, error, refetch }` y nada más. Así sirve igual con una consulta o con una lista de cinco —muestra el primer error y reintenta todas— sin pelear con los genéricos en cada pantalla.
+
+**El error trae qué hacer, no solo qué pasó.** Se muestra el mensaje de la API, un botón *Reintentar* que vuelve a lanzar la consulta, y una línea que distingue los dos casos frecuentes: si dice que la sesión venció hay que entrar de nuevo, y si no, suele ser la base despertando y reintentar alcanza.
+
+**Tres pantallas quedan como estaban, a propósito.** `AvisoUF` es un banner: si su consulta falla lo correcto es que no aparezca, no que grite. `App.tsx` consulta `/me` y un fallo ahí *significa* que no hay sesión, así que muestra el login —que es la respuesta correcta, no un error—. Y `AppShellLayout` no consulta nada.

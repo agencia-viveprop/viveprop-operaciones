@@ -2,9 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Badge,
-  Center,
   Group,
-  Loader,
   Paper,
   SegmentedControl,
   SimpleGrid,
@@ -18,6 +16,7 @@ import BandejaNegocios from '../components/BandejaNegocios'
 import PageHeader from '../components/PageHeader'
 import SeguimientoModal from '../components/SeguimientoModal'
 import { fecha } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 /**
  * El nivel se muestra siempre con su palabra, nunca con el color solo. En este
@@ -65,11 +64,12 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
   const [filtro, setFiltro] = useState<string>('atencion')
   const [seguimientoId, setSeguimientoId] = useState<number | null>(null)
 
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['bandeja'],
     queryFn: obtenerBandeja,
     enabled: vista === 'canjes',
   })
+  const { data } = consulta
 
   const selector = (
     <SegmentedControl
@@ -112,14 +112,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
     )
   }
 
-  if (isLoading) {
-    return (
-      <Center h={240}>
-        <Loader />
-      </Center>
-    )
-  }
-  if (!data) return null
+  if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
   const { resumen, filas } = data
   const requierenAtencion =

@@ -3,9 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
   Badge,
-  Center,
   Group,
-  Loader,
   Paper,
   SegmentedControl,
   SimpleGrid,
@@ -24,6 +22,7 @@ import {
 } from '../api/reportes'
 import PageHeader from '../components/PageHeader'
 import { clp } from '../components/negociosFormato'
+import EstadoConsulta from '../components/EstadoConsulta'
 
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -165,10 +164,11 @@ export default function ReporteMensual() {
   const anio = cursor.getFullYear()
   const mes = cursor.getMonth() + 1
 
-  const { data, isLoading } = useQuery({
+  const consulta = useQuery({
     queryKey: ['reporte-mensual', anio, mes, ventana],
     queryFn: () => obtenerReporteMensual(anio, mes, Number(ventana)),
   })
+  const { data } = consulta
 
   return (
     <Stack gap="md">
@@ -199,10 +199,8 @@ export default function ReporteMensual() {
         }
       />
 
-      {isLoading || !data ? (
-        <Center h={240}>
-          <Loader />
-        </Center>
+      {!data ? (
+        <EstadoConsulta de={consulta} alto={240} />
       ) : (
         <>
           {/* El selector va primero porque manda sobre los tiles de abajo. */}
