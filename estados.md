@@ -117,6 +117,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Revisión de los pendientes: sin bugs nuevos
+
+Repaso de los temas que habían quedado abiertos en sprints anteriores. **Ninguno era un defecto**, y conviene dejar dicho por qué para no volver a mirarlos:
+
+**`sla_es_habil` sigue muerto, y está bien que lo esté.** Tres tipos de movimiento tienen `sla_horas` —2, 2 y 24 horas— pero **nadie lee esos campos**: `CONFIG` no define cuál es la ventana de horario hábil. Sin esa definición, cualquier cálculo de SLA por paso sería inventado. Queda esperando el dato del negocio, no código.
+
+**Los motivos de pérdida: el catálogo está vacío y no hay lista de dónde sacarla.** Se buscó en las hojas `CONFIG` y `REGLAS CALCULO` del Excel y no hay ninguna. Los 10 hitos perdidos no traen motivo ni en el catálogo ni en texto. **Pero la opción de registrarlo sí existe**, que era lo que se había pedido: el movimiento `NEG_PERDIDA` lleva comentario libre y además marca el hito como perdido. Los campos `motivo_perdida_id` y `motivo_perdida_detalle` del hito son andamiaje del diseño D0 que ninguna pantalla expone; no se agregó UI para ellos porque duplicaría lo que el comentario del movimiento ya hace, y definir las categorías es del negocio.
+
+**El pipeline sí se puede usar desde la app.** Se verificó: la ficha del negocio tiene el componente que registra movimientos y muestra la línea de tiempo. Que haya 0 movimientos es falta de uso, no falta de pantalla.
+
 ### 2026-08-22 · Revisión y correcciones
 
 Pasada de revisión pedida por el usuario. Cuatro cosas, la primera con riesgo real.
@@ -133,7 +143,18 @@ Se limpió por migración (`d1f4a72b6e59`): 12 hitos. No se pierde nada — el v
 
 **4. El gráfico ahora avisa de su propio límite.** "Negocios por mes" agrupa por fecha de inicio, y en los migrados esa fecha es la de cierre. No se puede corregir —no hay dato con el que corregirlo— pero se cuenta: el gráfico dice "6 de 18 vienen del Excel con la fecha de inicio igual a la de cierre". El aviso **desaparece solo** cuando el número llegue a cero.
 
-**Y se borró `src/index.css`**, 111 líneas de la plantilla de Vite que nadie importaba y que contradecían el sistema de diseño —acento morado `#aa3bff`, ancho fijo de 1126px, texto centrado—. Que el hash del CSS compilado no cambiara confirmó que estaba muerto de verdad.
+**Y se limpiaron cuatro restos de la plantilla de Vite**, todos muertos y ninguno referenciado:
+
+| Archivo | Qué era |
+|---|---|
+| `src/index.css` | 111 líneas que contradecían el sistema de diseño: acento morado `#aa3bff`, ancho fijo de 1126px, texto centrado |
+| `src/assets/vite.svg` | El logo de Vite, con su `<title>Vite</title>` |
+| `src/assets/hero.png` | Imagen del starter, 343×361 |
+| `public/icons.svg` | Sprite de iconos sociales (Bluesky y compañía), servido en `/icons.svg` |
+
+Que el hash del CSS compilado no cambiara al borrar el `index.css` confirmó que estaba muerto de verdad. El directorio `src/assets/` quedó vacío y se eliminó.
+
+**Lo único que queda de la plantilla es `favicon.svg`**, que sí se usa: es el ícono violeta de la pestaña, y no es la marca. Se deja porque reemplazarlo es una decisión de diseño: el `logo.png` es un wordmark de 6341×1178 que a 16 px sería una mancha, y no hay un SVG de la marca en el repo del cual derivar el ícono.
 
 389 tests, `alembic check` limpio.
 
