@@ -117,6 +117,31 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · Los datos históricos van a producción por migración
+
+El hueco más grande que quedaba: producción tenía los canjes y la UF, pero **Negocios vacío**. Los 18 negocios, sus 19 hitos, sus 114 obligaciones y los 384 movimientos del seguimiento del Excel vivían solo en `dev`, así que nueve sprints de funcionalidad no tenían nada que mostrar allá.
+
+Se resolvió con el mismo mecanismo que la limpieza de canjes: **una migración que se aplica sola en el deploy**, sin necesitar la credencial de la base.
+
+**Los datos van en `alembic/datos/historicos.json`** (154 KB), generado desde `dev` por `app/scripts/exportar_historicos.py`. Meter 550 filas de negocios reales en el cuerpo de la migración la volvería ilegible y mezclaría el paso de carga con los datos que carga.
+
+**Los montos se cargan tal cual, sin pasar por el motor** (`D-026`). Siete de estos negocios están cerrados con plata ya facturada y `VVP-2` viene descuadrado del origen; recalcular cambiaría en silencio números ya cobrados. Verificado: se compararon las 19 filas contra el export en `comision_total`, `comision_real_vp` y `uf_snapshot`, **cero diferencias**.
+
+**Las referencias a catálogos van por código, no por id.** Los ids son seriales que asignó la migración de catálogos; corrió igual en las dos bases, así que *deberían* coincidir — pero "deberían" no alcanza cuando el resultado sería un negocio atribuido a la alianza equivocada sin que nada falle.
+
+**Lo que se probó en `dev`, en este orden:**
+
+| Prueba | Resultado |
+|---|---|
+| `downgrade` | borra los 164 registros y los 384 movimientos, y **no toca** los 221 de la limpieza |
+| `upgrade` | vuelve a cargar todo, con los montos idénticos al export |
+| `upgrade` con datos ya presentes | saltea los 18, no inserta nada, 4,6 s |
+| Corte a mitad de camino | el primer intento se pasó de tiempo y **quedó todo revertido**: la migración es atómica |
+
+**Dura unos dos minutos**, y conviene saberlo para no pensar que el deploy se colgó. El costo son 50 `INSERT ... RETURNING` secuenciales contra Neon a ~180 ms el viaje. Los inserts masivos —384 movimientos y 114 obligaciones— sí se agrupan en tuplas de 100, porque el `executemany` de SQLAlchemy sobre un `text()` no agrupa: manda una fila por statement. Corre una sola vez, así que no valía optimizar más.
+
+**No se exportaron los movimientos de la limpieza de canjes**: producción ya generó los suyos sobre sus propios datos, y traer los de `dev` los duplicaría.
+
 ### 2026-08-21 · El selector de Inicio usa el coral de "estás acá"
 
 Pedido del usuario: que el botón activo del selector se vea como el enlace activo del menú, sin cambiarle la forma.

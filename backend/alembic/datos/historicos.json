@@ -1,0 +1,4985 @@
+{
+ "_nota": "Generado por app/scripts/exportar_historicos.py desde la rama dev. Lo carga la migración de datos históricos. Las referencias a catálogos van por código, no por id.",
+ "propiedades": [
+  {
+   "direccion": "Camino los ingleses 715",
+   "unidad": "2207",
+   "comuna": "Valparaiso",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "NUEVO"
+  },
+  {
+   "direccion": "Froilán Roa 5746",
+   "unidad": "107",
+   "comuna": "La Florida",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "NUEVO"
+  },
+  {
+   "direccion": "Ladislao Errázuriz 2037",
+   "unidad": "503",
+   "comuna": "Providencia",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "NUEVO"
+  },
+  {
+   "direccion": "Mario Kreutzberger 1520",
+   "unidad": "316-A",
+   "comuna": "Santiago",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Diag. Sta. Elena 2605",
+   "unidad": "110",
+   "comuna": "San Joaquín",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Padre José Cifuentes Grez 864",
+   "unidad": "418",
+   "comuna": "Independencia",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Av. Sta. Rosa 5741",
+   "unidad": "1309-A",
+   "comuna": "San Miguel",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "San Diego 1473",
+   "unidad": "513",
+   "comuna": "Santiago",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Av. Portales 672",
+   "unidad": "314",
+   "comuna": "San Bernardo",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Av. Fernández Albano 492",
+   "unidad": "1207-B",
+   "comuna": "La Cisterna",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Fernández Albano 492",
+   "unidad": "Dpto 1207 torre B",
+   "comuna": "La Cisterna",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Avenida Las Condes 9560",
+   "unidad": "Dp 508",
+   "comuna": "Las Condes",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  },
+  {
+   "direccion": "Cerro Colorado 6028",
+   "unidad": "1010",
+   "comuna": "Las Condes",
+   "tipo_propiedad": "DEPARTAMENTO",
+   "estado_propiedad": "USADO"
+  }
+ ],
+ "negocios": [
+  {
+   "codigo": "VVP-1",
+   "modelo": "MERCADO_PRIMARIO",
+   "etapa": "E7",
+   "direccion": "Camino los ingleses 715",
+   "unidad": "2207",
+   "comuna": "Valparaiso",
+   "alianza": "INGEVEC",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Inmobiliaria Los Ingleses",
+   "comprador_arrendatario": "Claudia Pizarro Toro",
+   "corredor_agente": "María Teresa Zegers",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-10",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Av. Portales 672",
+   "unidad": "314",
+   "comuna": "San Bernardo",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "Danae Thormann",
+   "corredor_agente": "Alcira Claudia Montano Álvarez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-11",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Diag. Sta. Elena 2605",
+   "unidad": "110",
+   "comuna": "San Joaquín",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "LORENA REYES",
+   "corredor_agente": "Alcira Claudia Montano Álvarez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-12",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Av. Fernández Albano 492",
+   "unidad": "1207-B",
+   "comuna": "La Cisterna",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "RENOVACIÓN DISTRIBUIDOR DPA SP RENOVACIÓN DISTRIBUIDOR DPA SP",
+   "corredor_agente": "Ingrid Gloria Ortiz Pérez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-13",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Mario Kreutzberger 1520",
+   "unidad": "316-A",
+   "comuna": "Santiago",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "RODRIGO CASTILLO",
+   "corredor_agente": "Sofía Del Carmen Montecinos Arellano",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-14",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Av. Sta. Rosa 5741",
+   "unidad": "1309-A",
+   "comuna": "San Miguel",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "LAURA LUZA LEON",
+   "corredor_agente": "Ingrid Gloria Ortiz Pérez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-15",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E5",
+   "direccion": "San Diego 1473",
+   "unidad": "513",
+   "comuna": "Santiago",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "Shirley  Caruzí",
+   "corredor_agente": "Viveprop",
+   "notas": null,
+   "observaciones": "En proceso de formalización"
+  },
+  {
+   "codigo": "VVP-16",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E7",
+   "direccion": "Mario Kreutzberger 1520",
+   "unidad": "316-A",
+   "comuna": "Santiago",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "Erich Dreyer",
+   "corredor_agente": "Sofía Del Carmen Montecinos Arellano",
+   "notas": null,
+   "observaciones": "En proceso de formalización"
+  },
+  {
+   "codigo": "VVP-17",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E4",
+   "direccion": "Fernández Albano 492",
+   "unidad": "Dpto 1207 torre B",
+   "comuna": "La Cisterna",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "Joaquin Herrera",
+   "corredor_agente": "Angelica Seura",
+   "notas": null,
+   "observaciones": "En proceso de formalización"
+  },
+  {
+   "codigo": "VVP-18",
+   "modelo": "SECUNDARIO_AGENCIA",
+   "etapa": "E7",
+   "direccion": "Avenida Las Condes 9560",
+   "unidad": "Dp 508",
+   "comuna": "Las Condes",
+   "alianza": "VIVEPROP",
+   "tipo_operacion": "ARRIENDO",
+   "vendedor_arrendador": "María Teresa Jottar",
+   "comprador_arrendatario": "Joaquin Collado",
+   "corredor_agente": "Daniel Cuevas",
+   "notas": null,
+   "observaciones": "pendiente facturacion y pago a corredor y equipo Viveprop"
+  },
+  {
+   "codigo": "VVP-19",
+   "modelo": "SECUNDARIO_AGENCIA",
+   "etapa": "E7",
+   "direccion": "Cerro Colorado 6028",
+   "unidad": "1010",
+   "comuna": "Las Condes",
+   "alianza": "VIVEPROP",
+   "tipo_operacion": "ARRIENDO",
+   "vendedor_arrendador": "Sebastian Atria",
+   "comprador_arrendatario": "Felipe Cid",
+   "corredor_agente": "Daniel Cuevas",
+   "notas": null,
+   "observaciones": "En proceso de formalización"
+  },
+  {
+   "codigo": "VVP-2",
+   "modelo": "MERCADO_PRIMARIO",
+   "etapa": "E7",
+   "direccion": "Froilán Roa 5746",
+   "unidad": "107",
+   "comuna": "La Florida",
+   "alianza": "INGEVEC",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Inmobiliaria Froilán Roa",
+   "comprador_arrendatario": "Claudia Pizarro Toro",
+   "corredor_agente": "María Teresa Zegers",
+   "notas": null,
+   "observaciones": "Ver liq Negocio, hubo ajustes por costo credito pie ultima hora"
+  },
+  {
+   "codigo": "VVP-3",
+   "modelo": "MERCADO_PRIMARIO",
+   "etapa": "E7",
+   "direccion": "Ladislao Errázuriz 2037",
+   "unidad": "503",
+   "comuna": "Providencia",
+   "alianza": "URMENETA",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Inmobiliaria y Constructora DP",
+   "comprador_arrendatario": "Saravia Hermanos",
+   "corredor_agente": "Daniel Cuevas",
+   "notas": null,
+   "observaciones": "pendiente pago a corredor, pendiente facturacion captadora inmobiliaria, pendiente pago equipo Viveprop"
+  },
+  {
+   "codigo": "VVP-4",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Mario Kreutzberger 1520",
+   "unidad": "316-A",
+   "comuna": "Santiago",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "ISAAC JONATHAN LABRIN DIAZ",
+   "corredor_agente": "Sofía Del Carmen Montecinos Arellano",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-6",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Diag. Sta. Elena 2605",
+   "unidad": "110",
+   "comuna": "San Joaquín",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "userid_14869781 Gonzalez",
+   "corredor_agente": "Alcira Claudia Montano Álvarez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-7",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Padre José Cifuentes Grez 864",
+   "unidad": "418",
+   "comuna": "Independencia",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "patricia ---",
+   "corredor_agente": "Claudia Pamela Poblete Moreno",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-8",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "Av. Sta. Rosa 5741",
+   "unidad": "1309-A",
+   "comuna": "San Miguel",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "María Maldonado",
+   "corredor_agente": "Ingrid Gloria Ortiz Pérez",
+   "notas": null,
+   "observaciones": null
+  },
+  {
+   "codigo": "VVP-9",
+   "modelo": "SECUNDARIO_CONCENTRADORES",
+   "etapa": "E2",
+   "direccion": "San Diego 1473",
+   "unidad": "513",
+   "comuna": "Santiago",
+   "alianza": "ASSETPLAN",
+   "tipo_operacion": "VENTA",
+   "vendedor_arrendador": "Assetplan",
+   "comprador_arrendatario": "Camila  Baeza",
+   "corredor_agente": "Cristina Andrea Orellana Gallardo",
+   "notas": null,
+   "observaciones": null
+  }
+ ],
+ "hitos": [
+  {
+   "negocio": "VVP-1",
+   "nombre": null,
+   "fecha_inicio": "2025-08-12",
+   "fecha_cierre": "2025-08-12",
+   "estado": "CERRADO",
+   "valor_negocio": "3348.00",
+   "moneda": "UF",
+   "fecha_valorizacion": "2025-12-10",
+   "uf_snapshot": "39647.42",
+   "valor_clp_calculado": "132739562.16",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.04000000000000",
+   "pct_lado_comprador": "0E-14",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.02520012082005",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.01479987917995",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "María Teresa Zegers",
+   "comision_total": "5309582.00",
+   "comision_broker": "3345053.00",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "1964529.48",
+   "comision_equipo": "196452.95",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "1768076.53",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-10",
+   "nombre": null,
+   "fecha_inicio": "2026-01-23",
+   "fecha_cierre": "2026-01-23",
+   "estado": "PERDIDO",
+   "valor_negocio": "2320.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39726.59",
+   "valor_clp_calculado": "92165688.80",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1843314.00",
+   "comision_broker": "1105988.27",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "737325.51",
+   "comision_equipo": "73732.55",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "663592.96",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-11",
+   "nombre": null,
+   "fecha_inicio": "2026-01-28",
+   "fecha_cierre": "2026-01-28",
+   "estado": "PERDIDO",
+   "valor_negocio": "1776.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39713.76",
+   "valor_clp_calculado": "70531637.76",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1410633.00",
+   "comision_broker": "846379.65",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "564253.10",
+   "comision_equipo": "56425.31",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "507827.79",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-12",
+   "nombre": null,
+   "fecha_inicio": "2026-02-01",
+   "fecha_cierre": "2026-02-01",
+   "estado": "PERDIDO",
+   "valor_negocio": "2000.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39703.50",
+   "valor_clp_calculado": "79407000.00",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1588140.00",
+   "comision_broker": "952884.00",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "635256.00",
+   "comision_equipo": "63525.60",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "571730.40",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-13",
+   "nombre": null,
+   "fecha_inicio": "2026-03-05",
+   "fecha_cierre": "2026-03-05",
+   "estado": "PERDIDO",
+   "valor_negocio": "1080.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39819.01",
+   "valor_clp_calculado": "43004530.80",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "860091.00",
+   "comision_broker": "516054.37",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "344036.25",
+   "comision_equipo": "34403.62",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "309632.62",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-14",
+   "nombre": null,
+   "fecha_inicio": "2026-03-29",
+   "fecha_cierre": "2026-03-29",
+   "estado": "PERDIDO",
+   "valor_negocio": "1865.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39841.72",
+   "valor_clp_calculado": "74304807.80",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1486096.00",
+   "comision_broker": "891657.69",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "594438.46",
+   "comision_equipo": "59443.85",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "534994.62",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-15",
+   "nombre": null,
+   "fecha_inicio": "2026-01-06",
+   "fecha_cierre": "2026-01-06",
+   "estado": "ACTIVO",
+   "valor_negocio": "1259.20",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "40859.28",
+   "valor_clp_calculado": "51450005.38",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0E-14",
+   "pct_vp_comprador": "0.02000000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1029000.00",
+   "comision_broker": "0.00",
+   "rebate_concentrador": "123480.01",
+   "comision_vp_bruta": "1029000.11",
+   "comision_equipo": "102900.01",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "1049580.11",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-16",
+   "nombre": null,
+   "fecha_inicio": "2026-04-12",
+   "fecha_cierre": "2026-04-12",
+   "estado": "CERRADO",
+   "valor_negocio": "1050.00",
+   "moneda": "UF",
+   "fecha_valorizacion": "2026-06-15",
+   "uf_snapshot": "40779.55",
+   "valor_clp_calculado": "43025295.00",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.04000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0E-14",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "860506.00",
+   "comision_broker": "516303.54",
+   "rebate_concentrador": "206521.42",
+   "comision_vp_bruta": "344202.36",
+   "comision_equipo": "34420.24",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "516303.54",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-17",
+   "nombre": null,
+   "fecha_inicio": "2026-04-24",
+   "fecha_cierre": "2026-04-24",
+   "estado": "ACTIVO",
+   "valor_negocio": "1975.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "40859.28",
+   "valor_clp_calculado": "80697078.00",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0E-14",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1613942.00",
+   "comision_broker": "968364.94",
+   "rebate_concentrador": "193672.99",
+   "comision_vp_bruta": "645576.62",
+   "comision_equipo": "64557.66",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "774691.95",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-18",
+   "nombre": null,
+   "fecha_inicio": "2026-05-18",
+   "fecha_cierre": "2026-05-18",
+   "estado": "CERRADO",
+   "valor_negocio": "1215785.00",
+   "moneda": "CLP",
+   "fecha_valorizacion": "2026-05-18",
+   "uf_snapshot": "40391.32",
+   "valor_clp_calculado": "1215785.00",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.50000000000000",
+   "pct_lado_comprador": "0.50000000000000",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.40000000000000",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.60000000000000",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1215785.00",
+   "comision_broker": "486314.00",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "729471.00",
+   "comision_equipo": "72947.10",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "656523.90",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-19",
+   "nombre": null,
+   "fecha_inicio": "2026-06-01",
+   "fecha_cierre": "2026-06-01",
+   "estado": "CERRADO",
+   "valor_negocio": "27.00",
+   "moneda": "UF",
+   "fecha_valorizacion": "2026-06-01",
+   "uf_snapshot": "40627.62",
+   "valor_clp_calculado": "1096945.74",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.50000000000000",
+   "pct_lado_comprador": "0.50000000000000",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.40000000000000",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.60000000000000",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1096946.00",
+   "comision_broker": "438778.30",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "658167.44",
+   "comision_equipo": "65816.74",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "592350.70",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-2",
+   "nombre": null,
+   "fecha_inicio": "2025-10-07",
+   "fecha_cierre": "2025-10-07",
+   "estado": "CERRADO",
+   "valor_negocio": "2625.65",
+   "moneda": "UF",
+   "fecha_valorizacion": "2025-12-10",
+   "uf_snapshot": "39647.42",
+   "valor_clp_calculado": "104100248.32",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.04000000000000",
+   "pct_lado_comprador": "0E-14",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.02520012082005",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.01479987917995",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "María Teresa Zegers",
+   "comision_total": "3260207.00",
+   "comision_broker": "2623338.84",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "1540671.10",
+   "comision_equipo": "154067.11",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "1386603.99",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-3",
+   "nombre": "PROMESA",
+   "fecha_inicio": "2025-12-16",
+   "fecha_cierre": "2025-12-16",
+   "estado": "CERRADO",
+   "valor_negocio": "6088.44",
+   "moneda": "UF",
+   "fecha_valorizacion": "2026-12-26",
+   "uf_snapshot": "39707.30",
+   "valor_clp_calculado": "241755513.61",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0E-14",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.01000000000000",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.01000000000000",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0.03000000000000",
+   "nombre_tercero": "Daniel Cuevas",
+   "comision_total": "4835110.00",
+   "comision_broker": "2417555.14",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "2417555.14",
+   "comision_equipo": "234502.85",
+   "comision_tercero": "72526.65",
+   "comision_real_vp": "2110525.63",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-3",
+   "nombre": "ESCRITURA",
+   "fecha_inicio": "2026-03-09",
+   "fecha_cierre": "2026-03-09",
+   "estado": "CERRADO",
+   "valor_negocio": "6088.44",
+   "moneda": "UF",
+   "fecha_valorizacion": "2026-02-28",
+   "uf_snapshot": "39790.63",
+   "valor_clp_calculado": "242262863.32",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.01000000000000",
+   "pct_lado_comprador": "0E-14",
+   "pct_rebate_concentrador": "0E-14",
+   "pct_broker_vendedor": "0.00500000000000",
+   "pct_broker_comprador": "0E-14",
+   "pct_vp_vendedor": "0.00500000000000",
+   "pct_vp_comprador": "0E-14",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0.03000000000000",
+   "nombre_tercero": "Daniel Cuevas",
+   "comision_total": "2422629.00",
+   "comision_broker": "1211314.32",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "1211314.32",
+   "comision_equipo": "117497.49",
+   "comision_tercero": "36339.43",
+   "comision_real_vp": "1057477.40",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-4",
+   "nombre": null,
+   "fecha_inicio": "2026-01-02",
+   "fecha_cierre": "2026-01-02",
+   "estado": "PERDIDO",
+   "valor_negocio": "1080.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39735.63",
+   "valor_clp_calculado": "42914480.40",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "858290.00",
+   "comision_broker": "514973.76",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "343315.84",
+   "comision_equipo": "34331.58",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "308984.26",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-6",
+   "nombre": null,
+   "fecha_inicio": "2026-01-03",
+   "fecha_cierre": "2026-01-03",
+   "estado": "PERDIDO",
+   "valor_negocio": "1776.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39739.47",
+   "valor_clp_calculado": "70577298.72",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1411546.00",
+   "comision_broker": "846927.58",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "564618.39",
+   "comision_equipo": "56461.84",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "508156.55",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-7",
+   "nombre": null,
+   "fecha_inicio": "2026-01-08",
+   "fecha_cierre": "2026-01-08",
+   "estado": "PERDIDO",
+   "valor_negocio": "1580.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39758.68",
+   "valor_clp_calculado": "62818714.40",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1256374.00",
+   "comision_broker": "753824.57",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "502549.72",
+   "comision_equipo": "50254.97",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "452294.74",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-8",
+   "nombre": null,
+   "fecha_inicio": "2026-01-10",
+   "fecha_cierre": "2026-01-10",
+   "estado": "PERDIDO",
+   "valor_negocio": "1865.00",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39759.95",
+   "valor_clp_calculado": "74152306.75",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1483046.00",
+   "comision_broker": "889827.68",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "593218.45",
+   "comision_equipo": "59321.85",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "533896.61",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  },
+  {
+   "negocio": "VVP-9",
+   "nombre": null,
+   "fecha_inicio": "2026-01-14",
+   "fecha_cierre": "2026-01-14",
+   "estado": "PERDIDO",
+   "valor_negocio": "1259.20",
+   "moneda": "UF",
+   "fecha_valorizacion": null,
+   "uf_snapshot": "39749.68",
+   "valor_clp_calculado": "50052797.06",
+   "valor_clp_manual": null,
+   "motivo_valor_manual": null,
+   "pct_lado_vendedor": "0.02000000000000",
+   "pct_lado_comprador": "0.02000000000000",
+   "pct_rebate_concentrador": "0.12000000000000",
+   "pct_broker_vendedor": "0E-14",
+   "pct_broker_comprador": "0.01200000000000",
+   "pct_vp_vendedor": "0.00800000000000",
+   "pct_vp_comprador": "0.00800000000000",
+   "pct_equipo": "0.10000000000000",
+   "pct_tercero": "0E-14",
+   "nombre_tercero": "—",
+   "comision_total": "1001056.00",
+   "comision_broker": "600633.56",
+   "rebate_concentrador": "0.00",
+   "comision_vp_bruta": "400422.38",
+   "comision_equipo": "40042.24",
+   "comision_tercero": "0.00",
+   "comision_real_vp": "360380.14",
+   "motivo_perdida": null,
+   "motivo_perdida_detalle": null
+  }
+ ],
+ "obligaciones": [
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAPTADOR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-1",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-10",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-11",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-12",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-13",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-14",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-15",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAPTADOR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-16",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-17",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "EN_PROCESO_CIERRE",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAPTADOR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-18",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAPTADOR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "POR_FACTURAR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-19",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAPTADOR",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-2",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "PROMESA",
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-3",
+   "hito": "ESCRITURA",
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "PAGADO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-4",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-6",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-7",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-8",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "PAGO_PARTNER_COMERCIAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "FACT_CORREDOR_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "FACT_CAPTADOR_ALIANZA",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "PAGO_EQUIPO_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "FACT_COMISION_TOTAL",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  },
+  {
+   "negocio": "VVP-9",
+   "hito": null,
+   "tipo": "PAGO_COMISION_REAL_VP",
+   "estado": "NO_APLICA_CAIDO",
+   "monto": null,
+   "fecha": null
+  }
+ ],
+ "movimientos_canje": [
+  {
+   "entity_id": 2,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2022-11-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: cancelado porque a clienta no le gusto el depto"
+  },
+  {
+   "entity_id": 3,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2022-11-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: fue error la solicitud"
+  },
+  {
+   "entity_id": 4,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2022-12-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Pendiente postular"
+  },
+  {
+   "entity_id": 5,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2022-12-15T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: fue error la solicitud"
+  },
+  {
+   "entity_id": 6,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-01-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: vendedora tiene comprometida la propiedad"
+  },
+  {
+   "entity_id": 7,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-02-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Pendiente postular.. Cancelado porque La corredora que solicitó el canje, nunca tomó contacto y no asistió a la visita."
+  },
+  {
+   "entity_id": 9,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-03-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Cancelado porque propiedad ya fue arrendada"
+  },
+  {
+   "entity_id": 12,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-04-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: propiedad ya arrendada"
+  },
+  {
+   "entity_id": 13,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-05-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: corredor no respondio"
+  },
+  {
+   "entity_id": 14,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-06-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: cancelado automatico por formulario, felipe contactara a corredores de todas formas"
+  },
+  {
+   "entity_id": 15,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-06-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredor solicitado indica que propiedad está en proceso de venta, que va a actualizar las propiedades para que no aparezcan en canje"
+  },
+  {
+   "entity_id": 17,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-07-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora propietaria acepto oferta de otro corredor (SE VENDIO)"
+  },
+  {
+   "entity_id": 18,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-08-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: https://app.dataprop.cl/propiedades/1755622346-venta-casa-3hab-2ba-melipilla"
+  },
+  {
+   "entity_id": 19,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-08-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solictante Cancelo porque vio que faltan regularizaciones en propiedad"
+  },
+  {
+   "entity_id": 22,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-11-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: prueba cliente"
+  },
+  {
+   "entity_id": 31,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2023-12-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solicitado indica que no se dio cuenta que habilitó canje, la modificará para que salga de canjes"
+  },
+  {
+   "entity_id": 33,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-01-15T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: En validación de renta interesados/ corredor solicitante inubicable"
+  },
+  {
+   "entity_id": 33,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-11-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 35,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-02-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: En validación de renta interesados/ corredor solicitante inubicable"
+  },
+  {
+   "entity_id": 35,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-11-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 40,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-05-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredor solicitante esta a la espera de que su cliente le de respuesta"
+  },
+  {
+   "entity_id": 40,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 41,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-05-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Arrendado hoy, bajar canje"
+  },
+  {
+   "entity_id": 41,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-11-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 42,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-05-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solicitante contactada cliente con credito aprobado/propeitario firmara acuerdo de canje/ Juan carlos mora firmo falta maria teresa"
+  },
+  {
+   "entity_id": 42,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-11-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 42,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-11-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 43,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solicitante comunicado declara tener cliente con credito aprobado $100.000.000 aprox una parte credito otra efectivo/ propietario confirma la proxima semana ya que tiene una posible oferta"
+  },
+  {
+   "entity_id": 43,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-11-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 43,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-11-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 44,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solicitante comunicado declara tener cliente con credito aprobado $100.000.000 aprox una parte credito otra efectivo/ confirmara con propietario disponibilidad de propiedad"
+  },
+  {
+   "entity_id": 44,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-11-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 44,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-11-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 45,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-15T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 46,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-15T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 47,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-07T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Solicitante tiene potencial cliente calificado, Corredor propietario no tiene orden de venta y manifiesta incomodidad en enviar orden de venta por miedo a que tenga los datos la otra parte, se le explica el motivo y no entiende. fianlemnte se cancela por corredora propeitaria no dispuesta a firmar"
+  },
+  {
+   "entity_id": 47,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 47,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-12-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 48,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-07T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora propietaria informa que cliente le informo que propiedad se encuentra en proceso de venta desde la semana pasada, se informa que debe sacar la propiedad del centro de canje"
+  },
+  {
+   "entity_id": 48,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 48,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-12-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 49,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-07T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: a la espera de respueta de corredora propietaria, sigue sin contestar se le llama e insiste en varias ocaciones"
+  },
+  {
+   "entity_id": 49,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 49,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-12-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 53,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora propietaria manifiesta que no tiene disponible departamento para canje"
+  },
+  {
+   "entity_id": 53,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 53,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2025-12-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 54,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora propietaria quedo de confirmar disponibilidad/corredora propietaria manifiesta que la propiedad ya no esta disponible y confrimara el lunes 05, propiedad no disponible"
+  },
+  {
+   "entity_id": 54,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2025-12-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 54,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-07T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 55,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: se envia whatsapp a ambas partes/corredor propietario confirmara el 06-01-2026, cooredor solicitante cancela canje ya que se cambio el tiempo de uso de depto por tiempo especifico y no por un tiempo prolongado"
+  },
+  {
+   "entity_id": 55,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-04T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 55,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 56,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredor propietario manifiesta que la propiedad no esta disponible para canje, la cerro ayer"
+  },
+  {
+   "entity_id": 56,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 56,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-07T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 57,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora propietaria manifiesta que perdio la propiedad y se la dieron en exclusiva a otro corredor"
+  },
+  {
+   "entity_id": 57,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 57,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 58,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: En proceso de firma/ ya se comunicaron entre ellas"
+  },
+  {
+   "entity_id": 58,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 58,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-26T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 59,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-07-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora solicitante no confirma si su cliente esta o no calificado/ Despues de insistir dias corredora solicitante cancela canje sin dar mayor detalle del motivo"
+  },
+  {
+   "entity_id": 59,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 59,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 60,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredor solicitante no firma todavia ya que se le murio una sobrina"
+  },
+  {
+   "entity_id": 60,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-01-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 60,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-01-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 64,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-07-23T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: Corredora solicitante pregunta por rebaja de su cliente que puede ofertar/ a espera de respuesta/se cancela canje por no llegar a acuerdo"
+  },
+  {
+   "entity_id": 64,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 64,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 65,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-07-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: corredora propietaria no tiene apta la propiedad para la venta con orden de embargo"
+  },
+  {
+   "entity_id": 65,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 65,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 66,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 66,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 67,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 67,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 68,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 68,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-08-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Motivo de cancelación: a la espera de firma"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 69,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 71,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-02-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 71,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-02-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada"
+  },
+  {
+   "entity_id": 74,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2024-08-08T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Cancelado por Dataprop. Corredora manifiesta que propiedad no se encuentra en canje, manifiesta que se confundio donde lleva poco en dataprop"
+  },
+  {
+   "entity_id": 83,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2024-08-23T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Motivo de cancelación: corredor"
+  },
+  {
+   "entity_id": 86,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2024-09-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Cancelado por Dataprop. PROPIEDAD YA ESTA EN FIRMA DE PROMESA DE COMPRAVENTA"
+  },
+  {
+   "entity_id": 87,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2024-09-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Cancelado por Propietario. CORREDORA MANIFIESTA QUE ESTA HACIENDO CANJES EXTERNOS Y NO POR LA PLATAFORMA, BAJARA LA PROPIEDAD DEL CENTRO DE CANJE"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredor solicitante indica que nunca pudo contactar ni tuvo contacto de corredora para coordinar negocio"
+  },
+  {
+   "entity_id": 88,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-21T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Solicitante. Corredor solicitante indica que nunca pudo contactar ni tuvo contacto de corredora para coordinar negocio"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 90,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredora indica que pasó mucho tiempo y cliente ya no esta comprando"
+  },
+  {
+   "entity_id": 91,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 91,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 91,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Solicitante indica que a su cliente no le gustó, cancelará canje"
+  },
+  {
+   "entity_id": 91,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Solicitante. no le intereso al cliente"
+  },
+  {
+   "entity_id": 92,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2024-09-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. Cancelado por Solicitante. no le intereso al cliente"
+  },
+  {
+   "entity_id": 93,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 93,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 93,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Solicitante indica que a su cliente no le gustó, cancelará canje"
+  },
+  {
+   "entity_id": 93,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Solicitante. no le intereso al cliente"
+  },
+  {
+   "entity_id": 94,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 94,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 94,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Solicitante indica que a su cliente no le gustó, cancelará canje"
+  },
+  {
+   "entity_id": 94,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Solicitante. no le intereso al cliente"
+  },
+  {
+   "entity_id": 95,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 95,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 95,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible, Email registro solicitante, WA confirmación propietario, Mandato firmado | Propiedad esta en promesa, quitaran marca de canje"
+  },
+  {
+   "entity_id": 95,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-22T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Dataprop. Propiedad esta en promesa"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Email registro solicitante | Cancelada por administrador. Motivo: Corredor propietario no hará canje por motivos de estructure interna: no vamos a proceder, ya que leímos, y vi que uds se quedan con un % del canje, y nosotros tenemos un acuerdo con nuestros agentes, ellos se quedan con su 70% y no podemos pedirles que ademas cedan un 4% más."
+  },
+  {
+   "entity_id": 277,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-04-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Dataprop. Propiedad esta en promesa"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredora solicitante no confirmó si mantenía interés por el canje, se cancela solicitud por plazo"
+  },
+  {
+   "entity_id": 278,
+   "tipo_movimiento": "CANCELACION",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por Dataprop. Propiedad esta en promesa"
+  },
+  {
+   "entity_id": 279,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 279,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Es cartera directa publicada por Assetplan. Ver con Sebastián actualización de ese stock"
+  },
+  {
+   "entity_id": 280,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-04T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 280,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-04T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. En validación disponibilidad para canje"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-04T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 281,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. En estapa oferta, sin postulación, se solicita a ambas actualización"
+  },
+  {
+   "entity_id": 282,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Cliente calificado, Propiedad disponible | Es cartera directa publicada por Assetplan. Ver con Sebastián actualización de ese stock"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 284,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. En validación inicial a solicitante por financiemiento compra"
+  },
+  {
+   "entity_id": 285,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 285,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible, WA confirmación solicitante, Email registro solicitante, WA confirmación propietario, Email registro propietario, Mandato firmado, Validación solicitante, Validación propietario, Acuerdo de canje firmado | Corredora propietaria indica que hay problemas familiares por herencia, que penso que la habia despublicado. Cancelará canje y desmarcara canje en propiedad"
+  },
+  {
+   "entity_id": 286,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. En validación inicial a solicitante por financiemiento compra"
+  },
+  {
+   "entity_id": 287,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Buscará otra propiedad para cliente"
+  },
+  {
+   "entity_id": 288,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Interesado no volvio a contactar ni responder"
+  },
+  {
+   "entity_id": 289,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Interesado no volvio a contactar ni responder"
+  },
+  {
+   "entity_id": 290,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Interesado no volvio a contactar ni responder"
+  },
+  {
+   "entity_id": 291,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 291,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 291,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Solicitante indica que interesadodescarto por precio muy al limite de presupuesto"
+  },
+  {
+   "entity_id": 292,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 292,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 292,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 292,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. La cliente anuló la visita ya que cerró una casa nueva."
+  },
+  {
+   "entity_id": 293,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Seguimiento: Solicitante espera para esta semana o próxima confirmación de financiemiento compra de su cliente"
+  },
+  {
+   "entity_id": 294,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado por solicitante"
+  },
+  {
+   "entity_id": 295,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 295,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 295,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Validando si hay arriendo con opción de compra futura"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 296,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelará canje, cliente ya encontró propiedad"
+  },
+  {
+   "entity_id": 297,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 297,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. en validación interesado solicitante, y aclaracion dudas funcionamiento de canje"
+  },
+  {
+   "entity_id": 299,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 299,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 299,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 299,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 299,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Insistencia firma acuerdo canje"
+  },
+  {
+   "entity_id": 301,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 301,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 301,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 301,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-28T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredor solicitante indica: el cliente que teníamos evaluado desistió de arrendar"
+  },
+  {
+   "entity_id": 302,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 302,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 302,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-05-25T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredor solicitante indica: el cliente que teníamos evaluado desistió de arrendar"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 303,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-11T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Hola buen día. Ya no estoy interesado en este canje. Muchas gracias"
+  },
+  {
+   "entity_id": 304,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 304,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 304,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredora propietaria nunca respondión por solicitud de canje"
+  },
+  {
+   "entity_id": 305,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 305,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 305,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 305,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 305,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Corredor propietario nunca respondión por solicitud de canje"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-02T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 306,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-19T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Interesado descartó propiedad"
+  },
+  {
+   "entity_id": 307,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-01T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. cliente ya encontró depto"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-03T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 308,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-18T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Mandato firmado | Corredor propietario indica que no avanzaron, que ni siquiera hicieron visita porque interesado descarto la propiedad"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 318,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-16T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Mandato firmado | Corredora propietaria indica que no se firmará acuerdo ya que el cliente no llegaba al presupuesto de la propiedad"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 322,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-24T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. ok para canje"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-23T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 324,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-06-30T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. ok para canje"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-06-23T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 325,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Al comprador no le sirve la propiedad por tamaño del estacionamiento"
+  },
+  {
+   "entity_id": 329,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 329,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 329,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 329,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. validacion inicial solicitante"
+  },
+  {
+   "entity_id": 330,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 330,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 330,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 330,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-06T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. validacion inicial solicitante"
+  },
+  {
+   "entity_id": 331,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 331,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 331,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 331,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-09T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Propiedad arrendada hace tiempo, fue despublicada de portales pero seguia en canje"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 332,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No le sirvió a interesada, muy lejano ade ubicación"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 334,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Etapa EETT"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 335,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Cancelado sin indicar motivo"
+  },
+  {
+   "entity_id": 337,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-13T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Esperando respuesta"
+  },
+  {
+   "entity_id": 339,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Propiedad archivada hace tiempo, aun con marca de canje"
+  },
+  {
+   "entity_id": 340,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Propiedad archivada hace tiempo, aun con marca de canje"
+  },
+  {
+   "entity_id": 341,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-14T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Propiedad archivada hace tiempo, aun con marca de canje"
+  },
+  {
+   "entity_id": 343,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 343,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Solicitante no indicó si aun mantenía interes por esta propiedad"
+  },
+  {
+   "entity_id": 344,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 344,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 344,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 344,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 344,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. pendiente decision comprador"
+  },
+  {
+   "entity_id": 345,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-07-27T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 345,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-27T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Propiedad vendida por otro corredor, sigue disponible solo canje"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 346,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Se está gestionando manual con los corredores (se pidio que completen firma por plataforma)"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 347,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Mandato firmado | Cliente desistio de la propiedad"
+  },
+  {
+   "entity_id": 348,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada. No aplicaba o no se logró: Cliente calificado, Propiedad disponible, WA confirmación solicitante, Email registro solicitante, WA confirmación propietario, Validación solicitante | Esperando respuesta"
+  },
+  {
+   "entity_id": 349,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-07-29T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Cliente calificado, Propiedad disponible, WA confirmación solicitante, Email registro solicitante, WA confirmación propietario, Email registro propietario, Mandato firmado, Validación solicitante | Despublicada, pero seguía vigente en canje"
+  },
+  {
+   "entity_id": 353,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 353,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 353,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 353,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 353,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible, Mandato firmado | Propiedad ya estaba arrendada, corredor propietario las bajara de propiedades activas"
+  },
+  {
+   "entity_id": 354,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 354,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 354,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 354,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 354,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible, Mandato firmado | Propiedad ya estaba arrendada, corredor propietario las bajara de propiedades activas"
+  },
+  {
+   "entity_id": 356,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Mandato firmado | Estaba siguiendo los pasos del webinar y solicitó el canje por error"
+  },
+  {
+   "entity_id": 357,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-05T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible, Mandato firmado | propiedad no disponible en cartera"
+  },
+  {
+   "entity_id": 358,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 358,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. Propiedad reservada por cliente de corredor propietario"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 359,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-12T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. en proceso firma"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "CLIENTE_CALIFICADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "PROPIEDAD_DISPONIBLE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "WA_CONFIRM_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "EMAIL_REGISTRO_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "WA_CONFIRM_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "EMAIL_REGISTRO_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "MANDATO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "VALIDACION_SOLICITANTE",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "VALIDACION_PROPIETARIO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 360,
+   "tipo_movimiento": "ACUERDO_FIRMADO",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe"
+  },
+  {
+   "entity_id": 361,
+   "tipo_movimiento": "COMENTARIO_GENERAL",
+   "etapa_resultante": null,
+   "fecha": "2026-08-10T00:00:00+00:00",
+   "autor_id": 1,
+   "comentario": "Migrado del Excel — fecha aproximada · operador Felipe. No aplicaba o no se logró: Propiedad disponible | Propiedad no disponible, es cartera de Gonzalo Uribe"
+  }
+ ]
+}
