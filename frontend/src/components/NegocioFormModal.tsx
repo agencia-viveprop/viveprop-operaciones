@@ -6,7 +6,6 @@ import {
   Divider,
   Group,
   Modal,
-  NumberInput,
   Select,
   SimpleGrid,
   Stack,
@@ -17,13 +16,10 @@ import {
 import { IconInfoCircle } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import { buscarPropiedades, crearNegocio } from '../api/negocios'
+import CamposHito from './CamposHito'
+import { hitoVacio, payloadHito, validarHito } from './hitoForm'
 
 /** Los porcentajes se ingresan como número (2 = 2%) y se envían como fracción. */
-function aFraccion(valor: number | string): string | null {
-  if (valor === '' || valor === null) return null
-  return String(Number(valor) / 100)
-}
-
 function vacio() {
   return {
     codigo: '',
@@ -39,33 +35,10 @@ function vacio() {
     comprador_arrendatario: '',
     corredor_agente: '',
     observaciones: '',
-    // hito único
-    fecha_inicio: '',
-    estado: 'ACTIVO',
     etapa: '',
-    valor_negocio: '' as number | '',
-    moneda: 'UF',
-    fecha_valorizacion: '',
-    valor_clp_manual: '' as number | '',
-    motivo_valor_manual: '',
-    pct_lado_vendedor: '' as number | '',
-    pct_lado_comprador: '' as number | '',
-    pct_rebate_concentrador: '' as number | '',
-    pct_broker_vendedor: '' as number | '',
-    pct_broker_comprador: '' as number | '',
-    pct_vp_vendedor: '' as number | '',
-    pct_vp_comprador: '' as number | '',
-    pct_equipo: 10 as number | '',
-    pct_tercero: '' as number | '',
-    nombre_tercero: '',
+    // La liquidación única, con los mismos campos que el formulario de edición.
+    ...hitoVacio(),
   }
-}
-
-/** Qué lado se cobra en cada modelo, para no pedir campos que ese modelo ignora. */
-const CAMPOS_POR_MODELO: Record<string, { vendedor: boolean; comprador: boolean; rebate: boolean }> = {
-  MERCADO_PRIMARIO: { vendedor: true, comprador: false, rebate: false },
-  SECUNDARIO_CONCENTRADORES: { vendedor: false, comprador: true, rebate: true },
-  SECUNDARIO_AGENCIA: { vendedor: true, comprador: true, rebate: false },
 }
 
 export default function NegocioFormModal({
@@ -107,25 +80,6 @@ export default function NegocioFormModal({
 
   const guardar = useMutation({
     mutationFn: () => {
-      const pcts = [
-        'pct_lado_vendedor', 'pct_lado_comprador', 'pct_rebate_concentrador',
-        'pct_broker_vendedor', 'pct_broker_comprador', 'pct_vp_vendedor',
-        'pct_vp_comprador', 'pct_equipo', 'pct_tercero',
-      ] as const
-
-      const hito: Record<string, unknown> = {
-        fecha_inicio: form.fecha_inicio,
-        estado: form.estado,
-        etapa: form.etapa || null,
-        valor_negocio: form.valor_negocio === '' ? null : String(form.valor_negocio),
-        moneda: form.moneda || null,
-        fecha_valorizacion: form.fecha_valorizacion || null,
-        valor_clp_manual: form.valor_clp_manual === '' ? null : String(form.valor_clp_manual),
-        motivo_valor_manual: form.motivo_valor_manual || null,
-        nombre_tercero: form.nombre_tercero || null,
-      }
-      pcts.forEach((p) => (hito[p] = aFraccion(form[p])))
-
       return crearNegocio({
         codigo: form.codigo.trim(),
         modelo: form.modelo,
@@ -142,7 +96,8 @@ export default function NegocioFormModal({
         comprador_arrendatario: form.comprador_arrendatario || null,
         corredor_agente: form.corredor_agente || null,
         observaciones: form.observaciones || null,
-        hitos: [hito],
+        etapa: form.etapa || null,
+        hitos: [payloadHito(form)],
       })
     },
     onSuccess: () => {
@@ -161,8 +116,9 @@ export default function NegocioFormModal({
   const opciones = (items: { id: number | null; nombre: string }[] = []) =>
     items.map((i) => ({ value: String(i.id), label: i.nombre }))
 
-  const lados = CAMPOS_POR_MODELO[form.modelo] ?? { vendedor: true, comprador: true, rebate: true }
-  const completo = form.codigo && form.modelo && form.direccion && form.comuna && form.fecha_inicio
+  const problemaHito = validarHito(form)
+  const completo =
+    form.codigo && form.modelo && form.direccion && form.comuna && !problemaHito
 
   return (
     <Modal opened={abierto} onClose={cerrar} title="Nuevo negocio" size="lg">
@@ -276,158 +232,27 @@ export default function NegocioFormModal({
             />
           </SimpleGrid>
 
-          <Divider label="Liquidación" labelPosition="left" />
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            <TextInput
-              label="Fecha inicio"
-              type="date"
-              required
-              value={form.fecha_inicio}
-              onChange={(e) => set('fecha_inicio', e.currentTarget.value)}
-            />
-            <Select
-              label="Estado"
-              data={(catalogos?.estados_negocio ?? []).map((e) => ({ value: e.codigo, label: e.nombre }))}
-              value={form.estado}
-              onChange={(v) => set('estado', v ?? 'ACTIVO')}
-            />
-            <Select
-              label="Etapa"
-              data={(catalogos?.etapas ?? []).map((e) => ({ value: e.codigo, label: `${e.codigo} · ${e.nombre}` }))}
-              value={form.etapa || null}
-              onChange={(v) => set('etapa', v ?? '')}
-              clearable
-            />
-            <Select
-              label="Moneda"
-              data={['UF', 'CLP']}
-              value={form.moneda}
-              onChange={(v) => set('moneda', v ?? 'UF')}
-            />
-          </SimpleGrid>
+          {/* La etapa es del negocio, no de la liquidación: la mueve el pipeline
+              y acá se deja elegir la inicial. */}
+          <Select
+            label="Etapa inicial"
+            description="El pipeline la mueve después, registrando movimientos"
+            data={(catalogos?.etapas ?? []).map((e) => ({ value: e.codigo, label: `${e.codigo} · ${e.nombre}` }))}
+            value={form.etapa || null}
+            onChange={(v) => set('etapa', v ?? '')}
+            clearable
+          />
 
-          <SimpleGrid cols={{ base: 2, sm: 3 }}>
-            <NumberInput
-              label="Valor del negocio"
-              decimalScale={2}
-              value={form.valor_negocio}
-              onChange={(v) => set('valor_negocio', v)}
-            />
-            <TextInput
-              label="Fecha de valorización"
-              type="date"
-              description="Si se deja vacía se usa la de inicio"
-              value={form.fecha_valorizacion}
-              onChange={(e) => set('fecha_valorizacion', e.currentTarget.value)}
-            />
-            <NumberInput
-              label="Valor en pesos a mano"
-              description="Manda sobre el cálculo por UF"
-              value={form.valor_clp_manual}
-              onChange={(v) => set('valor_clp_manual', v)}
-            />
-          </SimpleGrid>
+          {/* Los campos de la liquidación salen del componente compartido con el
+              formulario de edición. Estaban duplicados acá, y dos copias de las
+              reglas del motor de comisiones garantizaban divergir. */}
+          <CamposHito
+            form={form}
+            set={set as never}
+            modelo={form.modelo}
+            estados={catalogos?.estados_negocio ?? []}
+          />
 
-          {form.valor_clp_manual !== '' && (
-            <TextInput
-              label="Motivo del valor a mano"
-              placeholder="Liquidación de la inmobiliaria, ajuste de costos…"
-              value={form.motivo_valor_manual}
-              onChange={(e) => set('motivo_valor_manual', e.currentTarget.value)}
-            />
-          )}
-
-          <Divider label="Comisiones (en %)" labelPosition="left" />
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            {lados.vendedor && (
-              <NumberInput
-                label="% lado vendedor"
-                decimalScale={4}
-                value={form.pct_lado_vendedor}
-                onChange={(v) => set('pct_lado_vendedor', v)}
-              />
-            )}
-            {lados.comprador && (
-              <NumberInput
-                label="% lado comprador"
-                decimalScale={4}
-                value={form.pct_lado_comprador}
-                onChange={(v) => set('pct_lado_comprador', v)}
-              />
-            )}
-            {lados.rebate && (
-              <>
-                <NumberInput
-                  label="% que cobra el concentrador"
-                  description="Base del rebate"
-                  decimalScale={4}
-                  value={form.pct_lado_vendedor}
-                  onChange={(v) => set('pct_lado_vendedor', v)}
-                />
-                <NumberInput
-                  label="% de rebate"
-                  decimalScale={4}
-                  value={form.pct_rebate_concentrador}
-                  onChange={(v) => set('pct_rebate_concentrador', v)}
-                />
-              </>
-            )}
-          </SimpleGrid>
-
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            {lados.vendedor && (
-              <>
-                <NumberInput
-                  label="% broker vendedor"
-                  decimalScale={6}
-                  value={form.pct_broker_vendedor}
-                  onChange={(v) => set('pct_broker_vendedor', v)}
-                />
-                <NumberInput
-                  label="% VP vendedor"
-                  decimalScale={6}
-                  value={form.pct_vp_vendedor}
-                  onChange={(v) => set('pct_vp_vendedor', v)}
-                />
-              </>
-            )}
-            {lados.comprador && (
-              <>
-                <NumberInput
-                  label="% broker comprador"
-                  decimalScale={6}
-                  value={form.pct_broker_comprador}
-                  onChange={(v) => set('pct_broker_comprador', v)}
-                />
-                <NumberInput
-                  label="% VP comprador"
-                  decimalScale={6}
-                  value={form.pct_vp_comprador}
-                  onChange={(v) => set('pct_vp_comprador', v)}
-                />
-              </>
-            )}
-          </SimpleGrid>
-
-          <SimpleGrid cols={{ base: 2, sm: 3 }}>
-            <NumberInput
-              label="% equipo ViveProp"
-              decimalScale={2}
-              value={form.pct_equipo}
-              onChange={(v) => set('pct_equipo', v)}
-            />
-            <NumberInput
-              label="% tercero"
-              decimalScale={2}
-              value={form.pct_tercero}
-              onChange={(v) => set('pct_tercero', v)}
-            />
-            <TextInput
-              label="Nombre del tercero"
-              value={form.nombre_tercero}
-              onChange={(e) => set('nombre_tercero', e.currentTarget.value)}
-            />
-          </SimpleGrid>
 
           <Textarea
             label="Observaciones"

@@ -127,7 +127,7 @@ def test_un_comentario_no_mueve_la_etapa(cliente, pipeline):
 def test_la_perdida_solo_toca_las_liquidaciones_abiertas(cliente, pipeline):
     """Una promesa ya cerrada no se vuelve perdida porque la escritura se cayó."""
     negocio = _crear(cliente, hitos=[
-        {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "estado": "CERRADO",
+        {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "fecha_cierre": "2026-03-01", "estado": "CERRADO",
          "valor_negocio": "1000", "moneda": "UF", "pct_lado_comprador": "0.02",
          "pct_vp_comprador": "0.008", "pct_equipo": "0.10"},
         {"nombre": "ESCRITURA", "fecha_inicio": "2026-01-02", "estado": "ACTIVO",

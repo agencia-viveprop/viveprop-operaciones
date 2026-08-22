@@ -153,10 +153,10 @@ def test_dos_hitos_con_porcentajes_distintos(cliente, base_negocios):
         "modelo": "MERCADO_PRIMARIO",
         "propiedad": {"direccion": "Ladislao Errázuriz 2037", "unidad": "503", "comuna": "Providencia"},
         "hitos": [
-            {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "estado": "CERRADO",
+            {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "fecha_cierre": "2026-03-01", "estado": "CERRADO",
              "valor_negocio": "1000", "moneda": "UF", "pct_lado_vendedor": "0.02",
              "pct_vp_vendedor": "0.01", "pct_equipo": "0.10"},
-            {"nombre": "ESCRITURA", "fecha_inicio": "2026-06-01", "estado": "CERRADO",
+            {"nombre": "ESCRITURA", "fecha_inicio": "2026-06-01", "fecha_cierre": "2026-07-01", "estado": "CERRADO",
              "valor_negocio": "1000", "moneda": "UF", "pct_lado_vendedor": "0.01",
              "pct_vp_vendedor": "0.005", "pct_equipo": "0.10"},
         ],
@@ -247,7 +247,7 @@ def test_agregar_un_hito_a_un_negocio_existente(cliente, base_negocios):
     creado = cliente.post("/api/negocios", json=_payload_vvp4()).json()
 
     r = cliente.post(f"/api/negocios/{creado['id']}/hitos", json={
-        "nombre": "ESCRITURA", "fecha_inicio": "2026-06-01", "estado": "CERRADO",
+        "nombre": "ESCRITURA", "fecha_inicio": "2026-06-01", "fecha_cierre": "2026-07-01", "estado": "CERRADO",
         "valor_negocio": "1080", "moneda": "UF", "pct_lado_comprador": "0.02",
         "pct_vp_comprador": "0.008", "pct_equipo": "0.10",
     })
@@ -271,3 +271,319 @@ def test_un_hito_de_otro_negocio_no_se_puede_editar(cliente, base_negocios):
 
 def test_negocio_inexistente_da_404(cliente, base_negocios):
     assert cliente.get("/api/negocios/9999").status_code == 404
+
+
+# ------------------------------- el cierre va junto con el estado
+#
+# Dos inconsistencias silenciosas que la API dejaba pasar. Un hito CERRADO sin
+# fecha suma en el bucket de ganado --que filtra por estado-- pero no aparece en
+# ningun mes, porque toda la reporteria mensual agrupa por `fecha_cierre`: la
+# plata existiria y no estaria en ninguna parte. Y un hito perdido con fecha de
+# cierre es la contradiccion que la migracion d1f4a72b6e59 limpio en 12 filas.
+
+
+def _payload_hito(**extra):
+    base = {"fecha_inicio": "2026-01-02", "estado": "ACTIVO"}
+    return base | extra
+
+
+def test_un_hito_cerrado_sin_fecha_se_rechaza(cliente, catalogos_sembrados, uf_cargada):
+    r = cliente.post("/api/negocios", json={
+        "codigo": "VVP-CERRADO-SIN-FECHA",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 1", "comuna": "Santiago"},
+        "hitos": [_payload_hito(estado="CERRADO")],
+    })
+
+    assert r.status_code == 422
+    assert "fecha de cierre" in r.text
+
+
+@pytest.mark.parametrize("estado", ["ACTIVO", "PERDIDO", "DESISTIDO"])
+def test_un_hito_no_cerrado_no_puede_traer_fecha_de_cierre(
+    cliente, catalogos_sembrados, uf_cargada, estado
+):
+    r = cliente.post("/api/negocios", json={
+        "codigo": f"VVP-{estado}",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 2", "comuna": "Santiago"},
+        "hitos": [_payload_hito(estado=estado, fecha_cierre="2026-03-01")],
+    })
+
+    assert r.status_code == 422
+    assert "no puede tener fecha de cierre" in r.text
+
+
+def test_la_fecha_de_cierre_no_puede_ser_anterior_al_inicio(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    r = cliente.post("/api/negocios", json={
+        "codigo": "VVP-AL-REVES",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 3", "comuna": "Santiago"},
+        "hitos": [_payload_hito(estado="CERRADO", fecha_cierre="2025-12-01")],
+    })
+
+    assert r.status_code == 422
+    assert "anterior a la de inicio" in r.text
+
+
+def test_cerrar_un_hito_desde_la_api_recalcula_la_comision(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    """El caso que la app no permitia hacer desde ninguna pantalla."""
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-CIERRE",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 4", "comuna": "Santiago"},
+        "hitos": [_payload_hito()],
+    }).json()
+    hito_id = creado["hitos"][0]["id"]
+    assert creado["hitos"][0]["comision_real_vp"] in (None, "0.00")
+
+    r = cliente.patch(f"/api/negocios/{creado['id']}/hitos/{hito_id}", json={
+        "fecha_inicio": "2026-01-02",
+        "fecha_cierre": "2026-06-01",
+        "estado": "CERRADO",
+        "valor_negocio": "1000",
+        "moneda": "UF",
+        "fecha_valorizacion": "2026-01-02",
+        "pct_lado_vendedor": "0.02",
+        "pct_broker_vendedor": "0.01",
+        "pct_vp_vendedor": "0.01",
+    })
+
+    assert r.status_code == 200, r.text
+    hito = r.json()
+    assert hito["estado"] == "CERRADO"
+    assert hito["fecha_cierre"] == "2026-06-01"
+    # La UF del 2026-01-02 es 39.735,63: mil UF son 39.735.630, y el 2% es
+    # 794.712,60. El motor lo recalculo al guardar, no vino del cuerpo.
+    assert hito["uf_snapshot"] == "39735.63"
+    assert hito["comision_total"] == "794712.60"
+    assert hito["comision_real_vp"] == "397356.30"
+
+
+def test_las_tasas_sobreviven_una_vuelta_de_leer_y_guardar(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    """El agujero que este test cierra.
+
+    El formulario de edicion lee el hito, muestra sus campos y manda de vuelta lo
+    que haya. Si la API no devolviera las tasas, el formulario las mostraria
+    vacias y al guardar irian en nulo: la comision se recalcularia a cero y la
+    base del calculo se perderia en silencio, sin ningun error.
+    """
+    tasas = {
+        "pct_lado_vendedor": "0.02",
+        "pct_broker_vendedor": "0.01",
+        "pct_vp_vendedor": "0.01",
+        "pct_equipo": "0.10",
+    }
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-VUELTA",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 9", "comuna": "Santiago"},
+        "hitos": [{
+            "fecha_inicio": "2026-01-02", "estado": "ACTIVO",
+            "valor_negocio": "1000", "moneda": "UF",
+            "fecha_valorizacion": "2026-01-02", **tasas,
+        }],
+    }).json()
+    hito = creado["hitos"][0]
+
+    # 1. La API las devuelve. Sin esto el resto no puede funcionar.
+    for campo, esperado in tasas.items():
+        assert hito[campo] is not None, f"{campo} no vuelve en la respuesta"
+        assert D(hito[campo]) == D(esperado)
+
+    comision_antes = hito["comision_real_vp"]
+
+    # 2. Se manda de vuelta tal cual vino, que es lo que hace el formulario, y
+    #    solo se cambia el estado a cerrado.
+    cuerpo = {c: hito[c] for c in (
+        "nombre", "fecha_inicio", "valor_negocio", "moneda", "fecha_valorizacion",
+        "valor_clp_manual", "motivo_valor_manual", "nombre_tercero",
+        "motivo_perdida_id", "motivo_perdida_detalle",
+        "pct_lado_vendedor", "pct_lado_comprador", "pct_rebate_concentrador",
+        "pct_broker_vendedor", "pct_broker_comprador", "pct_vp_vendedor",
+        "pct_vp_comprador", "pct_equipo", "pct_tercero",
+    )}
+    cuerpo |= {"estado": "CERRADO", "fecha_cierre": "2026-06-01"}
+
+    r = cliente.patch(f"/api/negocios/{creado['id']}/hitos/{hito['id']}", json=cuerpo)
+    assert r.status_code == 200, r.text
+    despues = r.json()
+
+    # 3. La comision no cambio: solo se cerro, no se recalculo sobre nada distinto.
+    assert despues["comision_real_vp"] == comision_antes
+    for campo, esperado in tasas.items():
+        assert D(despues[campo]) == D(esperado)
+
+
+# --------------------------------------------- la guarda del monto ya cerrado
+
+CAMPOS_DE_VUELTA = (
+    "nombre", "fecha_inicio", "valor_negocio", "moneda", "fecha_valorizacion",
+    "valor_clp_manual", "motivo_valor_manual", "nombre_tercero",
+    "motivo_perdida_id", "motivo_perdida_detalle",
+    "pct_lado_vendedor", "pct_lado_comprador", "pct_rebate_concentrador",
+    "pct_broker_vendedor", "pct_broker_comprador", "pct_vp_vendedor",
+    "pct_vp_comprador", "pct_equipo", "pct_tercero",
+)
+
+
+def _negocio_cerrado(cliente, codigo: str) -> dict:
+    """Un negocio con su unica liquidacion ya cerrada y su comision calculada."""
+    creado = cliente.post("/api/negocios", json={
+        "codigo": codigo,
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": f"Calle {codigo}", "comuna": "Santiago"},
+        "hitos": [{
+            "fecha_inicio": "2026-01-02",
+            "fecha_cierre": "2026-06-01",
+            "estado": "CERRADO",
+            "valor_negocio": "1000", "moneda": "UF",
+            "fecha_valorizacion": "2026-01-02",
+            "pct_lado_vendedor": "0.02",
+            "pct_broker_vendedor": "0.01",
+            "pct_vp_vendedor": "0.01",
+        }],
+    })
+    assert creado.status_code == 201, creado.text
+    return creado.json()
+
+
+def test_guardar_una_liquidacion_cerrada_sin_cambios_no_avisa(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    """La guarda no puede molestar cuando no pasa nada.
+
+    Si avisara en cada guardado se volveria ruido y la gente aprenderia a
+    confirmar sin leer, que es peor que no tener guarda.
+    """
+    negocio = _negocio_cerrado(cliente, "VVP-QUIETO")
+    hito = negocio["hitos"][0]
+    cuerpo = {c: hito[c] for c in CAMPOS_DE_VUELTA} | {
+        "estado": "CERRADO", "fecha_cierre": hito["fecha_cierre"],
+    }
+
+    r = cliente.patch(f"/api/negocios/{negocio['id']}/hitos/{hito['id']}", json=cuerpo)
+
+    assert r.status_code == 200, r.text
+    assert r.json()["comision_real_vp"] == hito["comision_real_vp"]
+
+
+def test_cambiar_la_tasa_de_una_liquidacion_cerrada_pide_confirmacion(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    """El caso que motivo todo esto: plata facturada que se mueve al guardar."""
+    negocio = _negocio_cerrado(cliente, "VVP-OJO")
+    hito = negocio["hitos"][0]
+    antes = hito["comision_real_vp"]
+    cuerpo = {c: hito[c] for c in CAMPOS_DE_VUELTA} | {
+        "estado": "CERRADO",
+        "fecha_cierre": hito["fecha_cierre"],
+        "pct_vp_vendedor": "0.02",  # el doble
+    }
+
+    r = cliente.patch(f"/api/negocios/{negocio['id']}/hitos/{hito['id']}", json=cuerpo)
+
+    assert r.status_code == 409, r.text
+    detalle = r.json()["detail"]
+    assert detalle["motivo"] == "cambio_de_monto"
+    # El mensaje trae los dos montos: sin eso no hay nada que decidir.
+    assert D(detalle["comision_actual"]) == D(antes)
+    assert D(detalle["comision_nueva"]) > D(antes)
+
+    # Y nada se guardo: el rechazo no puede dejar el cambio a medias.
+    guardado = cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"][0]
+    assert guardado["comision_real_vp"] == antes
+    assert D(guardado["pct_vp_vendedor"]) == D("0.01")
+
+
+def test_con_la_confirmacion_el_cambio_pasa(cliente, catalogos_sembrados, uf_cargada):
+    """No es un bloqueo: es un aviso que se puede aceptar."""
+    negocio = _negocio_cerrado(cliente, "VVP-DALE")
+    hito = negocio["hitos"][0]
+    cuerpo = {c: hito[c] for c in CAMPOS_DE_VUELTA} | {
+        "estado": "CERRADO",
+        "fecha_cierre": hito["fecha_cierre"],
+        "pct_vp_vendedor": "0.02",
+        "confirmar_cambio_de_monto": True,
+    }
+
+    r = cliente.patch(f"/api/negocios/{negocio['id']}/hitos/{hito['id']}", json=cuerpo)
+
+    assert r.status_code == 200, r.text
+    assert D(r.json()["comision_real_vp"]) == D(hito["comision_real_vp"]) * 2
+
+
+def test_cerrar_un_hito_abierto_no_pide_confirmacion(
+    cliente, catalogos_sembrados, uf_cargada
+):
+    """Cerrar calcula la comision por primera vez: ahi el cambio es el objetivo."""
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-ABRE-Y-CIERRA",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 12", "comuna": "Santiago"},
+        "hitos": [{
+            "fecha_inicio": "2026-01-02", "estado": "ACTIVO",
+            "valor_negocio": "1000", "moneda": "UF",
+            "fecha_valorizacion": "2026-01-02",
+            "pct_lado_vendedor": "0.02", "pct_broker_vendedor": "0.01",
+            "pct_vp_vendedor": "0.01",
+        }],
+    }).json()
+    hito = creado["hitos"][0]
+    cuerpo = {c: hito[c] for c in CAMPOS_DE_VUELTA} | {
+        "estado": "CERRADO",
+        "fecha_cierre": "2026-06-01",
+        "pct_vp_vendedor": "0.02",  # cambia la plata, y da lo mismo: estaba abierto
+    }
+
+    r = cliente.patch(f"/api/negocios/{creado['id']}/hitos/{hito['id']}", json=cuerpo)
+
+    assert r.status_code == 200, r.text
+    assert r.json()["estado"] == "CERRADO"
+
+
+def test_la_guarda_mira_los_siete_montos_no_solo_la_comision_real(
+    cliente, db, catalogos_sembrados, uf_cargada
+):
+    """La forma exacta de `VVP-2`: se mueve el total y la comision real no.
+
+    Esa fila del Excel calculo el total sobre una base y el reparto sobre otra, asi
+    que al guardarla el motor deja la comision real igual --que es la plata que se
+    cobro-- y le sube el total en 903.803. Una guarda que solo mirara
+    `comision_real_vp` habria dejado pasar justamente el descuadre mas grande.
+
+    Se simula desarmando la fila a mano: se le escribe un total que sus propias
+    entradas no producen, que es la condicion en que llego del Excel.
+    """
+    from app.models.negocio import NegocioHito
+
+    negocio = _negocio_cerrado(cliente, "VVP-COMO-EL-2")
+    hito = negocio["hitos"][0]
+    real_antes = hito["comision_real_vp"]
+
+    fila = db.get(NegocioHito, hito["id"])
+    fila.comision_total = D(hito["comision_total"]) - D("903803")
+    db.commit()
+
+    cuerpo = {c: hito[c] for c in CAMPOS_DE_VUELTA} | {
+        "estado": "CERRADO", "fecha_cierre": hito["fecha_cierre"],
+    }
+    r = cliente.patch(f"/api/negocios/{negocio['id']}/hitos/{hito['id']}", json=cuerpo)
+
+    assert r.status_code == 409, r.text
+    detalle = r.json()["detail"]
+    assert detalle["campo"] == "comision_total"
+    # La comision real no se mueve, y aun asi la guarda frena.
+    assert "comision_real_vp" not in detalle["montos_que_cambian"]
+    assert detalle["montos_que_cambian"]["comision_total"] == [
+        str(D(hito["comision_total"]) - D("903803")), hito["comision_total"],
+    ]
+
+    db.expire_all()
+    assert db.get(NegocioHito, hito["id"]).comision_real_vp == D(real_antes)

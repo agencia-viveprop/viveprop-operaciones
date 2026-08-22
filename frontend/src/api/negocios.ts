@@ -37,6 +37,19 @@ export type Hito = {
   comision_tercero: number | null
   comision_real_vp: number | null
 
+  /** Las tasas son la **entrada** del cálculo, no el resultado. El formulario de
+   *  edición las necesita: sin ellas, abrir un hito y guardar las mandaría en
+   *  nulo y borraría la base sobre la que se calculó la comisión. */
+  pct_lado_vendedor: string | null
+  pct_lado_comprador: string | null
+  pct_rebate_concentrador: string | null
+  pct_broker_vendedor: string | null
+  pct_broker_comprador: string | null
+  pct_vp_vendedor: string | null
+  pct_vp_comprador: string | null
+  pct_equipo: string | null
+  pct_tercero: string | null
+
   nombre_tercero: string | null
   motivo_perdida_id: number | null
   motivo_perdida_detalle: string | null
@@ -141,6 +154,25 @@ export type FiltrosNegocios = {
   codigo?: string
 }
 
+/**
+ * Guardar una liquidación cerrada le movería la comisión.
+ *
+ * La API responde 409 con los dos montos en vez de guardar. Lleva su propia clase
+ * porque quien la reciba no tiene que mostrar un error: tiene que preguntar, y
+ * para eso necesita las dos cifras, no un texto.
+ */
+export class CambioDeMontoError extends Error {
+  readonly comisionActual: string
+  readonly comisionNueva: string
+
+  constructor(comisionActual: string, comisionNueva: string, mensaje: string) {
+    super(mensaje)
+    this.name = 'CambioDeMontoError'
+    this.comisionActual = comisionActual
+    this.comisionNueva = comisionNueva
+  }
+}
+
 async function parseOrThrow(res: Response) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -148,6 +180,17 @@ async function parseOrThrow(res: Response) {
     // Los errores de validación de FastAPI vienen como lista de objetos.
     if (Array.isArray(detalle)) {
       throw new Error(detalle.map((d: { msg?: string }) => d.msg ?? '').join(' · '))
+    }
+    if (detalle?.motivo === 'cambio_de_monto') {
+      throw new CambioDeMontoError(
+        detalle.comision_actual,
+        detalle.comision_nueva,
+        detalle.mensaje,
+      )
+    }
+    // Sin esto un detalle con forma de objeto se mostraría como "[object Object]".
+    if (detalle !== null && typeof detalle === 'object') {
+      throw new Error(detalle.mensaje ?? JSON.stringify(detalle))
     }
     throw new Error(detalle ?? `Error ${res.status}`)
   }

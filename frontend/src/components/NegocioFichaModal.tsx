@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Alert,
   Badge,
+  Button,
   Card,
   Center,
   Divider,
@@ -14,9 +16,11 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle } from '@tabler/icons-react'
+import { IconAlertTriangle, IconPencil, IconPlus } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import { obtenerNegocio, type Hito } from '../api/negocios'
+import HitoFormModal from './HitoFormModal'
+import NegocioEditarModal from './NegocioEditarModal'
 import NegocioPipeline from './NegocioPipeline'
 import { clp, COLOR_ESTADO, fecha, MODELO_CORTO, pct, uf } from './negociosFormato'
 
@@ -40,7 +44,14 @@ function descuadre(h: Hito): number | null {
   return Math.abs(dif) > 1 ? dif : null
 }
 
-function FichaHito({ hito }: { hito: Hito }) {
+function FichaHito({
+  hito,
+  onEditar,
+}: {
+  hito: Hito
+  /** Nulo para gerencia: puede leer la ficha pero no cambiar la plata. */
+  onEditar: (() => void) | null
+}) {
   const dif = descuadre(hito)
   const usaManual = hito.valor_clp_manual !== null
 
@@ -53,10 +64,17 @@ function FichaHito({ hito }: { hito: Hito }) {
             {hito.estado}
           </Badge>
         </Group>
-        <Text size="sm" c="dimmed">
-          {fecha(hito.fecha_inicio)}
-          {hito.fecha_cierre && ` → ${fecha(hito.fecha_cierre)}`}
-        </Text>
+        <Group gap="sm">
+          <Text size="sm" c="dimmed">
+            {fecha(hito.fecha_inicio)}
+            {hito.fecha_cierre && ` → ${fecha(hito.fecha_cierre)}`}
+          </Text>
+          {onEditar && (
+            <Button size="compact-xs" variant="light" leftSection={<IconPencil size={13} />} onClick={onEditar}>
+              {hito.estado === 'ACTIVO' ? 'Cerrar o editar' : 'Editar'}
+            </Button>
+          )}
+        </Group>
       </Group>
 
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mb="sm">
@@ -160,6 +178,10 @@ export default function NegocioFichaModal({
   onClose: () => void
   puedeEditar: boolean
 }) {
+  // `undefined` cerrado; `null` = agregar una nueva; un hito = editar ese.
+  const [editando, setEditando] = useState<Hito | null | undefined>(undefined)
+  const [editandoNegocio, setEditandoNegocio] = useState(false)
+
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
   const { data: negocio, isLoading } = useQuery({
     queryKey: ['negocio', negocioId],
@@ -195,6 +217,19 @@ export default function NegocioFichaModal({
 
       {negocio && (
         <Stack gap="md">
+          {puedeEditar && (
+            <Group justify="flex-end">
+              <Button
+                size="compact-sm"
+                variant="light"
+                leftSection={<IconPencil size={14} />}
+                onClick={() => setEditandoNegocio(true)}
+              >
+                Editar el negocio
+              </Button>
+            </Group>
+          )}
+
           <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="sm">
             <Dato label="Modelo">{MODELO_CORTO[negocio.modelo]}</Dato>
             <Dato label="Alianza">{nombreCatalogo(negocio.alianza_id)}</Dato>
@@ -225,17 +260,49 @@ export default function NegocioFichaModal({
             <Title order={4}>
               {negocio.hitos.length === 1 ? 'Liquidación' : `${negocio.hitos.length} liquidaciones`}
             </Title>
-            {negocio.hitos.length > 1 && (
-              <Text size="sm">
-                Comisión real VP del negocio:{' '}
-                <Text span fw={700} ff="monospace">{clp(totalReal)}</Text>
-              </Text>
-            )}
+            <Group gap="sm">
+              {negocio.hitos.length > 1 && (
+                <Text size="sm">
+                  Comisión real VP del negocio:{' '}
+                  <Text span fw={700} ff="monospace">{clp(totalReal)}</Text>
+                </Text>
+              )}
+              {puedeEditar && (
+                <Button
+                  size="compact-sm"
+                  variant="light"
+                  leftSection={<IconPlus size={14} />}
+                  onClick={() => setEditando(null)}
+                >
+                  Agregar liquidación
+                </Button>
+              )}
+            </Group>
           </Group>
 
           {negocio.hitos.map((h) => (
-            <FichaHito key={h.id} hito={h} />
+            <FichaHito
+              key={h.id}
+              hito={h}
+              onEditar={puedeEditar ? () => setEditando(h) : null}
+            />
           ))}
+
+          {/* Va dentro del `negocio &&` porque necesita su id y su modelo: el
+              modelo decide qué tasas se piden. */}
+          <NegocioEditarModal
+            negocio={negocio}
+            abierto={editandoNegocio}
+            onClose={() => setEditandoNegocio(false)}
+          />
+
+          <HitoFormModal
+            negocioId={negocio.id}
+            modelo={negocio.modelo}
+            hito={editando ?? null}
+            abierto={editando !== undefined}
+            onClose={() => setEditando(undefined)}
+          />
         </Stack>
       )}
     </Modal>

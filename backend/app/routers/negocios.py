@@ -118,6 +118,35 @@ class HitoIn(BaseModel):
     motivo_perdida_id: int | None = None
     motivo_perdida_detalle: str | None = None
 
+    # No es un campo del hito: es el "si, estoy seguro" de la guarda de mas abajo.
+    # Se excluye del model_dump que asigna atributos (ver `_datos_del_hito`).
+    confirmar_cambio_de_monto: bool = False
+
+    @model_validator(mode="after")
+    def _el_cierre_va_con_el_estado(self):
+        """La fecha de cierre existe si y solo si el hito esta cerrado.
+
+        Sin esto se cuelan dos inconsistencias silenciosas. Un hito CERRADO sin
+        fecha suma en el bucket de ganado --que filtra por estado-- pero no
+        aparece en ningun mes, porque toda la reporteria mensual agrupa por
+        `fecha_cierre`: la plata existiria y no estaria en ninguna parte. Y al
+        reves, un hito perdido con fecha de cierre es la contradiccion que la
+        migracion `d1f4a72b6e59` tuvo que limpiar en 12 filas; sin validacion se
+        puede volver a introducir desde la API.
+        """
+        if self.estado == EstadoNegocio.CERRADO and self.fecha_cierre is None:
+            raise ValueError(
+                "Un hito cerrado necesita fecha de cierre: sin ella no aparece en "
+                "ningun reporte mensual."
+            )
+        if self.estado != EstadoNegocio.CERRADO and self.fecha_cierre is not None:
+            raise ValueError(
+                f"Un hito en estado {self.estado.value} no puede tener fecha de cierre."
+            )
+        if self.fecha_cierre is not None and self.fecha_cierre < self.fecha_inicio:
+            raise ValueError("La fecha de cierre es anterior a la de inicio.")
+        return self
+
 
 class HitoOut(BaseModel):
     id: int
@@ -143,6 +172,21 @@ class HitoOut(BaseModel):
     comision_equipo: Decimal | None
     comision_tercero: Decimal | None
     comision_real_vp: Decimal | None
+
+    # Las tasas tienen que salir: son la **entrada** del calculo, y el formulario
+    # de edicion las necesita para poder mostrarlas. Sin ellas, abrir un hito para
+    # cerrarlo y guardar mandaria las tasas en nulo y borraria en silencio la base
+    # sobre la que se calculo la comision. Hay un test que exige que sobrevivan a
+    # una vuelta completa de lectura y guardado.
+    pct_lado_vendedor: Decimal | None
+    pct_lado_comprador: Decimal | None
+    pct_rebate_concentrador: Decimal | None
+    pct_broker_vendedor: Decimal | None
+    pct_broker_comprador: Decimal | None
+    pct_vp_vendedor: Decimal | None
+    pct_vp_comprador: Decimal | None
+    pct_equipo: Decimal | None
+    pct_tercero: Decimal | None
 
     nombre_tercero: str | None
     motivo_perdida_id: int | None
@@ -269,6 +313,11 @@ def _validar_referencias(db: Session, alianza_id, tipo_operacion_id) -> None:
     servicio.validar_catalogo(db, tipo_operacion_id, TipoCatalogo.TIPO_OPERACION, "tipo_operacion_id")
 
 
+def _datos_del_hito(payload: "HitoIn") -> dict:
+    """Los campos que se asignan al hito, sin la bandera de confirmacion."""
+    return payload.model_dump(exclude={"confirmar_cambio_de_monto"})
+
+
 def _aplicar_hito(db: Session, hito: NegocioHito, datos: dict, modelo: str) -> None:
     servicio.validar_catalogo(
         db, datos.get("motivo_perdida_id", hito.motivo_perdida_id),
@@ -277,6 +326,82 @@ def _aplicar_hito(db: Session, hito: NegocioHito, datos: dict, modelo: str) -> N
     for campo, valor in datos.items():
         setattr(hito, campo, valor)
     servicio.refrescar_hito(db, hito, modelo)
+
+
+# Un peso: por debajo de eso es redondeo, no un cambio.
+TOLERANCIA_MONTO = Decimal("1")
+
+# Los siete montos que el motor persiste. Se vigilan todos, no solo la comision
+# real: `VVP-2` se desvia en `comision_total` --903.803-- y dejaba la real intacta,
+# asi que mirar una sola columna dejaba pasar justamente el caso mas grande.
+MONTOS_DEL_MOTOR = (
+    "comision_total", "comision_broker", "rebate_concentrador", "comision_vp_bruta",
+    "comision_equipo", "comision_tercero", "comision_real_vp",
+)
+
+
+def _montos_de(hito: NegocioHito) -> dict[str, Decimal | None]:
+    return {c: getattr(hito, c) for c in MONTOS_DEL_MOTOR}
+
+
+def _vigilar_monto_cerrado(
+    hito: NegocioHito,
+    antes: dict[str, Decimal | None],
+    ya_estaba_cerrado: bool,
+    confirmado: bool,
+) -> None:
+    """Impide que guardar una liquidacion cerrada le mueva la plata sin avisar.
+
+    **Por que existe.** Los 19 negocios del Excel se cargaron con los montos tal
+    cual (`D-026`) y la API los pasa por el motor en cada guardado. Cuando las
+    entradas guardadas no reproducen el monto guardado, abrir el formulario y
+    apretar Guardar --sin tocar nada-- cambiaba la comision. Medido: `VVP-17`
+    bajaba de 774.691,95 a 759.166,55, y `VVP-2` subia su total en 903.803. La
+    migracion `f5a92c3d81e6` dejo esas filas consistentes, pero eso arregla los
+    datos que hay, no la clase de problema: cualquier carga futura puede traer
+    otra fila asi.
+
+    **Solo mira las que ya estaban cerradas**, y a proposito. Cerrar un negocio
+    calcula la comision por primera vez: ahi el cambio es el objetivo. Y mover la
+    plata de un negocio abierto es trabajo normal de pipeline. Lo que no puede
+    pasar en silencio es que cambie un monto que ya se facturo.
+
+    No es un bloqueo: `confirmar_cambio_de_monto` lo deja pasar. La diferencia
+    entre eso y el estado anterior es que ahora hay que verla y aceptarla.
+    """
+    if not ya_estaba_cerrado or confirmado:
+        return
+
+    despues = _montos_de(hito)
+    movidos = {
+        campo: (antes[campo], despues[campo])
+        for campo in MONTOS_DEL_MOTOR
+        if antes[campo] is not None
+        and despues[campo] is not None
+        and abs(despues[campo] - antes[campo]) >= TOLERANCIA_MONTO
+    }
+    if not movidos:
+        return
+
+    # Se informa la comision real si se movio, y si no, el primer monto que si.
+    # Es el numero que la pantalla necesita para poder preguntar algo concreto.
+    principal = "comision_real_vp" if "comision_real_vp" in movidos else next(iter(movidos))
+    actual, nuevo = movidos[principal]
+    raise HTTPException(
+        status.HTTP_409_CONFLICT,
+        {
+            "motivo": "cambio_de_monto",
+            "campo": principal,
+            "mensaje": (
+                "Esta liquidación está cerrada y guardarla cambiaría "
+                f"{principal.replace('_', ' ')} de {actual} a {nuevo}. Si el monto "
+                "nuevo es el correcto, confirma el cambio para continuar."
+            ),
+            "comision_actual": str(actual),
+            "comision_nueva": str(nuevo),
+            "montos_que_cambian": {c: [str(a), str(d)] for c, (a, d) in movidos.items()},
+        },
+    )
 
 
 # ------------------------------------------------------------------ endpoints
@@ -544,7 +669,7 @@ def crear_hito(
     hito = NegocioHito(fecha_inicio=payload.fecha_inicio, estado=payload.estado)
     negocio.hitos.append(hito)
     try:
-        _aplicar_hito(db, hito, payload.model_dump(), negocio.modelo.value)
+        _aplicar_hito(db, hito, _datos_del_hito(payload), negocio.modelo.value)
         db.commit()
     except NegocioError as exc:
         db.rollback()
@@ -568,12 +693,24 @@ def actualizar_hito(
             status.HTTP_404_NOT_FOUND,
             f"El hito {hito_id} no pertenece al negocio {negocio.codigo}.",
         )
+    # Se leen antes de aplicar: despues el objeto ya viene recalculado.
+    montos_antes = _montos_de(hito)
+    ya_estaba_cerrado = hito.estado == EstadoNegocio.CERRADO
+
     try:
-        _aplicar_hito(db, hito, payload.model_dump(), negocio.modelo.value)
+        _aplicar_hito(db, hito, _datos_del_hito(payload), negocio.modelo.value)
+        _vigilar_monto_cerrado(
+            hito, montos_antes, ya_estaba_cerrado, payload.confirmar_cambio_de_monto
+        )
         db.commit()
     except NegocioError as exc:
         db.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    except HTTPException:
+        # La guarda ya recalculo el hito en memoria: sin rollback, la sesion se
+        # llevaria el cambio rechazado al siguiente commit.
+        db.rollback()
+        raise
     db.refresh(hito)
     return hito
 

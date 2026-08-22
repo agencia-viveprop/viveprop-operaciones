@@ -841,3 +841,33 @@ Los cinco supuestos, para poder discutirlos uno por uno: cuánto entró (año co
 **La fuga de tiempos se cerró y se midió.** Antes, un email desconocido volvía sin tocar ningún hash y uno real gastaba 70 ms: la diferencia decía qué correos tienen cuenta. Ahora siempre se verifica un hash, contra un señuelo calculado una vez al importar cuando el usuario no existe. Medido en vivo: **1,02x de diferencia**, contra ~70x antes.
 
 **Dos errores propios que atrapó `alembic check`,** y que justifican haberlo dejado limpio el día anterior: el modelo nuevo no estaba importado en `app/models/__init__.py`, así que `autogenerate` proponía **borrar la tabla** que la migración acababa de crear; y el índice llevaba en la migración un nombre distinto del que genera `index=True` en el modelo.
+
+---
+
+## D-046 · Los hitos históricos se dejan reproducibles por el motor, y guardar una liquidación cerrada pide confirmación
+
+**Contexto: la pantalla para cerrar un negocio destapó un defecto en los datos.** La auditoría encontró que la app no permitía cerrar un negocio desde ninguna pantalla —el motor de comisiones, la pieza más grande del proyecto, no tenía forma de recibir un cierre—. Al construir el formulario y probarlo contra `dev`, cerrar `VVP-17` le **bajó la comisión real de 774.691,95 a 759.166,55** sin que se tocara una sola tasa.
+
+**No era el motor.** Sus 19 casos de regresión pasaban y siguen pasando. El defecto estaba en el paso anterior, `resolver_valorizacion`, que **nunca tuvo prueba propia**: `test_comisiones.py` recibe la base en pesos ya calculada y verifica el reparto, así que la conversión de UF a pesos no estaba cubierta por nada.
+
+**La causa.** `resolver_valorizacion` toma la UF de `fecha_valorizacion`, y si está vacía la de `fecha_inicio`. Trece de los 19 hitos vinieron con esa fecha en nulo, así que al primer guardado se revalorizaban con la UF del día de inicio y **sobreescribían la `uf_snapshot` que traía el Excel**. `D-026` había cargado los montos tal cual justamente para no pasarlos por el motor; la migración fue cuidadosa, pero la API los pasa en cada guardado y nadie lo había notado porque hasta ahora ninguna pantalla guardaba un hito.
+
+**Decisión 1: dejar cada fila consistente consigo misma**, de modo que recalcularla dé lo que ya está guardado (migración `f5a92c3d81e6`).
+
+- Se reponen las **seis fechas de valorización que sí venían en la planilla** —`VVP-1`, `VVP-2`, `VVP-3 ESCRITURA`, `VVP-16`, `VVP-18`, `VVP-19`—, que se habían perdido en el camino.
+- `VVP-15` y `VVP-17`, los dos abiertos, no traían fecha: la planilla los valorizaba con **la UF del día en que se exportaba**. Quedan fijos al 20-08-2026, que preserva el monto pero lo congela.
+- `VVP-3 PROMESA` y `VVP-16` traen un valor en pesos que **ninguna UF de la serie produce** —la primera difiere en 1,23 de la más cercana; la segunda equivale a 40.976,47 cuando la propia planilla anotaba 40.779,55—. Van con `valor_clp_manual`, que es el campo para un valor que se afirma en vez de derivarse, y la ficha lo muestra con su aviso.
+- `comision_total` se reescribe con el producto exacto: el Excel la guardaba al peso y las demás columnas con todos sus decimales, así que las 19 filas diferían en menos de un peso. Sin esto, cualquier guardado futuro movería centavos y una auditoría no sabría distinguirlo de un problema real.
+
+**`VVP-2` queda intacto salvo su fecha, y a propósito.** Esa fila usó **dos bases a la vez**: el total sobre 81.505.175 y el broker y la VP bruta sobre los 104.100.248,32 de la UF. Ninguna base única la reproduce —`test_comisiones.py` ya la tiene como `xfail` estricto—. Ponerle `valor_clp_manual` le bajaría la comisión real a 1.085.640; dejarla derivar de la UF le subiría el total a 4.164.010. Las dos son inventar plata. Se le fija la fecha, que estabiliza su UF sin mover un peso, y el resto espera la decisión de negocio.
+
+**Decisión 2: la migración arregla los datos que hay, no la clase de problema.** Cualquier carga futura puede traer otra fila así. Así que la API **frena** cuando guardar una liquidación **ya cerrada** movería alguno de sus siete montos, y responde 409 con las dos cifras en vez de guardar. La pantalla las muestra y ofrece "Guardar de todas formas": no es un bloqueo, es un aviso que hay que ver y aceptar.
+
+- **Solo las que ya estaban cerradas.** Cerrar un negocio calcula la comisión por primera vez: ahí el cambio es el objetivo. Y mover la plata de un negocio abierto es trabajo normal de pipeline. Lo que no puede pasar en silencio es que cambie un monto ya facturado.
+- **Se vigilan los siete montos, no solo `comision_real_vp`.** La primera versión miraba solo ése y en la prueba en vivo **dejó pasar a `VVP-2`**, cuyo desvío está en `comision_total` y deja la comisión real intacta. Una guarda de una sola columna se perdía justamente el descuadre más grande.
+
+**Decisión 3: el resguardo va en un test, no en la migración.** `test_valorizacion_historica.py` comprueba las dos direcciones: que los montos del JSON son los del Excel —contra `HISTORICOS`, el fixture de la planilla— y que pasando las *entradas* del JSON por `refrescar_hito` salen esos mismos montos. Usa **la UF de verdad** de las 22 fechas involucradas y no la que cada fila afirma, porque derivarla del propio `uf_snapshot` habría vuelto el test circular. Se verificó que falla: quitándole la fecha a `VVP-17` dice `40040.43 == 40859.28` y nombra el negocio.
+
+**Un error propio que vale registrar.** La primera versión de `downgrade` ponía `fecha_valorizacion` en nulo en todas las filas, y **borró en `dev` las seis fechas que venían de la planilla** por confundirlas con las que la migración escribe. Se recuperaron del export versionado. La lección queda escrita en el archivo: una migración de datos que "revierte" a un valor supuesto destruye el dato real que había. Ahora `downgrade` no hace nada y explica por qué.
+
+**Queda abierto, y es de negocio:** con qué UF se valoriza un negocio **abierto**. La planilla los revalorizaba a la fecha de exportación, o sea que el pipeline se movía solo cada vez que alguien abría el archivo. Congelarlos a una fecha preserva el número pero lo deja envejecer. No se decide por cuenta propia.

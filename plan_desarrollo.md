@@ -333,6 +333,8 @@ Ninguna bloquea el arranque.
 | 10 (D5) | Tasas de rebate de VVP-15/16/17 y los 10 motivos de pérdida vacíos. |
 | 18 (F5) | ~~Qué quiere ver el directorio~~ — se entregó con supuestos; falta que los corrija. |
 | — | **Importar #364 y #367**, que son posteriores al último export de Dataprop. La limpieza de canjes ya no está pendiente: va en la migración `a4e81b6f30c9` y se aplica en el deploy. |
+| — | **Con qué UF se valoriza un negocio abierto.** La planilla los revalorizaba con la UF del día en que se exportaba, o sea que el pipeline se movía solo cada vez. Los dos abiertos quedaron fijos al 20-08-2026, que preserva el monto pero lo congela. Ver `D-046`. |
+| — | **Qué base es la correcta en `VVP-2`.** Esa fila usó dos a la vez: el total sobre 81.505.175 y el reparto sobre los 104.100.248,32 de la UF. El descuadre son los 903.803 que la ficha muestra. Hasta que se decida, la app impide guardarla sin confirmación explícita. |
 
 
 

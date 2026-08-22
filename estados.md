@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-22 (22 listos + G2 en curso; solo falta el dominio propio, excluido por el usuario)
+**Última actualización:** 2026-08-22 (22 listos + G2 en curso; auditoría: se arregló que guardar un negocio histórico le moviera la comisión)
 
 ---
 
@@ -116,6 +116,37 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-22 · Auditoría · guardar un negocio histórico le movía la plata
+
+**El hallazgo más grande de la auditoría, y salió de arreglar otro.** La auditoría detectó que la app no permitía cerrar un negocio desde ninguna pantalla: el motor de comisiones no tenía forma de recibir un cierre. Al construir el formulario y probarlo contra `dev`, cerrar `VVP-17` le **bajó la comisión real de 774.691,95 a 759.166,55** sin que se tocara una sola tasa.
+
+**No era el motor** —sus 19 casos de regresión pasaban— sino el paso anterior, `resolver_valorizacion`, que **nunca tuvo prueba propia**. Trece de los 19 hitos históricos vinieron sin `fecha_valorizacion`, así que al primer guardado se revalorizaban con la UF del día de inicio y sobreescribían la que traía el Excel. `D-026` había cargado los montos tal cual para no pasarlos por el motor; la API los pasa en cada guardado.
+
+**Medido antes y después, sobre los 19 hitos de `dev`:**
+
+| | Antes | Después |
+|---|---:|---:|
+| Hitos que reproducen su plata al recalcular | 1 de 19 | **18 de 19** |
+| Ganado | 8.087.861,69 | 8.087.861,69 |
+| Pipeline | 1.808.746,66 *(ya dañado por la prueba)* | **1.824.272,06** |
+| Potencial perdido | 4.751.490,69 | 4.751.490,69 |
+
+El único que no reproduce es `VVP-2`, y no puede: esa fila del Excel usó **dos bases a la vez** —el total sobre 81.505.175 y el reparto sobre los 104.100.248,32 de la UF—. Se dejó intacta salvo su fecha. Ver `D-046`.
+
+**Lo que se hizo.**
+
+1. **Migración `f5a92c3d81e6`**, que deja cada fila consistente consigo misma: repone las seis fechas de valorización que venían en la planilla, fija las dos abiertas, pasa a `valor_clp_manual` los dos valores en pesos que ninguna UF de la serie produce (`VVP-3 PROMESA` y `VVP-16`), y reescribe `comision_total` con el producto exacto en vez del redondeo al peso del Excel. Aplicada a `dev`; llega a producción en el deploy.
+2. **La API frena** cuando guardar una liquidación **ya cerrada** movería alguno de sus siete montos: responde 409 con las dos cifras y la pantalla ofrece "Guardar de todas formas". Verificado en vivo contra `dev`: `VVP-2` queda frenado nombrando `comision_total` y sus 903.803; `VVP-19` con una tasa cambiada queda frenado y **nada se guarda**; guardar `VVP-17` o `VVP-19` sin cambios devuelve 200 y no mueve un peso.
+3. **`test_valorizacion_historica.py`**, 40 tests que comprueban las dos direcciones —que los montos cargados son los del Excel, y que las entradas cargadas los reproducen— usando la UF de verdad de las 22 fechas involucradas y no la que cada fila afirma. Se verificó que falla: quitándole la fecha a `VVP-17` dice `40040.43 == 40859.28`.
+
+**La pantalla que faltaba, terminada.** Formulario de liquidación (crear, editar y cerrar), edición de los datos del negocio, y los campos de comisión extraídos a un componente compartido —`NegocioFormModal` bajó de 462 a 286 líneas—. Las nueve tasas ahora **salen** en la respuesta de la API: no salían, y sin ellas el formulario habría guardado nulos y borrado en silencio la base del cálculo. Lo atrapó el compilador de TypeScript, no una prueba.
+
+**Verificado:** 484 tests pasando (1 xfail, 1 skip), `alembic check` limpio, `npm run build` y `oxlint` sin hallazgos.
+
+**Un error propio, registrado.** La primera versión del `downgrade` de la migración ponía `fecha_valorizacion` en nulo en **todas** las filas y borró en `dev` las seis fechas que venían de la planilla. Se recuperaron del export versionado. Ahora `downgrade` no hace nada y explica por qué.
+
+**Queda abierto, y es de negocio:** con qué UF se valoriza un negocio **abierto**. La planilla los revalorizaba cada vez que se exportaba, o sea que el pipeline se movía solo.
 
 ### 2026-08-22 · El reporte mensual mostraba ceros arriba
 
