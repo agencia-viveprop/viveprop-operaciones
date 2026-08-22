@@ -117,6 +117,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-21 · El selector de Inicio usa el coral de "estás acá"
+
+Pedido del usuario: que el botón activo del selector se vea como el enlace activo del menú, sin cambiarle la forma.
+
+Se resolvió con una línea, `color="accent"`. Mantine ya calcula el texto blanco cuando el control recibe un color —`getContrastColor` devuelve blanco si `autoContrast` está apagado, que es el default— así que no hizo falta CSS propio. El coral es el mismo `#F4545A` que usa el menú: los dos resuelven a `accent.6` vía `primaryShade`, así que coinciden por construcción y no por copiar un hex.
+
+Único efecto lateral: el pill activo pierde la sombra sutil que Mantine le pone cuando no hay color. No es un cambio de forma, y el menú tampoco tiene sombra, así que quedan parejos.
+
 ### 2026-08-21 · Los dos dashboards en Inicio, y "Negocios por mes"
 
 Pedido del usuario. **Inicio hospeda los dos dashboards** con un selector Canjes / Negocios, y desapareció "Dashboard Negocios" del menú porque ya vive ahí. La ruta `/negocios/dashboard` sigue funcionando para links guardados, con su propio encabezado.

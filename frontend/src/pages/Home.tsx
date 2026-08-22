@@ -28,6 +28,12 @@ export default function Home({ usuario }: { usuario: Usuario }) {
         subtitle={`Bienvenido, ${usuario.nombre} · ${usuario.email}`}
         action={
           <SegmentedControl
+            // El mismo coral del enlace activo del menú, con texto blanco: es el
+            // color de "esto es lo que estás mirando" en toda la app. Mantine
+            // calcula el blanco solo al recibir `color`, y no cambia la forma
+            // del control -- solo le saca la sombra del pill activo, que el
+            // menú tampoco tiene.
+            color="accent"
             value={vista}
             onChange={setVista}
             data={[
