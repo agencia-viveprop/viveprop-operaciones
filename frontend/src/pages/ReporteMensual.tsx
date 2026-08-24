@@ -16,6 +16,7 @@ import {
 import { IconChevronLeft, IconChevronRight, IconMinus } from '@tabler/icons-react'
 import {
   obtenerReporteMensual,
+  rotuloVentana,
   VENTANAS,
   type Dominio,
   type Comparacion,
@@ -274,7 +275,7 @@ export default function ReporteMensual() {
                 color="accent"
                 value={ventana}
                 onChange={setVentana}
-                data={VENTANAS.map((v) => ({ value: String(v), label: `${v} meses` }))}
+                data={VENTANAS.map((v) => ({ value: String(v), label: rotuloVentana(v) }))}
               />
             </Group>
           </Group>
@@ -291,7 +292,7 @@ export default function ReporteMensual() {
               <Tile
                 rotulo="COMISIÓN REAL VP"
                 valor={clp(data.movil.actual.comision_real_vp)}
-                pie={`en ${data.ventana_meses} meses`}
+                pie={data.es_historico ? 'en todo el histórico' : `en ${data.ventana_meses} meses`}
               />
               <Tile rotulo="COMISIÓN TOTAL" valor={clp(data.movil.actual.comision_total)} />
               <Tile
@@ -306,7 +307,7 @@ export default function ReporteMensual() {
               <Tile
                 rotulo="CANJES SOLICITADOS"
                 valor={data.movil.actual.canjes_solicitados}
-                pie={`en ${data.ventana_meses} meses`}
+                pie={data.es_historico ? 'en todo el histórico' : `en ${data.ventana_meses} meses`}
               />
               {/* Los activos van al lado de los solicitados porque son parte de
                   ellos: de los que entraron en la ventana, los que siguen vivos. */}
@@ -403,12 +404,26 @@ export default function ReporteMensual() {
             </>
           )}
 
-          <TablaComparacion
-            titulo={`Últimos ${data.ventana_meses} meses`}
-            ayuda="Contra los mismos meses inmediatamente anteriores, sin solaparse"
-            c={data.movil}
-            dominio={dominio}
-          />
+          {/* En la histórica no hay ventana anterior: antes del primer registro
+              no existe nada, así que la tabla saldría entera en "sin base". Se
+              reemplaza por la explicación. */}
+          {data.es_historico ? (
+            <Paper withBorder radius="md" p="md">
+              <Title order={5}>Histórico completo</Title>
+              <Text size="sm" c="dimmed" mt={4}>
+                {data.ventana_meses} meses, desde el primer registro. No hay comparación
+                contra un período anterior porque antes de eso no hay nada: lo que se compara
+                es el año corrido, más abajo.
+              </Text>
+            </Paper>
+          ) : (
+            <TablaComparacion
+              titulo={`Últimos ${data.ventana_meses} meses`}
+              ayuda="Contra los mismos meses inmediatamente anteriores, sin solaparse"
+              c={data.movil}
+              dominio={dominio}
+            />
+          )}
           <TablaComparacion
             titulo="Año corrido"
             ayuda="Contra el mismo tramo del año pasado, no contra el año entero"
@@ -442,8 +457,8 @@ export default function ReporteMensual() {
               ) : data.mes.hitos_cerrados === 0 ? (
                 <>
                   No se cerró ninguna liquidación en el mes. Con procesos que duran de un
-                  mes a varios eso es normal: {data.meses_sin_cierres} de los últimos{' '}
-                  {data.meses_de_la_ventana} meses estuvieron vacíos.
+                  mes a varios eso es normal: {data.meses_sin_cierres} de los{' '}
+                  {data.meses_con_negocios} meses con negocios estuvieron vacíos.
                 </>
               ) : (
                 <>

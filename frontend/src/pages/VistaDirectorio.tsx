@@ -15,6 +15,7 @@ import {
 import { IconInfoCircle, IconPrinter } from '@tabler/icons-react'
 import {
   obtenerVistaDirectorio,
+  rotuloVentana,
   VENTANAS,
   type Conteo,
   type Dominio,
@@ -219,7 +220,7 @@ export default function VistaDirectorio() {
             color="accent"
             value={ventana}
             onChange={setVentana}
-            data={VENTANAS.map((v) => ({ value: String(v), label: `${v} meses` }))}
+            data={VENTANAS.map((v) => ({ value: String(v), label: rotuloVentana(v) }))}
           />
         </Group>
       </Group>
@@ -239,7 +240,7 @@ export default function VistaDirectorio() {
           color="good"
         />
         <Tile
-          rotulo={`ÚLTIMOS ${data.ventana_meses} MESES`}
+          rotulo={data.es_historico ? 'HISTÓRICO COMPLETO' : `ÚLTIMOS ${data.ventana_meses} MESES`}
           valor={clp(data.ventana_movil.comision_real_vp)}
           detalle={`${data.ventana_movil.hitos_cerrados} liquidaciones cerradas`}
         />
@@ -395,7 +396,11 @@ export default function VistaDirectorio() {
         <Tile
           rotulo="SOLICITADOS"
           valor={String(data.canjes.solicitados)}
-          detalle={`en ${data.ventana_meses} meses · ${data.canjes.solicitados_historicos} en toda la historia`}
+          detalle={
+            data.es_historico
+              ? `en los ${data.ventana_meses} meses del histórico`
+              : `en ${data.ventana_meses} meses · ${data.canjes.solicitados_historicos} en toda la historia`
+          }
           color="brand"
         />
         <Tile

@@ -174,12 +174,26 @@ class ReporteMensual(BaseModel):
     # siguiente. Un dato que envejece mal es peor que ninguno, porque nadie se
     # entera de que dejó de valer.
     meses_sin_cierres: int
-    meses_de_la_ventana: int
+    # Cuántos meses de la ventana **ya tenían negocios**, que no siempre es el
+    # largo de la ventana: en la histórica, los meses previos al primer negocio no
+    # cuentan. Se llamaba `meses_de_la_ventana` y el nombre dejó de ser cierto
+    # cuando la histórica entró, así que se renombró en vez de dejarlo mintiendo.
+    meses_con_negocios: int
     # Mes por mes de la ventana, del más viejo al más nuevo. Es lo que permite ver
     # si el mes actual avanza, se estanca o retrocede contra los que vinieron
     # antes: la comparación de la ventana contra la ventana anterior dice cuánto
     # cambió, pero no en qué dirección venía.
     serie: list[MetricasMes]
+    # `true` cuando la ventana es la histórica. La pantalla lo necesita para dos
+    # cosas: rotularla "Histórico" en vez de "46 meses", y **no** mostrar la
+    # comparación contra la ventana anterior, porque antes del primer registro no
+    # hay nada con qué comparar y la tabla saldría toda en "sin base".
+    es_historico: bool
+    # Desde qué mes existe cada dominio, en formato '2025-08'. Es desde donde se
+    # promedia y se traza la tendencia de sus métricas: en la ventana histórica,
+    # los meses previos al primer negocio no son meses malos, son meses sin
+    # negocio, y promediarlos dejaría la referencia cuatro veces más baja.
+    inicio_por_dominio: dict[str, str | None]
     # El promedio mensual de la ventana, para la línea de referencia del gráfico y
     # para la frase que compara el mes actual contra su propia normalidad.
     promedio: PromedioMes
@@ -225,8 +239,62 @@ def mes_anterior(anio: int, mes: int) -> tuple[int, int]:
     return (anio - 1, 12) if mes == 1 else (anio, mes - 1)
 
 
-VENTANAS_VALIDAS = (3, 6, 12)
+# Cero significa "histórico": toda la serie, desde el primer registro.
+#
+# Va como centinela y no como una ventana de N meses porque el largo lo decide el
+# dato, no quien pregunta: hoy son 46 meses --canjes arrancan en noviembre de
+# 2022-- y el mes que viene serán 47. El servicio lo resuelve al número real y lo
+# devuelve en `ventana_meses`, así que el resto del cálculo no cambia.
+VENTANA_HISTORICO = 0
+
+VENTANAS_VALIDAS = (VENTANA_HISTORICO, 3, 6, 12)
 VENTANA_DEFECTO = 6
+
+
+def _primer_mes_con_datos(db: Session) -> tuple[int, int]:
+    """El mes más viejo con algo registrado, mirando los dos dominios.
+
+    Es el arranque de la ventana histórica. Si no hay ni un dato devuelve el mes
+    actual, que da una ventana de un mes: vacía, pero no una serie de largo cero
+    que rompería el promedio y la tendencia.
+    """
+    fechas = [
+        db.scalar(select(func.min(NegocioHito.fecha_inicio))),
+        db.scalar(select(func.min(Canje.fecha_solicitud))),
+    ]
+    concretas = [f.date() if isinstance(f, datetime) else f for f in fechas if f is not None]
+    if not concretas:
+        hoy = datetime.now(timezone.utc).date()
+        return hoy.year, hoy.month
+    primera = min(concretas)
+    return primera.year, primera.month
+
+
+def _meses_entre(desde: tuple[int, int], hasta: tuple[int, int]) -> int:
+    """Cuántos meses cubre el rango, con los dos extremos incluidos."""
+    (a1, m1), (a2, m2) = desde, hasta
+    return (a2 - a1) * 12 + (m2 - m1) + 1
+
+
+# El primer mes con actividad de cada dominio, para que el promedio y la tendencia
+# no se diluyan con meses en los que ese dominio no existía.
+#
+# **Por qué hace falta.** Negocios arranca en agosto de 2025 y canjes en noviembre
+# de 2022. Promediar la comisión sobre los 46 meses históricos la reparte entre 34
+# meses en los que ViveProp no tenía ni un negocio cargado: el promedio queda
+# cuatro veces más bajo de lo real y un mes malo se lee como bueno contra él. La
+# referencia tiene que empezar donde empieza el dominio.
+def _inicio_por_dominio(db: Session) -> dict[str, tuple[int, int] | None]:
+    def mes_de(valor) -> tuple[int, int] | None:
+        if valor is None:
+            return None
+        d = valor.date() if isinstance(valor, datetime) else valor
+        return d.year, d.month
+
+    return {
+        "negocios": mes_de(db.scalar(select(func.min(NegocioHito.fecha_inicio)))),
+        "canjes": mes_de(db.scalar(select(func.min(Canje.fecha_solicitud)))),
+    }
 
 
 def correr_meses(anio: int, mes: int, cuantos: int) -> tuple[int, int]:
@@ -452,7 +520,28 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
     return serie
 
 
-def _promedio(serie: list[MetricasMes]) -> PromedioMes:
+def _desde_el_inicio(
+    serie: list[MetricasMes], inicio: tuple[int, int] | None
+) -> list[MetricasMes]:
+    """La parte de la serie a partir del mes en que ese dominio empezó a existir.
+
+    En una ventana de 3, 6 o 12 meses no recorta nada --el dominio ya existía en
+    todo el tramo-- así que solo cambia algo en la histórica, que es donde hace
+    falta: ahí los 34 meses previos al primer negocio no son meses malos, son
+    meses sin negocio.
+
+    Si el dominio no tiene ni un registro se devuelve la serie entera: el promedio
+    dará cero y eso es lo correcto.
+    """
+    if inicio is None:
+        return serie
+    clave = f"{inicio[0]:04d}-{inicio[1]:02d}"
+    return [m for m in serie if m.etiqueta >= clave] or serie
+
+
+def _promedio(
+    serie: list[MetricasMes], inicios: dict[str, tuple[int, int] | None] | None = None
+) -> PromedioMes:
     """El promedio mensual de la ventana.
 
     Es la referencia contra la que se lee el mes actual: "agosto está 47% bajo el
@@ -466,11 +555,14 @@ def _promedio(serie: list[MetricasMes]) -> PromedioMes:
     **No redondea a entero.** Ver `PromedioMes`: el promedio de un conteo es
     fraccionario, y truncarlo dio un promedio de cero liquidaciones habiendo cuatro.
     """
-    n = len(serie) or 1
+    inicios = inicios or {}
 
     def prom(campo: str) -> Decimal:
-        total = sum((Decimal(getattr(m, campo)) for m in serie), CERO)
-        return (total / n).quantize(CENTAVO)
+        # Cada métrica promedia sobre los meses en que su dominio ya existía. En
+        # las ventanas de 3, 6 y 12 eso es toda la serie; en la histórica no.
+        tramo = _desde_el_inicio(serie, inicios.get(DOMINIOS[campo]))
+        total = sum((Decimal(getattr(m, campo)) for m in tramo), CERO)
+        return (total / (len(tramo) or 1)).quantize(CENTAVO)
 
     return PromedioMes(
         etiqueta=f"promedio de {len(serie)} meses",
@@ -499,13 +591,22 @@ DOMINIOS = {campo: "negocios" for campo, _ in METRICAS_NEGOCIOS} | {
 UMBRAL_PLANA = Decimal("3")
 
 
-def _tendencia(serie: list[MetricasMes], campo: str, nombre: str) -> Tendencia:
+def _tendencia(
+    serie: list[MetricasMes],
+    campo: str,
+    nombre: str,
+    inicio: tuple[int, int] | None = None,
+) -> Tendencia:
     """Mínimos cuadrados sobre los meses de la ventana.
 
     Los meses van como 0, 1, 2... así que la pendiente sale directamente en
     unidades por mes. Con un solo punto no hay recta: se devuelve plana en su
     propio valor, que es lo único cierto.
     """
+    # Igual que el promedio: la recta arranca donde arranca el dominio. Ajustarla
+    # sobre 34 meses en cero seguidos de 12 con datos daría una pendiente que
+    # describe el nacimiento del negocio, no su tendencia.
+    serie = _desde_el_inicio(serie, inicio)
     n = len(serie)
     ys = [Decimal(getattr(m, campo)) for m in serie]
     media_y = sum(ys, CERO) / n if n else CERO
@@ -587,6 +688,14 @@ def obtener_reporte_mensual(
     if ventana not in VENTANAS_VALIDAS:
         raise ValueError(f"La ventana tiene que ser una de {VENTANAS_VALIDAS}.")
 
+    # La histórica se resuelve al número real de meses acá, una sola vez, y de ahí
+    # en adelante el cálculo es el mismo que para cualquier otra ventana.
+    es_historico = ventana == VENTANA_HISTORICO
+    if es_historico:
+        ventana = _meses_entre(_primer_mes_con_datos(db), (anio, mes))
+
+    inicios = _inicio_por_dominio(db)
+
     # El mes calendario, como detalle.
     desde_mes, hasta_mes = limites(anio, mes)
     detalle = _metricas(db, desde_mes, hasta_mes, f"{anio:04d}-{mes:02d}")
@@ -614,11 +723,22 @@ def obtener_reporte_mensual(
         ventana_meses=ventana,
         movil=_comparar(movil, movil_prev),
         anio_corrido=_comparar(corrido, corrido_prev),
-        meses_sin_cierres=sum(1 for m in serie if m.hitos_cerrados == 0),
-        meses_de_la_ventana=ventana,
+        # Los dos van sobre el tramo en que negocios ya existía: "39 de los
+        # últimos 46 meses estuvieron vacíos" sería cierto y engañoso, porque 33
+        # de esos meses no tenían ni un negocio cargado.
+        meses_sin_cierres=sum(
+            1 for m in _desde_el_inicio(serie, inicios.get("negocios"))
+            if m.hitos_cerrados == 0
+        ),
+        meses_con_negocios=len(_desde_el_inicio(serie, inicios.get("negocios"))),
         serie=serie,
-        promedio=_promedio(serie),
+        es_historico=es_historico,
+        inicio_por_dominio={
+            dom: (f"{v[0]:04d}-{v[1]:02d}" if v else None) for dom, v in inicios.items()
+        },
+        promedio=_promedio(serie, inicios),
         tendencias={
-            campo: _tendencia(serie, campo, nombre) for campo, nombre in METRICAS
+            campo: _tendencia(serie, campo, nombre, inicios.get(DOMINIOS[campo]))
+            for campo, nombre in METRICAS
         },
     )

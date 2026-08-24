@@ -1115,3 +1115,33 @@ El default es doce meses, que era el valor fijo anterior: da la lectura anualiza
 **Los activos se cuentan por estado, plano, y eso cambió respecto de la versión anterior.** Antes `canjes_vigentes` era "activo **y** con etapa distinta de cerrada", el mismo criterio de la bandeja. Ahora la partición es por estado sin condiciones extra, porque los conteos del período tienen que cumplir `solicitados = activos + cancelados` para poder dibujarse apilados (`D-055`). Lo que antes se llamaba vigentes sigue siendo derivable —`activos_historicos − cerrados_historicos`— y **los dos números van en la respuesta justamente para que reconcilien a la vista**, en vez de dejar al lector eligiendo cuál creer.
 
 **Dos textos que quedaron falsos y se corrigieron.** El subtítulo decía "los montos son comisión real ViveProp" en una pantalla que ahora también muestra una mitad sin montos; pasó a depender del dominio. Y el aviso al pie decía que se preguntó qué quiere ver el directorio y no hubo respuesta: ya la hubo, dos veces. Ahora dice qué falta para cerrar la vista —los plazos de negocios y la comisión de canjes—, que es lo que de verdad queda pendiente.
+
+---
+
+## D-057 · La ventana histórica, y el promedio que no se diluye con meses sin dominio
+
+**Contexto.** Las ventanas eran 3, 6 y 12 meses. Faltaba una que mostrara todo desde el principio, sin tramos.
+
+**Decisión 1: histórico es un centinela que el servicio resuelve al largo real.** `ventana = 0` significa "todo"; el servicio busca el primer registro de cualquiera de los dos dominios y calcula cuántos meses hay hasta el mes que se está mirando —hoy son **46**, canjes arrancan en noviembre de 2022— y de ahí en adelante el cálculo es idéntico al de cualquier otra ventana. La respuesta trae el largo resuelto en `ventana_meses` y un `es_historico` para que la pantalla lo rotule "Histórico" en vez de "46 meses".
+
+Va como centinela y no como una ventana de N meses porque **el largo lo decide el dato, no quien pregunta**: el mes que viene serán 47.
+
+**Decisión 2, y es la que hace que la ventana histórica signifique algo: el promedio y la tendencia arrancan donde arranca su dominio.**
+
+Negocios existe desde agosto de 2025 y canjes desde noviembre de 2022. Promediar la comisión sobre los 46 meses históricos la reparte entre 33 meses en los que ViveProp no tenía ni un negocio cargado: la referencia queda en **175.823** en vez de **622.143**, tres veces y media más baja. Contra ese promedio inventado, un mes malo se lee como bueno.
+
+Los meses previos al primer negocio no son meses malos: son meses sin negocio. Así que cada métrica promedia y ajusta su recta desde el primer registro de **su** dominio. En las ventanas de 3, 6 y 12 eso no recorta nada —el dominio ya existía en todo el tramo— así que la única que cambia es la histórica, que es donde hacía falta.
+
+El mismo criterio se aplicó a los meses vacíos: *"39 de los últimos 46 meses estuvieron vacíos"* sería cierto y engañoso. Ahora son **6 de 13 meses con negocios**. Y el campo se renombró de `meses_de_la_ventana` a `meses_con_negocios`, porque el nombre viejo dejó de ser cierto y dejarlo así habría sido dejarlo mintiendo.
+
+**Decisión 3: en la histórica no hay comparación contra la ventana anterior.** Antes del primer registro no existe nada, así que la tabla saldría entera en "sin base". Se reemplaza por una línea que lo dice y remite al año corrido, que sí tiene con qué comparar.
+
+### Lo que corrigió mirar los 46 meses renderizados
+
+**Las dos líneas de referencia se dibujaban de punta a punta.** La recta de tendencia de la comisión se ajusta sobre trece meses, y estaba trazada a lo largo de los cuarenta y seis: le cambiaba la pendiente a la vista —más plana que la calculada— y sugería que había negocios desde 2022. La línea del promedio hacía lo mismo con su nivel.
+
+Las dos quedaron acotadas al tramo que describen, usando el `puntos` que la tendencia ya traía. Se ve en el gráfico: las de negocios arrancan en agosto de 2025 y las de canjes cruzan todo.
+
+De paso, el veredicto decía *"la ventana de 13 meses viene a la baja"* en una pantalla rotulada "46 meses". Ahora dice *"la tendencia sobre 13 meses"*, que es lo que es.
+
+**Las etiquetas del eje no colisionan**: Recharts las adelgaza solo, y con 46 barras muestra una de cada dos. Se verificó en captura antes de darlo por bueno.

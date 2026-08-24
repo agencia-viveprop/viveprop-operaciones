@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Ventana «Histórico» en el reporte mensual y en el directorio
+
+Pedido tuyo: una ventana más que muestre todo desde el inicio, sin filtros de tramos, en las dos pantallas.
+
+Hecha. Es un centinela que el servicio resuelve al largo real: hoy **46 meses**, porque canjes arrancan en noviembre de 2022. De ahí en adelante el cálculo es el mismo que para 3, 6 o 12.
+
+**Y hubo que resolver algo para que signifique algo.** Negocios existe desde agosto de 2025 y canjes desde noviembre de 2022. Promediar la comisión sobre los 46 meses la reparte entre 33 en los que ViveProp no tenía ni un negocio cargado: la referencia queda en **175.823** en vez de **622.143**, tres veces y media más baja, y contra ese promedio inventado un mes malo se lee como bueno. Ahora cada métrica promedia y traza su tendencia desde el primer registro de **su** dominio. En 3, 6 y 12 meses eso no recorta nada.
+
+El mismo criterio para los meses vacíos: *"39 de los últimos 46 estuvieron vacíos"* sería cierto y engañoso; ahora son **6 de 13 meses con negocios**. El campo se renombró de `meses_de_la_ventana` a `meses_con_negocios`, porque el nombre viejo dejó de ser cierto.
+
+En la histórica no hay comparación contra la ventana anterior --antes del primer registro no hay nada-- así que esa tabla se reemplaza por una línea que lo explica y remite al año corrido.
+
+**Mirar los 46 meses renderizados corrigió otro defecto:** las dos líneas de referencia se dibujaban de punta a punta. La recta de tendencia de la comisión se ajusta sobre 13 meses y estaba trazada sobre los 46, así que mostraba una pendiente más plana que la calculada y sugería negocios desde 2022. Quedaron acotadas al tramo que describen. Ver `D-057`.
+
+**Verificado:** 573 tests, `alembic check` limpio, build y lint sin hallazgos, los 46 meses revisados en captura --las etiquetas del eje no colisionan, Recharts muestra una de cada dos--.
+
 ### 2026-08-22 · Vista directorio separada por dominio, con ventana y evolución
 
 Pedido tuyo: las mismas separaciones que el reporte mensual, y métricas, vistas y filtros equivalentes.

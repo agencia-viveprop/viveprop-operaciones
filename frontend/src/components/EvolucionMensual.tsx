@@ -173,6 +173,21 @@ export default function EvolucionMensual({
   const conTotal = unaSola || apilado
   const dibujaTendencia =
     tendencia !== undefined && tendencia.direccion !== 'plana' && datos.length > 1
+
+  /**
+   * Dónde arranca el tramo que la tendencia describe.
+   *
+   * **No siempre es el principio del gráfico.** En la ventana histórica la serie
+   * va desde el primer registro de cualquiera de los dos dominios, pero cada
+   * métrica se ajusta desde que **su** dominio existe: la comisión se traza sobre
+   * trece meses en un gráfico de cuarenta y seis. Dibujar esa recta de punta a
+   * punta le cambiaba la pendiente y sugería que había negocios desde 2022.
+   *
+   * `puntos` viene del backend justamente para poder acotarla.
+   */
+  const desdeTendencia = tendencia
+    ? Math.max(0, datos.length - tendencia.puntos)
+    : 0
   const formato = esPlata ? pesos : unidades
   // El eje va sin decimales: sus marcas son enteras y "2,00" solo agrega ruido.
   const ejeY = esPlata ? millones : (v: number) => String(v)
@@ -224,9 +239,15 @@ export default function EvolucionMensual({
             formatter={(valor, nombre) => [formato(Number(valor)), nombre]}
             contentStyle={{ borderRadius: 8, fontSize: 13 }}
           />
+          {/* El promedio también va acotado al tramo que promedia. Dibujado de
+              punta a punta afirmaba que ese nivel era la referencia también en los
+              meses en que el dominio no existía. */}
           {promedio !== undefined && promedio > 0 && conTotal && (
             <ReferenceLine
-              y={promedio}
+              segment={[
+                { x: datos[desdeTendencia].mes as string, y: promedio },
+                { x: datos[ultimo].mes as string, y: promedio },
+              ]}
               stroke={estructura.promedio}
               strokeDasharray="4 4"
               strokeWidth={2}
@@ -241,7 +262,7 @@ export default function EvolucionMensual({
           {tendencia && tendencia.direccion !== 'plana' && datos.length > 1 && (
             <ReferenceLine
               segment={[
-                { x: datos[0].mes as string, y: Number(tendencia.desde) },
+                { x: datos[desdeTendencia].mes as string, y: Number(tendencia.desde) },
                 { x: datos[ultimo].mes as string, y: Number(tendencia.hasta) },
               ]}
               stroke={paleta.tendencia}
@@ -381,14 +402,14 @@ export function Veredicto({
     tendencia && tendencia.direccion !== 'plana' ? (
       <>
         {' '}
-        La ventana de {tendencia.puntos} meses viene{' '}
+        La tendencia sobre {tendencia.puntos} meses viene{' '}
         <Text span fw={700} c={tendencia.direccion === 'sube' ? 'good.7' : 'critical.7'}>
           {tendencia.direccion === 'sube' ? 'al alza' : 'a la baja'}
         </Text>
         .
       </>
     ) : tendencia ? (
-      <> La ventana de {tendencia.puntos} meses viene plana.</>
+      <> La tendencia sobre {tendencia.puntos} meses viene plana.</>
     ) : null
 
   if (promedio === 0) {

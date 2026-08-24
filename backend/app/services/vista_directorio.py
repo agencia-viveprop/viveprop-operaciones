@@ -41,13 +41,18 @@ from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.models.catalogo import Catalogo, EstadoNegocio
 from app.models.negocio import Negocio, NegocioHito
 from app.services.reporte_mensual import (
+    DOMINIOS,
     METRICAS,
     VENTANA_DEFECTO,
+    VENTANA_HISTORICO,
     VENTANAS_VALIDAS,
     MetricasMes,
     PromedioMes,
     Tendencia,
+    _inicio_por_dominio,
+    _meses_entre,
     _metricas,
+    _primer_mes_con_datos,
     _promedio,
     _serie_mensual,
     _tendencia,
@@ -183,6 +188,10 @@ class VistaDirectorio(BaseModel):
     # Mes por mes de la ventana, con su promedio y su tendencia. Es lo mismo que
     # el reporte mensual: se reusan sus funciones en vez de recalcular acá.
     serie: list[MetricasMes]
+    # `true` con la ventana histórica: la pantalla la rotula así y esconde la
+    # comparación contra la ventana anterior, que no existe.
+    es_historico: bool
+    inicio_por_dominio: dict[str, str | None]
     promedio: PromedioMes
     tendencias: dict[str, Tendencia]
 
@@ -417,6 +426,12 @@ def obtener_vista_directorio(
     hoy = hoy or datetime.now(timezone.utc).date()
     anio, mes = hoy.year, hoy.month
 
+    # La histórica se resuelve al número real de meses, igual que en el mensual.
+    es_historico = ventana == VENTANA_HISTORICO
+    if es_historico:
+        ventana = _meses_entre(_primer_mes_con_datos(db), (anio, mes))
+    inicios = _inicio_por_dominio(db)
+
     desde_a, hasta_a = rango_anio_corrido(anio, mes)
     desde_ap, hasta_ap = rango_anio_corrido(anio - 1, mes)
     desde_v, hasta_v = rango_ventana(anio, mes, ventana)
@@ -442,9 +457,14 @@ def obtener_vista_directorio(
         ticket=_ticket(db),
         proyeccion=_proyeccion(db, pipeline, conversion),
         serie=serie,
-        promedio=_promedio(serie),
+        es_historico=es_historico,
+        inicio_por_dominio={
+            dom: (f"{v[0]:04d}-{v[1]:02d}" if v else None) for dom, v in inicios.items()
+        },
+        promedio=_promedio(serie, inicios),
         tendencias={
-            campo: _tendencia(serie, campo, nombre) for campo, nombre in METRICAS
+            campo: _tendencia(serie, campo, nombre, inicios.get(DOMINIOS[campo]))
+            for campo, nombre in METRICAS
         },
         canjes=_canjes(db, desde_v, hasta_v),
     )

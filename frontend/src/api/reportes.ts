@@ -197,7 +197,9 @@ export type ReporteMensual = {
   mes: MetricasMes
   ventana_meses: number
   meses_sin_cierres: number
-  meses_de_la_ventana: number
+  /** Cuántos meses de la ventana ya tenían negocios. No siempre es el largo de la
+   *  ventana: en la histórica, los meses previos al primer negocio no cuentan. */
+  meses_con_negocios: number
   /** El titular: la ventana móvil contra la anterior del mismo largo. */
   movil: Comparacion
   anio_corrido: Comparacion
@@ -205,6 +207,13 @@ export type ReporteMensual = {
    *  ver si el mes actual avanza, se estanca o retrocede: la comparación de
    *  ventana contra ventana dice cuánto cambió, no en qué dirección venía. */
   serie: MetricasMes[]
+  /** `true` con la ventana histórica. La pantalla la rotula así y esconde la
+   *  comparación contra la ventana anterior, que no existe. */
+  es_historico: boolean
+  /** Desde qué mes existe cada dominio, en formato '2025-08'. Es desde donde se
+   *  promedia y se traza su tendencia, para que los meses previos al primer
+   *  negocio no diluyan la referencia. */
+  inicio_por_dominio: Record<string, string | null>
   /**
    * El promedio mensual de la ventana, para la línea de referencia.
    *
@@ -217,7 +226,16 @@ export type ReporteMensual = {
   tendencias: Record<string, Tendencia>
 }
 
-export const VENTANAS = [3, 6, 12] as const
+/** Cero es la ventana histórica: toda la serie desde el primer registro. El
+ *  servidor la resuelve al número real de meses y lo informa en `ventana_meses`. */
+export const VENTANA_HISTORICO = 0
+
+export const VENTANAS = [3, 6, 12, VENTANA_HISTORICO] as const
+
+/** Cómo se llama cada ventana en el selector. */
+export function rotuloVentana(v: number): string {
+  return v === VENTANA_HISTORICO ? 'Histórico' : `${v} meses`
+}
 
 export function obtenerReporteMensual(
   anio: number,
@@ -315,6 +333,12 @@ export type VistaDirectorio = {
   ticket: Ticket | null
   proyeccion: Proyeccion
   serie: MetricasMes[]
+  /** `true` con la ventana histórica. La pantalla la rotula así y esconde la
+   *  comparación contra la ventana anterior, que no existe. */
+  es_historico: boolean
+  /** Desde qué mes existe cada dominio, en formato '2025-08'. Es desde donde se
+   *  promedia y se traza su tendencia. */
+  inicio_por_dominio: Record<string, string | null>
   promedio: PromedioMes
   tendencias: Record<string, Tendencia>
   canjes: CanjesDirectorio

@@ -20,6 +20,7 @@ from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.models.catalogo import EstadoNegocio, Etapa, ModeloNegocio
 from app.models.negocio import Negocio, NegocioHito, Propiedad
 from app.services.reporte_mensual import (
+    VENTANA_HISTORICO,
     METRICAS,
     VENTANAS_VALIDAS,
     correr_meses,
@@ -308,13 +309,13 @@ def test_el_endpoint_sin_parametros_toma_el_mes_actual(cliente):
     cuerpo = r.json()
     assert set(cuerpo) == {
         "mes", "ventana_meses", "movil", "anio_corrido",
-        "meses_sin_cierres", "meses_de_la_ventana",
-        "serie", "promedio", "tendencias",
+        "meses_sin_cierres", "meses_con_negocios",
+        "serie", "promedio", "tendencias", "es_historico", "inicio_por_dominio",
     }
     assert cuerpo["ventana_meses"] == 6
     # Sin datos, los seis meses de la ventana estan vacios. Es el numero que la
     # pantalla usa para explicar un mes en cero, y antes iba escrito a mano.
-    assert cuerpo["meses_de_la_ventana"] == 6
+    assert cuerpo["meses_con_negocios"] == 6
     assert cuerpo["meses_sin_cierres"] == 6
 
 
@@ -333,7 +334,12 @@ def test_el_endpoint_acepta_las_tres_ventanas(cliente, ventana):
     r = cliente.get("/api/reportes/mensual", params={"ventana": ventana})
 
     assert r.status_code == 200
-    assert r.json()["ventana_meses"] == ventana
+    if ventana == 0:
+        # La historica no devuelve cero: se resuelve al largo real de la serie.
+        assert r.json()["es_historico"] is True
+        assert r.json()["ventana_meses"] >= 1
+    else:
+        assert r.json()["ventana_meses"] == ventana
 
 
 @pytest.mark.parametrize("params, codigo", [
@@ -348,27 +354,29 @@ def test_el_endpoint_rechaza_periodos_imposibles(cliente, params, codigo):
     assert cliente.get("/api/reportes/mensual", params=params).status_code == codigo
 
 
-def test_cuenta_los_meses_vacios_de_su_propia_ventana(cliente, db):
+def test_cuenta_los_meses_vacios_sobre_los_meses_con_negocios(cliente, db):
     """El numero que la pantalla usa para explicar un mes en cero.
 
     Iba escrito a mano --"4 de 11 meses estuvieron vacios"-- y eso deja de ser
-    cierto el mes siguiente sin que nada falle. Un dato que envejece mal es peor
-    que ninguno, porque nadie se entera de que dejo de valer.
+    cierto el mes siguiente sin que nada falle.
+
+    **Y se cuenta sobre los meses en que ya habia negocios**, no sobre el largo de
+    la ventana. Los negocios de este caso arrancan en abril, asi que enero,
+    febrero y marzo no son meses vacios: son meses sin negocios. Decir "4 de 6"
+    los contaria como fracasos.
     """
-    # Dos cierres dentro de la ventana de seis meses que termina en junio: abril
-    # y junio. Quedan cuatro meses sin ningun cierre.
     _negocio(db, "V-1", [_hito(date(2026, 4, 1), date(2026, 4, 20), real=D("100"))])
     _negocio(db, "V-2", [_hito(date(2026, 6, 1), date(2026, 6, 15), real=D("200"))])
 
     cuerpo = cliente.get("/api/reportes/mensual?anio=2026&mes=6&ventana=6").json()
 
-    assert cuerpo["meses_de_la_ventana"] == 6
-    assert cuerpo["meses_sin_cierres"] == 4
+    # Abril, mayo y junio. Solo mayo esta vacio.
+    assert cuerpo["meses_con_negocios"] == 3
+    assert cuerpo["meses_sin_cierres"] == 1
 
-    # Y sigue al dia cuando cambia la ventana: en tres meses --abril, mayo,
-    # junio-- solo mayo esta vacio.
+    # Con una ventana de tres da lo mismo: el tramo con negocios es el mismo.
     corto = cliente.get("/api/reportes/mensual?anio=2026&mes=6&ventana=3").json()
-    assert corto["meses_de_la_ventana"] == 3
+    assert corto["meses_con_negocios"] == 3
     assert corto["meses_sin_cierres"] == 1
 
 
@@ -383,7 +391,7 @@ def test_la_serie_trae_un_mes_por_cada_mes_de_la_ventana(db):
     """
     for ventana in (3, 6, 12):
         r = obtener_reporte_mensual(db, 2026, 8, ventana=ventana)
-        assert len(r.serie) == ventana == r.meses_de_la_ventana
+        assert len(r.serie) == ventana == r.meses_con_negocios
         assert all(m.hitos_cerrados == 0 for m in r.serie)
 
 
@@ -703,9 +711,149 @@ def test_el_promedio_de_un_conteo_no_se_trunca(db):
 
 
 def test_el_promedio_de_los_activos_tampoco_se_trunca(db):
+    """Y promedia desde que el dominio existe, no desde el borde de la ventana.
+
+    El unico canje es de mayo, asi que en una ventana de seis meses que termina en
+    junio los cuatro meses anteriores son meses sin programa de canjes, no meses
+    con cero solicitudes. El promedio va sobre mayo y junio: 1 entre 2.
+    """
     _solicitud(db, 20, date(2026, 5, 3), CanjeEstado.ACTIVO)
     db.commit()
 
     p = obtener_reporte_mensual(db, 2026, 6, ventana=6).promedio
 
-    assert p.canjes_activos == D("0.17")
+    assert p.canjes_activos == D("0.50")
+
+
+# --------------------------------------------------- la ventana historica
+
+
+def test_la_ventana_historica_arranca_en_el_primer_registro(db):
+    """Cero significa "todo": el largo lo decide el dato, no quien pregunta."""
+    _solicitud(db, 100, date(2025, 11, 3), CanjeEstado.CANCELADO)
+    _negocio(db, "H-1", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("500"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    assert r.es_historico is True
+    # De noviembre de 2025 a agosto de 2026, los dos extremos incluidos.
+    assert r.ventana_meses == 10
+    assert len(r.serie) == 10
+    assert r.serie[0].etiqueta == "2025-11"
+    assert r.serie[-1].etiqueta == "2026-08"
+
+
+def test_la_historica_toma_el_dominio_mas_viejo_de_los_dos(db):
+    """Canjes puede arrancar antes que negocios, o al reves."""
+    _solicitud(db, 101, date(2025, 3, 5), CanjeEstado.CANCELADO)
+    _negocio(db, "H-2", [_hito(date(2026, 1, 1), date(2026, 1, 10), real=D("100"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    assert r.serie[0].etiqueta == "2025-03"
+    assert r.inicio_por_dominio == {"canjes": "2025-03", "negocios": "2026-01"}
+
+
+def test_sin_ningun_dato_la_historica_no_se_cae(db):
+    """Una serie de largo cero romperia el promedio y la tendencia."""
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    assert r.ventana_meses == 1
+    assert len(r.serie) == 1
+    assert r.promedio.comision_real_vp == D("0.00")
+
+
+def test_las_otras_ventanas_no_son_historicas(db):
+    for ventana in (3, 6, 12):
+        r = obtener_reporte_mensual(db, 2026, 8, ventana=ventana)
+        assert r.es_historico is False
+        assert r.ventana_meses == ventana
+
+
+# ------------------------- el promedio no se diluye con meses sin dominio
+
+
+def test_el_promedio_historico_arranca_donde_arranca_el_dominio(db):
+    """El punto entero de este cambio.
+
+    Canjes existe desde marzo de 2025 y negocios desde junio de 2026. La serie
+    historica va de marzo de 2025 a agosto de 2026: 18 meses. Promediar la
+    comision sobre esos 18 la reparte entre 15 meses en los que ViveProp no tenia
+    ni un negocio cargado, y la deja cinco veces mas baja de lo real. Un mes malo
+    se leeria como bueno contra esa referencia.
+    """
+    _solicitud(db, 102, date(2025, 3, 5), CanjeEstado.CANCELADO)
+    _negocio(db, "H-3", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("900"))])
+    _negocio(db, "H-4", [_hito(date(2026, 7, 1), date(2026, 7, 10), real=D("300"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    assert r.ventana_meses == 18
+    # 1.200 repartidos entre los tres meses de negocios (junio, julio, agosto),
+    # no entre los dieciocho de la serie.
+    assert r.promedio.comision_real_vp == D("400.00")
+    # Y canjes si promedia sobre los dieciocho: existe desde el primero.
+    assert r.promedio.canjes_solicitados == (D("1") / 18).quantize(D("0.01"))
+
+
+def test_la_tendencia_historica_tambien_arranca_ahi(db):
+    """Ajustar la recta sobre meses sin dominio describe el nacimiento del
+    negocio, no su tendencia."""
+    _solicitud(db, 103, date(2025, 3, 5), CanjeEstado.CANCELADO)
+    _negocio(db, "H-5", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("300"))])
+    _negocio(db, "H-6", [_hito(date(2026, 7, 1), date(2026, 7, 10), real=D("200"))])
+    _negocio(db, "H-7", [_hito(date(2026, 8, 1), date(2026, 8, 10), real=D("100"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    te = r.tendencias["comision_real_vp"]
+    assert te.puntos == 3, "los tres meses de negocios, no los dieciocho de la serie"
+    assert te.direccion == "baja"
+    assert te.pendiente == D("-100.00")
+    # Canjes si usa la serie completa.
+    assert r.tendencias["canjes_solicitados"].puntos == 18
+
+
+def test_en_una_ventana_corta_el_recorte_no_cambia_nada(db):
+    """El recorte solo importa en la historica: en tres, seis o doce meses el
+    dominio ya existia en todo el tramo."""
+    _negocio(db, "H-8", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("600"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=3)
+
+    assert r.tendencias["comision_real_vp"].puntos == 3
+    assert r.promedio.comision_real_vp == D("200.00")
+
+
+def test_los_meses_vacios_se_cuentan_sobre_el_tramo_con_negocios(db):
+    """"39 de los ultimos 46 meses estuvieron vacios" seria cierto y engañoso."""
+    _solicitud(db, 104, date(2025, 1, 5), CanjeEstado.CANCELADO)
+    _negocio(db, "H-9", [_hito(date(2026, 7, 1), date(2026, 7, 10), real=D("100"))])
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=VENTANA_HISTORICO)
+
+    assert r.ventana_meses == 20, "la serie completa"
+    # Negocios existe desde julio: dos meses, uno con cierre y uno sin.
+    assert r.meses_con_negocios == 2
+    assert r.meses_sin_cierres == 1
+
+
+# --------------------------------------------------------------- endpoint
+
+
+def test_el_endpoint_acepta_la_ventana_historica(cliente):
+    r = cliente.get("/api/reportes/mensual?anio=2026&mes=8&ventana=0")
+
+    assert r.status_code == 200, r.text
+    assert r.json()["es_historico"] is True
+
+
+def test_el_endpoint_sigue_rechazando_una_ventana_invalida(cliente):
+    assert cliente.get("/api/reportes/mensual?ventana=5").status_code == 422
+    assert cliente.get("/api/reportes/mensual?ventana=-1").status_code == 422
