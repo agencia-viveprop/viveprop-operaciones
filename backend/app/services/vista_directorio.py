@@ -41,7 +41,16 @@ from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.models.catalogo import Catalogo, EstadoNegocio
 from app.models.negocio import Negocio, NegocioHito
 from app.services.reporte_mensual import (
+    METRICAS,
+    VENTANA_DEFECTO,
+    VENTANAS_VALIDAS,
     MetricasMes,
+    PromedioMes,
+    Tendencia,
+    _metricas,
+    _promedio,
+    _serie_mensual,
+    _tendencia,
     rango_anio_corrido,
     rango_ventana,
 )
@@ -52,9 +61,10 @@ CERO = Decimal("0")
 # que es la convención en reportería de negocio.
 Z_95 = 1.96
 
-# Meses de la ventana larga que acompaña al año corrido. Doce da la lectura
-# anualizada sin depender de en qué mes del año estemos.
-VENTANA_LARGA = 12
+# Cuántas categorías se listan en cada desglose de canjes. Nueve comunas ya
+# ocupan media pantalla y la cola larga no informa: lo que importa es dónde está
+# el volumen, no el listado completo.
+TOPE_DESGLOSE = 8
 
 
 class Monto(BaseModel):
@@ -106,11 +116,58 @@ class Proyeccion(BaseModel):
     nota: str
 
 
+class Conteo(BaseModel):
+    """Un desglose por categoría, en unidades. El equivalente de `Monto` cuando
+    lo que se cuenta no es plata."""
+
+    etiqueta: str
+    cantidad: int
+
+
+class CanjesDirectorio(BaseModel):
+    """La mitad de canjes de la vista, que es de volumen y no de plata.
+
+    **No tiene ticket ni proyección, y no es un olvido.** Canjes sí genera
+    comisión --la de administración de Dataprop-- pero se calcula sobre la
+    comisión de los corredores participantes, que está sin cargar en las 297
+    filas; y `valor_prop` no sirve de reemplazo porque su moneda está equivocada
+    en ~138 de ellas (`D-054`). Sin plata no hay ticket mediano ni pipeline
+    ponderado que valga.
+
+    Lo que sí se puede decir de un programa de intercambio es cuánto volumen
+    entra, de dónde viene y cuánto sobrevive.
+    """
+
+    # Del período elegido: son conteos de un rango, así que la ventana los manda.
+    solicitados: int
+    activos: int
+    cancelados: int
+    # Los totales de toda la historia, para que el número de la ventana tenga
+    # contra qué leerse.
+    solicitados_historicos: int
+    activos_historicos: int
+    # La tasa de cierre va sobre la historia completa y sobre los **resueltos**,
+    # igual que en negocios: los que siguen abiertos no cuentan a favor ni en
+    # contra porque todavía no terminaron.
+    cerrados_historicos: int
+    resueltos_historicos: int
+    tasa_cierre_pct: Decimal
+
+    por_operacion: list[Conteo]
+    por_tipo_inmueble: list[Conteo]
+    por_comuna: list[Conteo]
+
+
 class VistaDirectorio(BaseModel):
     generado: date
+    # La ventana elegida. Manda sobre lo que es temporal --la ventana móvil, la
+    # serie y la tendencia-- y no sobre los buckets, la tasa de cierre, el ticket
+    # ni la proyección: un negocio abierto está abierto, no pertenece a un mes, y
+    # una tasa sobre uno o dos casos resueltos no es una tasa.
+    ventana_meses: int
     anio_corrido: MetricasMes
     anio_corrido_anterior: MetricasMes
-    ultimos_12_meses: MetricasMes
+    ventana_movil: MetricasMes
 
     ganado: Bucket
     pipeline: Bucket
@@ -123,8 +180,13 @@ class VistaDirectorio(BaseModel):
     ticket: Ticket | None
     proyeccion: Proyeccion
 
-    canjes_vigentes: int
-    canjes_historicos: int
+    # Mes por mes de la ventana, con su promedio y su tendencia. Es lo mismo que
+    # el reporte mensual: se reusan sus funciones en vez de recalcular acá.
+    serie: list[MetricasMes]
+    promedio: PromedioMes
+    tendencias: dict[str, Tendencia]
+
+    canjes: CanjesDirectorio
 
 
 def _bucket(db: Session, estados: tuple[EstadoNegocio, ...]) -> Bucket:
@@ -267,26 +329,110 @@ def _proyeccion(db: Session, pipeline: Bucket, conversion: Conversion) -> Proyec
     )
 
 
-def obtener_vista_directorio(db: Session, hoy: date | None = None) -> VistaDirectorio:
-    from app.services.reporte_mensual import _metricas
+def _conteos(db: Session, columna, tope: int | None = None) -> list[Conteo]:
+    """Cuántos canjes hay por cada valor de una columna, de mayor a menor.
+
+    Se salta los nulos en vez de agruparlos en "Sin dato": en un desglose de
+    origen, una categoría "Sin dato" grande empuja hacia abajo a las reales y no
+    dice de dónde vino nada.
+    """
+    filas = db.execute(
+        select(columna, func.count())
+        .where(columna.is_not(None))
+        .group_by(columna)
+        .order_by(func.count().desc())
+    ).all()
+    conteos = [
+        Conteo(etiqueta=str(v.value if hasattr(v, "value") else v), cantidad=n)
+        for v, n in filas
+    ]
+    return conteos[:tope] if tope else conteos
+
+
+def _canjes(db: Session, desde: date, hasta: date) -> CanjesDirectorio:
+    """La mitad de canjes: volumen del período, de dónde viene, y cuánto sobrevive.
+
+    **Los conteos del período van por fecha de solicitud**, los tres, para que
+    sumen entre sí: `solicitados = activos + cancelados`. Es la misma regla que el
+    reporte mensual, y la que permite dibujarlos apilados (`D-055`).
+
+    **La tasa de cierre va sobre la historia completa y sobre los resueltos.**
+    Igual que en negocios: los que siguen abiertos no cuentan ni a favor ni en
+    contra porque todavía no terminaron. Hoy da cero, y es cierto -- ningún canje
+    se ha cerrado con éxito (`D-054`).
+    """
+    inicio = datetime.combine(desde, datetime.min.time(), tzinfo=timezone.utc)
+    fin = datetime.combine(hasta, datetime.max.time(), tzinfo=timezone.utc)
+
+    def en_ventana(*condiciones) -> int:
+        return db.scalar(
+            select(func.count()).select_from(Canje).where(
+                Canje.fecha_solicitud >= inicio, Canje.fecha_solicitud <= fin, *condiciones
+            )
+        ) or 0
+
+    def historico(*condiciones) -> int:
+        return db.scalar(
+            select(func.count()).select_from(Canje).where(*condiciones)
+        ) or 0
+
+    cerrados = historico(Canje.etapa == CanjeEtapa.CERRADO, Canje.estado == CanjeEstado.ACTIVO)
+    cancelados_hist = historico(Canje.estado == CanjeEstado.CANCELADO)
+    resueltos = cerrados + cancelados_hist
+
+    return CanjesDirectorio(
+        solicitados=en_ventana(),
+        activos=en_ventana(Canje.estado == CanjeEstado.ACTIVO),
+        cancelados=en_ventana(Canje.estado == CanjeEstado.CANCELADO),
+        solicitados_historicos=historico(),
+        activos_historicos=historico(Canje.estado == CanjeEstado.ACTIVO),
+        cerrados_historicos=cerrados,
+        resueltos_historicos=resueltos,
+        tasa_cierre_pct=(
+            CERO
+            if resueltos == 0
+            else (Decimal(cerrados) / Decimal(resueltos) * 100).quantize(Decimal("0.1"))
+        ),
+        por_operacion=_conteos(db, Canje.tipo_operacion),
+        por_tipo_inmueble=_conteos(db, Canje.tipo_inmueble, TOPE_DESGLOSE),
+        por_comuna=_conteos(db, Canje.comuna, TOPE_DESGLOSE),
+    )
+
+
+def obtener_vista_directorio(
+    db: Session, hoy: date | None = None, ventana: int = VENTANA_DEFECTO
+) -> VistaDirectorio:
+    """La vista de directorio, separada por dominio y con la ventana elegible.
+
+    **La ventana solo manda sobre lo temporal**: la ventana móvil, la serie, la
+    tendencia y los conteos de canjes del período. Los buckets --ganado, en
+    proceso, no concretado--, la tasa de cierre, el ticket y la proyección siguen
+    siendo históricos, y eso es deliberado: un negocio abierto está abierto y no
+    pertenece a un mes, y una tasa de cierre calculada sobre uno o dos casos
+    resueltos daría un intervalo de 2,5% a 100%, que es peor que no darla.
+    """
+    if ventana not in VENTANAS_VALIDAS:
+        raise ValueError(f"La ventana tiene que ser una de {VENTANAS_VALIDAS}.")
 
     hoy = hoy or datetime.now(timezone.utc).date()
     anio, mes = hoy.year, hoy.month
 
     desde_a, hasta_a = rango_anio_corrido(anio, mes)
     desde_ap, hasta_ap = rango_anio_corrido(anio - 1, mes)
-    desde_v, hasta_v = rango_ventana(anio, mes, VENTANA_LARGA)
+    desde_v, hasta_v = rango_ventana(anio, mes, ventana)
 
     pipeline = _bucket(db, (EstadoNegocio.ACTIVO,))
     conversion = _conversion(db)
+    serie = _serie_mensual(db, anio, mes, ventana)
 
     return VistaDirectorio(
         generado=hoy,
+        ventana_meses=ventana,
         anio_corrido=_metricas(db, desde_a, hasta_a, f"{desde_a:%Y-%m} a {hasta_a:%Y-%m}"),
         anio_corrido_anterior=_metricas(
             db, desde_ap, hasta_ap, f"{desde_ap:%Y-%m} a {hasta_ap:%Y-%m}"
         ),
-        ultimos_12_meses=_metricas(db, desde_v, hasta_v, f"{desde_v:%Y-%m} a {hasta_v:%Y-%m}"),
+        ventana_movil=_metricas(db, desde_v, hasta_v, f"{desde_v:%Y-%m} a {hasta_v:%Y-%m}"),
         ganado=_bucket(db, (EstadoNegocio.CERRADO,)),
         pipeline=pipeline,
         potencial_perdido=_bucket(db, (EstadoNegocio.PERDIDO, EstadoNegocio.DESISTIDO)),
@@ -295,10 +441,10 @@ def obtener_vista_directorio(db: Session, hoy: date | None = None) -> VistaDirec
         conversion=conversion,
         ticket=_ticket(db),
         proyeccion=_proyeccion(db, pipeline, conversion),
-        canjes_vigentes=db.scalar(
-            select(func.count()).select_from(Canje).where(
-                Canje.estado == CanjeEstado.ACTIVO, Canje.etapa != CanjeEtapa.CERRADO
-            )
-        ) or 0,
-        canjes_historicos=db.scalar(select(func.count()).select_from(Canje)) or 0,
+        serie=serie,
+        promedio=_promedio(serie),
+        tendencias={
+            campo: _tendencia(serie, campo, nombre) for campo, nombre in METRICAS
+        },
+        canjes=_canjes(db, desde_v, hasta_v),
     )

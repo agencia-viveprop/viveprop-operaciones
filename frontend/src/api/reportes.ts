@@ -268,11 +268,44 @@ export type Proyeccion = {
   nota: string
 }
 
+/** Un desglose en unidades. El hermano de `Monto` cuando no se cuenta plata. */
+export type Conteo = { etiqueta: string; cantidad: number }
+
+/**
+ * La mitad de canjes del directorio: volumen, origen y supervivencia.
+ *
+ * Sin ticket ni proyección, y no es un olvido: canjes sí genera comisión --la de
+ * administración de Dataprop-- pero se calcula sobre la comisión de los
+ * corredores, que está sin cargar, y `valor_prop` no sirve de reemplazo porque su
+ * moneda está equivocada en ~138 de las 297 filas (`D-054`).
+ */
+export type CanjesDirectorio = {
+  /** Del período elegido. `solicitados = activos + cancelados`, exacto. */
+  solicitados: number
+  activos: number
+  cancelados: number
+  /** De toda la historia, para que el número del período tenga contra qué leerse. */
+  solicitados_historicos: number
+  activos_historicos: number
+  /** Los que están ACTIVO con la etapa en Cerrado. Restados de los activos dan
+   *  lo que el resto de la app llama «vigentes». */
+  cerrados_historicos: number
+  resueltos_historicos: number
+  tasa_cierre_pct: string
+  por_operacion: Conteo[]
+  por_tipo_inmueble: Conteo[]
+  por_comuna: Conteo[]
+}
+
 export type VistaDirectorio = {
   generado: string
+  /** Manda sobre lo temporal --la ventana móvil, la serie, la tendencia y los
+   *  conteos de canjes del período-- y no sobre los buckets, la tasa de cierre,
+   *  el ticket ni la proyección, que siguen siendo históricos. */
+  ventana_meses: number
   anio_corrido: MetricasMes
   anio_corrido_anterior: MetricasMes
-  ultimos_12_meses: MetricasMes
+  ventana_movil: MetricasMes
   ganado: BucketDirectorio
   pipeline: BucketDirectorio
   potencial_perdido: BucketDirectorio
@@ -281,10 +314,14 @@ export type VistaDirectorio = {
   conversion: Conversion
   ticket: Ticket | null
   proyeccion: Proyeccion
-  canjes_vigentes: number
-  canjes_historicos: number
+  serie: MetricasMes[]
+  promedio: PromedioMes
+  tendencias: Record<string, Tendencia>
+  canjes: CanjesDirectorio
 }
 
-export function obtenerVistaDirectorio(): Promise<VistaDirectorio> {
-  return fetch('/api/reportes/directorio', { credentials: 'include' }).then(parseOrThrow)
+export function obtenerVistaDirectorio(ventana: number): Promise<VistaDirectorio> {
+  return fetch(`/api/reportes/directorio?ventana=${ventana}`, {
+    credentials: 'include',
+  }).then(parseOrThrow)
 }

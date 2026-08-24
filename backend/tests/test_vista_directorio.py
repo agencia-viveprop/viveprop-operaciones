@@ -15,7 +15,7 @@ from decimal import Decimal as D
 
 import pytest
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa
+from app.models.canje import Canje, CanjeEstado, CanjeEtapa, OperacionTipo
 from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
 from app.models.negocio import Negocio, NegocioHito, Propiedad
 from app.services.vista_directorio import obtener_vista_directorio
@@ -45,8 +45,10 @@ def _hito(estado, real, inicio=date(2026, 1, 10), cierre=None):
     )
 
 
-def _vista(db):
-    return obtener_vista_directorio(db, hoy=HOY)
+def _vista(db, ventana: int = 12):
+    # Doce por defecto: es la ventana con la que se escribieron los tests de los
+    # buckets, antes de que la ventana fuera elegible.
+    return obtener_vista_directorio(db, hoy=HOY, ventana=ventana)
 
 
 # --------------------------------------------------- los tres buckets
@@ -237,8 +239,19 @@ def test_sin_cierres_no_hay_ticket(db):
 # -------------------------------------------------------------- canjes
 
 
-def test_los_canjes_vigentes_excluyen_los_cerrados_y_cancelados(db):
-    """Mismo criterio que la bandeja: activo y con etapa distinta de cerrada."""
+def test_los_conteos_de_canjes_van_por_estado_y_reconcilian(db):
+    """Los activos se cuentan por estado, plano, y no "activo y no cerrado".
+
+    Es un cambio respecto de la version anterior de esta vista, y tiene un motivo:
+    los conteos del periodo tienen que cumplir `solicitados = activos +
+    cancelados` para poder dibujarse apilados (`D-055`), y eso solo se sostiene si
+    la particion es por estado sin condiciones extra.
+
+    Lo que la version anterior llamaba "vigentes" sigue siendo derivable:
+    `activos_historicos - cerrados_historicos`. Los dos numeros van en la
+    respuesta justamente para que reconcilien a la vista y no haya que elegir cual
+    creer.
+    """
     db.add_all([
         Canje(id=1, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
               etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
@@ -249,10 +262,158 @@ def test_los_canjes_vigentes_excluyen_los_cerrados_y_cancelados(db):
     ])
     db.commit()
 
-    v = _vista(db)
+    c = _vista(db).canjes
 
-    assert v.canjes_vigentes == 1
-    assert v.canjes_historicos == 3
+    assert c.solicitados_historicos == 3
+    assert c.activos_historicos == 2, "los dos con estado ACTIVO"
+    assert c.cerrados_historicos == 1, "el que tiene la etapa en Cerrado"
+    # El "vigentes" de antes: activo y sin la etapa cerrada.
+    assert c.activos_historicos - c.cerrados_historicos == 1
+
+
+def test_los_conteos_del_periodo_suman_entre_si(db):
+    """`solicitados = activos + cancelados` en la ventana, igual que en la serie."""
+    db.add_all([
+        Canje(id=10, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+        Canje(id=11, fecha_solicitud=date(2026, 7, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+        # Fuera de la ventana de tres meses que termina en agosto.
+        Canje(id=12, fecha_solicitud=date(2026, 1, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+    ])
+    db.commit()
+
+    c = _vista(db, ventana=3).canjes
+
+    assert (c.solicitados, c.activos, c.cancelados) == (2, 1, 1)
+    assert c.solicitados == c.activos + c.cancelados
+    # El historico si los cuenta todos.
+    assert c.solicitados_historicos == 3
+
+
+def test_la_tasa_de_cierre_de_canjes_va_sobre_los_resueltos(db):
+    """Los que siguen abiertos no cuentan ni a favor ni en contra.
+
+    Hoy da cero sobre los datos reales, y es cierto: ningun canje se ha cerrado
+    con exito (`D-054`). El test usa un cerrado inventado para verificar que la
+    formula funciona el dia que haya uno.
+    """
+    db.add_all([
+        Canje(id=20, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
+              etapa=CanjeEtapa.CERRADO, comuna="Santiago"),
+        Canje(id=21, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+        Canje(id=22, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+        Canje(id=23, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+    ])
+    db.commit()
+
+    c = _vista(db).canjes
+
+    # Tres resueltos: un cerrado y dos cancelados. El cuarto sigue abierto.
+    assert c.resueltos_historicos == 3
+    assert c.cerrados_historicos == 1
+    assert c.tasa_cierre_pct == D("33.3")
+
+
+def test_sin_canjes_resueltos_la_tasa_es_cero_y_no_falla(db):
+    c = _vista(db).canjes
+
+    assert c.resueltos_historicos == 0
+    assert c.tasa_cierre_pct == D("0")
+
+
+def test_los_desgloses_de_canjes_van_de_mayor_a_menor(db):
+    """Lo que importa es donde esta el volumen, no el listado completo."""
+    db.add_all([
+        Canje(id=30 + i, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Las Condes" if i < 3 else "Maipu",
+              tipo_operacion=OperacionTipo.VENTA if i < 4 else OperacionTipo.ARRIENDO)
+        for i in range(5)
+    ])
+    db.commit()
+
+    c = _vista(db).canjes
+
+    assert [(x.etiqueta, x.cantidad) for x in c.por_comuna] == [("Las Condes", 3), ("Maipu", 2)]
+    assert [(x.etiqueta, x.cantidad) for x in c.por_operacion] == [("VENTA", 4), ("ARRIENDO", 1)]
+
+
+def test_los_nulos_no_arman_una_categoria_sin_dato(db):
+    """Una categoria "Sin dato" grande empuja hacia abajo a las reales."""
+    db.add_all([
+        Canje(id=40, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago", tipo_inmueble="DEPTO"),
+        Canje(id=41, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
+              etapa=CanjeEtapa.EN_OFERTA, comuna=None, tipo_inmueble=None),
+    ])
+    db.commit()
+
+    c = _vista(db).canjes
+
+    assert [x.etiqueta for x in c.por_comuna] == ["Santiago"]
+    assert [x.etiqueta for x in c.por_tipo_inmueble] == ["DEPTO"]
+
+
+# ------------------------------------------------- la ventana y la tendencia
+
+
+def test_la_ventana_solo_alcanza_lo_temporal(db):
+    """Los buckets no se filtran por la ventana, y es deliberado.
+
+    Un negocio abierto esta abierto: no pertenece a un mes. Y una tasa de cierre
+    calculada sobre uno o dos casos resueltos daria un intervalo de casi cien
+    puntos, que es peor que no darla.
+    """
+    _negocio(db, "W-1", [_hito(EstadoNegocio.CERRADO, D("500"),
+                               inicio=date(2026, 1, 5), cierre=date(2026, 1, 20))])
+    _negocio(db, "W-2", [_hito(EstadoNegocio.ACTIVO, D("700"), inicio=date(2026, 8, 1))])
+
+    corta = _vista(db, ventana=3)
+    larga = _vista(db, ventana=12)
+
+    # La ventana movil si cambia: el cierre de enero entra en la de doce y no en
+    # la de tres.
+    assert corta.ventana_movil.comision_real_vp == D("0")
+    assert larga.ventana_movil.comision_real_vp == D("500")
+    # Los buckets no.
+    assert corta.ganado.comision_real_vp == larga.ganado.comision_real_vp == D("500")
+    assert corta.pipeline.comision_real_vp == larga.pipeline.comision_real_vp == D("700")
+
+
+def test_la_serie_y_la_tendencia_siguen_la_ventana(db):
+    for ventana in (3, 6, 12):
+        v = _vista(db, ventana=ventana)
+        assert v.ventana_meses == ventana
+        assert len(v.serie) == ventana
+        assert all(te.puntos == ventana for te in v.tendencias.values())
+
+
+def test_la_tendencia_del_directorio_es_la_misma_del_reporte_mensual(db):
+    """Se reusa la funcion, no se recalcula: dos versiones divergirian."""
+    from app.services.reporte_mensual import obtener_reporte_mensual
+
+    _negocio(db, "W-3", [_hito(EstadoNegocio.CERRADO, D("300"),
+                               inicio=date(2026, 6, 1), cierre=date(2026, 6, 10))])
+    _negocio(db, "W-4", [_hito(EstadoNegocio.CERRADO, D("900"),
+                               inicio=date(2026, 8, 1), cierre=date(2026, 8, 10))])
+
+    v = _vista(db, ventana=6)
+    m = obtener_reporte_mensual(db, 2026, 8, ventana=6)
+
+    assert v.tendencias["comision_real_vp"] == m.tendencias["comision_real_vp"]
+    assert v.serie == m.serie
+    assert v.promedio == m.promedio
+
+
+def test_una_ventana_invalida_se_rechaza(db):
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError, match="ventana"):
+        _vista(db, ventana=5)
 
 
 # ------------------------------------------------------------ endpoint

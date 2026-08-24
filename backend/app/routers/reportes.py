@@ -103,14 +103,27 @@ def mensual(
 
 @router.get("/directorio", response_model=VistaDirectorio)
 def directorio(
+    ventana: int = Query(
+        VENTANA_DEFECTO, description=f"Meses de la ventana móvil: {list(VENTANAS_VALIDAS)}"
+    ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    """La vista ejecutiva: cuánto entró, de dónde, qué hay por delante.
+    """La vista ejecutiva, separada por dominio: cuánto entró, de dónde, qué viene.
 
     La proyección va como **rango** y con el `n` visible. Con 17 negocios
     resueltos, la tasa de conversión tiene un intervalo de confianza de casi 50
     puntos: dar una cifra puntual sería darle al directorio falsa precisión sobre
     una decisión de plata.
+
+    **La ventana solo alcanza lo temporal** --la ventana móvil, la serie, la
+    tendencia y los conteos de canjes del período--. Los buckets, la tasa de
+    cierre, el ticket y la proyección siguen siendo históricos: un negocio abierto
+    no pertenece a un mes, y una tasa sobre uno o dos casos resueltos no es una tasa.
     """
-    return obtener_vista_directorio(db)
+    if ventana not in VENTANAS_VALIDAS:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"La ventana tiene que ser una de {list(VENTANAS_VALIDAS)}.",
+        )
+    return obtener_vista_directorio(db, ventana=ventana)

@@ -1091,3 +1091,27 @@ Lado a lado no servía: cuatro activos junto a noventa cancelados son una raya j
 El promedio pasó a su propio modelo, `PromedioMes`, con todos los campos decimales. No reusa `MetricasMes` porque ahí los conteos son enteros y **el promedio de un conteo no lo es**. Hay un test que lo fija: 0,67 y no 0.
 
 De paso, los conteos fraccionarios van con coma decimal: `15,67` y no `15.67`, que se lee como otro número.
+
+---
+
+## D-056 · La vista directorio se separa por dominio, y la ventana solo alcanza lo temporal
+
+**Contexto.** El directorio era una foto sin ventana elegible —doce meses fijos— y de canjes mostraba dos conteos sueltos en un recuadro al pie. El pedido fue darle el mismo tratamiento que al reporte mensual: separación por dominio, y métricas, vistas y filtros equivalentes.
+
+**Decisión 1: el mismo selector Negocios / Canjes y la misma ventana móvil**, reusando los componentes del reporte mensual —`EvolucionMensual`, `Veredicto`— y sus funciones de backend —`_serie_mensual`, `_promedio`, `_tendencia`—. No se recalcula nada acá: dos versiones del mismo cálculo divergen, y hay un test que exige que la serie, el promedio y la tendencia del directorio sean **idénticos** a los del reporte mensual para la misma ventana.
+
+**Decisión 2, y es la que define la vista: la ventana solo manda sobre lo temporal.**
+
+Alcanza la ventana móvil, la serie, la tendencia y los conteos de canjes del período. **No** alcanza los buckets —ganado, en proceso, no concretado—, la tasa de cierre, el ticket ni la proyección.
+
+El motivo no es comodidad. Un negocio abierto **está abierto**: no pertenece a un mes, y filtrarlo por ventana obligaría a inventar un criterio —¿los abiertos que se iniciaron en la ventana?— que responde otra pregunta. Y la tasa de cierre con tres meses se calcularía sobre uno o dos casos resueltos: su intervalo de confianza pasaría de los 47 puntos actuales a casi cien, y la proyección heredaría ese rango. Un número con ese margen no informa una decisión de plata; es peor que no darlo.
+
+El default es doce meses, que era el valor fijo anterior: da la lectura anualizada sin depender de en qué mes del año estemos.
+
+**Decisión 3: la mitad de canjes es de volumen, origen y supervivencia.** Sin ticket ni proyección, porque sin plata no hay ticket mediano ni pipeline ponderado (`D-054`). Lleva los conteos del período —solicitados, activos, cancelados, que suman entre sí—, la tasa de cierre sobre los resueltos históricos, la serie apilada con su tendencia, y de dónde viene el volumen por operación, tipo de inmueble y comuna.
+
+**Los desgloses se recortan a ocho categorías y se declara que están recortados.** Nueve comunas ya ocupan media pantalla y la cola larga no dice dónde está el volumen. Se ordenan de mayor a menor y **se saltan los nulos** en vez de agruparlos en "Sin dato": en un desglose de origen, una categoría "Sin dato" grande empuja hacia abajo a las reales y no explica de dónde vino nada.
+
+**Los activos se cuentan por estado, plano, y eso cambió respecto de la versión anterior.** Antes `canjes_vigentes` era "activo **y** con etapa distinta de cerrada", el mismo criterio de la bandeja. Ahora la partición es por estado sin condiciones extra, porque los conteos del período tienen que cumplir `solicitados = activos + cancelados` para poder dibujarse apilados (`D-055`). Lo que antes se llamaba vigentes sigue siendo derivable —`activos_historicos − cerrados_historicos`— y **los dos números van en la respuesta justamente para que reconcilien a la vista**, en vez de dejar al lector eligiendo cuál creer.
+
+**Dos textos que quedaron falsos y se corrigieron.** El subtítulo decía "los montos son comisión real ViveProp" en una pantalla que ahora también muestra una mitad sin montos; pasó a depender del dominio. Y el aviso al pie decía que se preguntó qué quiere ver el directorio y no hubo respuesta: ya la hubo, dos veces. Ahora dice qué falta para cerrar la vista —los plazos de negocios y la comisión de canjes—, que es lo que de verdad queda pendiente.

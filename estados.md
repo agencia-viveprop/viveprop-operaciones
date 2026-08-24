@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Vista directorio separada por dominio, con ventana y evolución
+
+Pedido tuyo: las mismas separaciones que el reporte mensual, y métricas, vistas y filtros equivalentes.
+
+Hecho, reusando los componentes y las funciones del reporte mensual en vez de recalcular: hay un test que exige que la serie, el promedio y la tendencia del directorio sean **idénticos** a los del mensual para la misma ventana.
+
+**La ventana solo alcanza lo temporal**, y es la decisión que define la vista. Manda sobre la ventana móvil, la serie, la tendencia y los conteos de canjes del período. No manda sobre los buckets, la tasa de cierre, el ticket ni la proyección: un negocio abierto **está abierto**, no pertenece a un mes, y una tasa de cierre sobre uno o dos casos resueltos pasaría de un intervalo de 47 puntos a casi cien. El default sigue en doce meses, que era el valor fijo anterior.
+
+**La mitad de canjes** lleva los conteos del período --solicitados, activos, cancelados, que suman entre sí--, la tasa de cierre sobre los resueltos históricos (0 de 293), la serie apilada con tendencia, y de dónde viene el volumen por operación, tipo de inmueble y comuna. Sin ticket ni proyección: sin plata no hay ticket mediano ni pipeline ponderado.
+
+**Un cambio de definición que conviene saber.** Los activos ahora se cuentan por estado, plano, y no "activo y con etapa distinta de cerrada" como antes. Es lo que hace que `solicitados = activos + cancelados` y que se puedan apilar. Lo que antes se llamaba vigentes sigue derivable y los dos números van juntos en la respuesta para que reconcilien a la vista. Ver `D-056`.
+
+**Dos textos que habían quedado falsos:** el subtítulo hablaba de montos en una pantalla que ahora tiene una mitad sin montos, y el aviso al pie decía que no hubo respuesta sobre qué quiere ver el directorio. Corregidos.
+
+**Verificado:** 561 tests, `alembic check` limpio, build y lint sin hallazgos, y las dos mitades revisadas en captura renderizando la página real con el `fetch` interceptado.
+
 ### 2026-08-22 · Tendencia en los gráficos, y los canjes activos visibles
 
 Pedido tuyo: línea de tendencia en el tiempo, reflejar los canjes activos sin que se diluyan entre las solicitudes, y un recuadro de activos arriba de los gráficos.

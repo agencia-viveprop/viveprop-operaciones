@@ -95,6 +95,8 @@ Variables de entorno en Render:
 
 **Canjes no tiene eje de plata todavía, y está explicado en la pantalla.** Sí genera comisión --la de administración de Dataprop, 6/5/4% en venta según el tramo en UF u 8% en arriendo-- pero se calcula sobre la comisión de los corredores participantes, que está sin cargar en las 297 filas. Y `valor_prop` no sirve como reemplazo: la moneda está equivocada en ~138 filas y el campo mezcla precio de venta con arriendo mensual.
 
+**Vista directorio, separada por dominio.** Mismo selector Negocios / Canjes y misma ventana móvil que el reporte mensual, reusando sus componentes y sus cálculos. **La ventana solo alcanza lo temporal** --la ventana móvil, la serie, la tendencia y los conteos de canjes del período--: los buckets, la tasa de cierre, el ticket y la proyección siguen siendo históricos, porque un negocio abierto no pertenece a un mes y una tasa sobre uno o dos casos resueltos tendría un margen de casi cien puntos (`D-056`). La mitad de canjes va de volumen, origen y supervivencia, sin ticket ni proyección.
+
 **Vista directorio.** En *Vista directorio*, la presentación ejecutiva: cuánto entró, de dónde vino, qué hay por delante y una proyección. La proyección va como **rango** con el `n` a la vista, nunca como cifra (`D-044`). Se exporta imprimiendo: `Ctrl+P` da una hoja limpia.
 
 **Reset de contraseña.** En *Usuarios*, el botón **Resetear** genera una clave temporal, la muestra una sola vez y cierra las sesiones de esa persona. Al entrar, la app le pide elegir una propia y **la API le devuelve 403 en todo** hasta que lo haga — el bloqueo está en `get_current_user`, no en la pantalla (`D-040`). Nadie puede resetear su propia clave: para eso está *Cambiar contraseña*.
