@@ -6,12 +6,18 @@
 
 export type ConteoEtiqueta = { etiqueta: string; cantidad: number }
 
+/** Una etapa con su total y el desglose por estado, para filtrar sin reconsultar. */
+export type ConteoEtapa = ConteoEtiqueta & { activos: number; cancelados: number }
+
 export type ResumenCanjes = {
   total: number
   activos: number
   cancelados: number
   tasa_activos_pct: number
-  por_etapa: ConteoEtiqueta[]
+  /** Los que están ACTIVO pero con la etapa en Cerrado: el tile de «Activos» los
+   *  excluye, así que explican por qué el desglose puede sumar más que el tile. */
+  activos_con_etapa_cerrada: number
+  por_etapa: ConteoEtapa[]
   por_mes: ConteoEtiqueta[]
   por_tipo_inmueble: ConteoEtiqueta[]
   por_operacion: ConteoEtiqueta[]

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa
@@ -10,12 +10,31 @@ class ConteoEtiqueta(BaseModel):
     cantidad: int
 
 
+class ConteoEtapa(BaseModel):
+    """Una etapa con su total y el desglose por estado.
+
+    Los tres números vienen juntos para que la pantalla pueda filtrar sin volver a
+    consultar: son seis etapas por dos estados, no vale una ida al servidor por
+    cada clic en el selector.
+    """
+
+    etiqueta: str
+    cantidad: int
+    activos: int
+    cancelados: int
+
+
 class ResumenCanjes(BaseModel):
     total: int
     activos: int
     cancelados: int
     tasa_activos_pct: float
-    por_etapa: list[ConteoEtiqueta]
+    # Los que están ACTIVO pero con la etapa en Cerrado. El tile de «Activos» los
+    # excluye --un canje cerrado no está activo, aunque su estado no se haya
+    # actualizado-- así que sin este número la suma del desglose por etapa no
+    # cuadraría con el tile y no habría forma de explicar la diferencia.
+    activos_con_etapa_cerrada: int
+    por_etapa: list[ConteoEtapa]
     por_mes: list[ConteoEtiqueta]
     por_tipo_inmueble: list[ConteoEtiqueta]
     por_operacion: list[ConteoEtiqueta]
@@ -44,27 +63,43 @@ def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
     cancelados = db.scalar(select(func.count()).select_from(Canje).where(Canje.estado == CanjeEstado.CANCELADO)) or 0
     tasa_activos_pct = round((activos / total * 100), 1) if total else 0.0
 
-    filas_etapa = db.execute(select(Canje.etapa, func.count()).group_by(Canje.etapa)).all()
-    conteos_etapa = dict(filas_etapa)
-    por_etapa = [
-        ConteoEtiqueta(etiqueta=ETAPA_LABELS[e], cantidad=conteos_etapa.get(e, 0)) for e in CanjeEtapa
-    ]
-
-    # Se usa el alias "periodo" en GROUP BY/ORDER BY en vez de repetir la
-    # expresion to_char(...) tres veces -- repetirla generaba un parametro
-    # ligado distinto por ocurrencia y Postgres no reconocia que era la
-    # misma expresion (GroupingError), aunque el valor fuera igual siempre.
-    filas_mes = db.execute(
-        text(
-            """
-            SELECT to_char(fecha_solicitud, 'YYYY-MM') AS periodo, count(*) AS cantidad
-            FROM canjes
-            GROUP BY periodo
-            ORDER BY periodo
-            """
-        )
+    # Una sola consulta agrupada por las dos columnas: el desglose por estado sale
+    # de acá, no de dos consultas más por etapa.
+    filas_etapa = db.execute(
+        select(Canje.etapa, Canje.estado, func.count()).group_by(Canje.etapa, Canje.estado)
     ).all()
-    por_mes = [ConteoEtiqueta(etiqueta=periodo, cantidad=cant) for periodo, cant in filas_mes]
+    conteos: dict[tuple, int] = {(etapa, estado): n for etapa, estado, n in filas_etapa}
+    por_etapa = [
+        ConteoEtapa(
+            etiqueta=ETAPA_LABELS[e],
+            cantidad=sum(n for (etapa, _), n in conteos.items() if etapa == e),
+            activos=conteos.get((e, CanjeEstado.ACTIVO), 0),
+            cancelados=conteos.get((e, CanjeEstado.CANCELADO), 0),
+        )
+        for e in CanjeEtapa
+    ]
+    activos_con_etapa_cerrada = conteos.get((CanjeEtapa.CERRADO, CanjeEstado.ACTIVO), 0)
+
+    # El agrupado por mes se hace en Python, no en SQL, y eso es deliberado.
+    #
+    # Antes era `to_char(fecha_solicitud, 'YYYY-MM')` en SQL crudo, que es una
+    # funcion de Postgres: **dejaba todo este resumen sin poder probarse**, porque
+    # los tests corren sobre SQLite y ahi `to_char` no existe. Por eso el
+    # dashboard de canjes no tenia ni un test, y por eso este archivo llego a
+    # producirse sin red.
+    #
+    # El costo es traer una fecha por canje en vez de un agregado. Son 297 filas y
+    # crecen al ritmo en que Dataprop recibe solicitudes; a diez mil sigue siendo
+    # una consulta y un bucle. Se gana poder probarlo y no depender del dialecto.
+    fechas = db.scalars(select(Canje.fecha_solicitud)).all()
+    conteo_mes: dict[str, int] = {}
+    for f in fechas:
+        clave = f"{f.year:04d}-{f.month:02d}"
+        conteo_mes[clave] = conteo_mes.get(clave, 0) + 1
+    por_mes = [
+        ConteoEtiqueta(etiqueta=periodo, cantidad=conteo_mes[periodo])
+        for periodo in sorted(conteo_mes)
+    ]
 
     filas_tipo = db.execute(
         select(Canje.tipo_inmueble, func.count())
@@ -86,6 +121,7 @@ def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
         activos=activos,
         cancelados=cancelados,
         tasa_activos_pct=tasa_activos_pct,
+        activos_con_etapa_cerrada=activos_con_etapa_cerrada,
         por_etapa=por_etapa,
         por_mes=por_mes,
         por_tipo_inmueble=por_tipo_inmueble,

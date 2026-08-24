@@ -126,6 +126,28 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Canjes por etapa, con filtro de activos y cancelados
+
+Pedido tuyo. El bloque mostraba un solo número por etapa --el total-- y con 293 cancelados de 297 ese número era casi el conteo de cancelados: no decía nada sobre lo que hay vivo.
+
+Ahora cada etapa trae los tres números y el selector **Todos · Activos · Cancelados** filtra al instante, sin volver a consultar: los doce números vienen en la misma respuesta, que sale de una sola consulta agrupada por etapa y estado. Al lado del selector va el total de la vista, porque con «Activos» se ve una fila de 1, 2, 1 y sin el total no se sabe si son cuatro canjes o cuarenta. Arranca en «Todos», que es lo que la pantalla ya mostraba.
+
+Sobre `dev`, los tres filtros cuadran con los recuadros de arriba:
+
+| etapa | Todos | Activos | Cancelados |
+|---|---:|---:|---:|
+| Sin etapa | 75 | 0 | 75 |
+| En revisión | 24 | 0 | 24 |
+| Proceso de acuerdo | 102 | 1 | 101 |
+| En oferta | 38 | 2 | 36 |
+| En negocio | 27 | 1 | 26 |
+| Cerrado | 31 | 0 | 31 |
+| **suma** | **297** | **4** | **293** |
+
+**Y de paso, el resumen de canjes pasó a ser testeable.** `por_mes` usaba `to_char(...)` en SQL crudo, una función de Postgres, así que todo este resumen no se podía probar --los tests corren sobre SQLite-- y por eso el dashboard de canjes no tenía ni un test. El agrupado por mes se hace ahora en Python; se verificó que el resultado es idéntico en los 37 meses de `dev`, antes y después. Con eso el archivo tiene sus primeros 7 tests. Ver `D-051`.
+
+**Verificado en vivo contra `dev`:** 507 tests, build y lint limpios.
+
 ### 2026-08-22 · Se puede ver qué columnas espera cada carga masiva
 
 Pedido tuyo: en los botones de *Importar Canjes* y *Carga masiva*, poder ver la estructura del archivo esperado. Antes las dos pedían un `.xlsx` sin decir en ninguna parte qué columnas querían; la única forma de saber si servía era subirlo y leer los errores.

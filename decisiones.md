@@ -954,3 +954,21 @@ El caso del reporte mensual es aún más claro: *"4 de 11 meses"* era cierto el 
 **Y esa plantilla no es para llenarla a mano.** El archivo de canjes sale de la query contra Dataprop. Se baja para **comparar encabezados** cuando la carga falla y no se entiende por qué. Está dicho así en la pantalla, para que nadie se ponga a tipear canjes en ella.
 
 **El orden de las rutas importa.** `/canjes/plantilla` va registrada antes de `/canjes/{canje_id}`, o FastAPI intenta parsear "plantilla" como un entero. Es el mismo error que ya se había cometido con `/canjes/bandeja`, y hay un test que lo fija.
+
+---
+
+## D-051 · El desglose por etapa viene con la respuesta, y el filtro es de pantalla
+
+**Contexto.** El bloque «Canjes por etapa» mostraba un solo número por etapa: el total, sin distinguir activos de cancelados. Con **293 cancelados de 297**, ese número era básicamente el conteo de cancelados y no decía nada sobre lo que hay vivo — que es lo que uno viene a mirar.
+
+**Decisión.** Cada etapa trae los tres números en la misma respuesta —total, activos, cancelados— y el selector filtra en la pantalla, sin volver a consultar.
+
+**Por qué no un parámetro en la URL.** Son seis etapas por dos estados: doce números que caben en la misma respuesta que ya se pide. Un `?estado=` habría significado una ida al servidor por cada clic en el selector, con su carga y su parpadeo, para traer datos que ya estaban ahí. Se resuelve con **una sola consulta agrupada por las dos columnas**, no con dos consultas más.
+
+**Arranca en «Todos».** Es lo que la pantalla mostraba antes de que existiera el selector: agregar un filtro no debería cambiar lo que uno ya veía. Queda dicho en el código que «Activos» es la vista más informativa de las tres, pero elegirla como defecto es una decisión de quien usa la app, no del código.
+
+**El total de la vista va al lado del selector.** Con «Activos» se ve una fila de números chicos —1, 2, 1— y sin el total no queda claro si son cuatro canjes o cuarenta.
+
+**Los activos con la etapa en Cerrado se declaran en vez de esconderse.** El recuadro «Activos» de arriba exige `estado = ACTIVO` **y** `etapa != Cerrado`: un canje cerrado no está activo, aunque nadie le haya cambiado el estado. El desglose por etapa, en cambio, cuenta por estado sin más. Un canje en ese cruce aparecería como activo en la fila «Cerrado» y no en el recuadro, y la suma daría uno más sin explicación. Así que la respuesta trae `activos_con_etapa_cerrada` y la pantalla lo dice —**solo cuando no es cero**, para no poner un cartel sobre un caso que hoy no existe—. Hay un test que construye ese cruce y exige que la diferencia sea exactamente ese número.
+
+**Y de paso: el resumen de canjes pasó a ser testeable.** `por_mes` se calculaba con `to_char(fecha_solicitud, 'YYYY-MM')` en SQL crudo, que es una función de Postgres, así que **todo este resumen no se podía probar** —los tests corren sobre SQLite— y por eso el dashboard de canjes no tenía ni un test. Ahora el agrupado por mes se hace en Python. El costo es traer una fecha por canje en vez de un agregado: son 297 filas, y a diez mil sigue siendo una consulta y un bucle. Se verificó que el resultado es idéntico en los 37 meses de `dev` antes y después.
