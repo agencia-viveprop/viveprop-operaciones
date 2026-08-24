@@ -126,6 +126,21 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · La fecha del movimiento se puede elegir
+
+Pedido tuyo: al registrar un movimiento de canje, poder elegir la fecha, junto al tipo. Antes todo movimiento quedaba con el instante del clic, y en la práctica uno anota el lunes lo que pasó el viernes: esos tres días iban directo al reloj del semáforo.
+
+La API **ya aceptaba `fecha`** desde el sprint del pipeline, así que el campo en sí era media hora de trabajo. Lo que tomó tiempo fue lo que había que cerrar antes de exponerlo:
+
+- **Vacío = ahora.** El campo no se precarga, así que el camino habitual manda el cuerpo sin fecha y el servidor pone la de la petición, igual que antes. Backdatear es opt-in.
+- **Se atrasa, no se adelanta.** Una fecha futura daba **horas negativas** en la bandeja, porque `horas_sin_gestion` es `ahora - ultimo_movimiento`. Se rechaza, con cinco minutos de holgura por el desfase del reloj del navegador. Y una fecha anterior a la solicitud del canje también, con las dos fechas en el mensaje.
+- **La etapa dejó de retroceder sola.** Este es el hallazgo: `crear_movimiento_*` aplicaba la etapa del movimiento recién insertado. Con fechas siempre crecientes daba igual; al poder atrasarlas, no. Medido: en un canje que el día 20 había pasado a «En negocio», anotar una gestión del día 10 lo devolvía a «En revisión». Ahora la etapa se deriva del movimiento más reciente que traiga una.
+- **El estado no se deriva**, y es a propósito: un canje cancelado no revive porque alguien anote gestión posterior. Con test.
+
+Ver `D-052`. La validación quedó en el servicio compartido, así que cubre negocios también —su endpoint ya aceptaba `fecha` y tenía el mismo hueco—, aunque su pantalla todavía no ofrece el campo.
+
+**Verificado en vivo contra `dev`**, sobre el canje 360: fecha futura y fecha anterior a la solicitud rechazadas con 400 y su mensaje; fecha del 19-08 guardada tal cual y ubicada en el lugar correcto de la línea de tiempo; la etapa quedó en `EN_OFERTA`, sin moverse. El movimiento de prueba se borró. 523 tests, `alembic check` limpio.
+
 ### 2026-08-22 · Canjes por etapa, con filtro de activos y cancelados
 
 Pedido tuyo. El bloque mostraba un solo número por etapa --el total-- y con 293 cancelados de 297 ese número era casi el conteo de cancelados: no decía nada sobre lo que hay vivo.

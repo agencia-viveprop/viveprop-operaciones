@@ -31,7 +31,16 @@ export function listarMovimientosCanje(canjeId: number): Promise<Movimiento[]> {
   return fetch(`/api/canjes/${canjeId}/movimientos`, { credentials: 'include' }).then(parseOrThrow)
 }
 
-export function crearMovimientoCanje(canjeId: number, payload: { tipo_movimiento: string; comentario?: string }): Promise<Movimiento> {
+/**
+ * Registra un movimiento en un canje.
+ *
+ * `fecha` es opcional y va en ISO con zona. Si no se manda, el servidor pone el
+ * instante en que llega la petición, que es el comportamiento de siempre.
+ */
+export function crearMovimientoCanje(
+  canjeId: number,
+  payload: { tipo_movimiento: string; comentario?: string; fecha?: string },
+): Promise<Movimiento> {
   return fetch(`/api/canjes/${canjeId}/movimientos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

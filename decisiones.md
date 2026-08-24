@@ -972,3 +972,25 @@ El caso del reporte mensual es aún más claro: *"4 de 11 meses"* era cierto el 
 **Los activos con la etapa en Cerrado se declaran en vez de esconderse.** El recuadro «Activos» de arriba exige `estado = ACTIVO` **y** `etapa != Cerrado`: un canje cerrado no está activo, aunque nadie le haya cambiado el estado. El desglose por etapa, en cambio, cuenta por estado sin más. Un canje en ese cruce aparecería como activo en la fila «Cerrado» y no en el recuadro, y la suma daría uno más sin explicación. Así que la respuesta trae `activos_con_etapa_cerrada` y la pantalla lo dice —**solo cuando no es cero**, para no poner un cartel sobre un caso que hoy no existe—. Hay un test que construye ese cruce y exige que la diferencia sea exactamente ese número.
 
 **Y de paso: el resumen de canjes pasó a ser testeable.** `por_mes` se calculaba con `to_char(fecha_solicitud, 'YYYY-MM')` en SQL crudo, que es una función de Postgres, así que **todo este resumen no se podía probar** —los tests corren sobre SQLite— y por eso el dashboard de canjes no tenía ni un test. Ahora el agrupado por mes se hace en Python. El costo es traer una fecha por canje en vez de un agregado: son 297 filas, y a diez mil sigue siendo una consulta y un bucle. Se verificó que el resultado es idéntico en los 37 meses de `dev` antes y después.
+
+---
+
+## D-052 · La fecha de un movimiento se puede atrasar, y la etapa vigente se deriva de la línea de tiempo
+
+**Contexto.** La pantalla de seguimiento no ofrecía fecha, así que todo movimiento quedaba con el instante en que se apretaba el botón. En la práctica uno anota el lunes lo que pasó el viernes, y esos tres días de diferencia van directo al reloj del semáforo y al reporte semanal.
+
+La API **ya aceptaba `fecha`** en canjes y en negocios desde el sprint del pipeline; el hueco era solo de pantalla. Lo que faltaba no era el campo: era todo lo que había que cerrar antes de exponerlo.
+
+**Decisión 1: el campo va vacío, y vacío significa «ahora».** No se precarga con la hora actual. Así el camino habitual —registrar lo que acaba de pasar— manda un cuerpo sin `fecha` y el servidor pone la de la petición, exactamente como antes. Backdatear es opt-in, y no hay forma de que un formulario abierto diez minutos guarde una hora vieja por descuido.
+
+**Decisión 2: se puede atrasar, no adelantar.** Una fecha futura envenena el reloj de la bandeja: `horas_sin_gestion` es `ahora - ultimo_movimiento`, así que daría **horas negativas** en pantalla, y con ellas el semáforo y el reporte semanal. Se rechaza con 400. Y una fecha anterior a que la cosa existiera —la solicitud del canje, o el hito más antiguo del negocio— no es un dato sino un tipeo; el mensaje trae las dos fechas para que se vea cuál era el mínimo.
+
+**Hay cinco minutos de holgura**, porque la fecha la arma el navegador y su reloj puede ir unos minutos adelante. Sin eso, registrar «ahora» desde una máquina adelantada se rechazaría por venir del futuro, que es un error incomprensible para quien lo ve.
+
+**Decisión 3, y es la que el campo obligó a tomar: la etapa vigente se deriva de la línea de tiempo.** Antes, `crear_movimiento_*` hacía `entidad.etapa = tipo.etapa_resultante` con el movimiento recién insertado. Con fechas siempre crecientes eso era correcto; **desde que se pueden atrasar, no.** Está medido: en un canje que el día 20 había pasado a «En negocio», anotar una gestión con fecha del día 10 lo devolvía a «En revisión» —la etapa retrocedía sola, contra un movimiento posterior que seguía ahí—.
+
+Ahora se lee: la etapa es la del movimiento **más reciente** que traiga una. Es un cambio de acumular a derivar, y es lo correcto de todas formas: la etapa vigente es una consecuencia de la línea de tiempo, no un contador.
+
+**El estado no se deriva, y eso sí es a propósito.** Un canje que se canceló quedó cancelado; que después alguien anote otra gestión no lo revive. Deshacer una cancelación es una edición manual, no un movimiento. Hay un test que lo fija para que nadie «complete» la simetría por prolijidad.
+
+**La validación se puso en el servicio compartido**, así que cubre canjes y negocios. La pantalla de negocios todavía no ofrece el campo —no se pidió—, pero su endpoint ya aceptaba `fecha`: cerrar el agujero en un dominio y dejarlo abierto en el otro habría sido arreglar la mitad.

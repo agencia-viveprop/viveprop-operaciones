@@ -1,8 +1,32 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Divider, Modal, Select, Stack, Text, Textarea, Timeline } from '@mantine/core'
+import {
+  Alert,
+  Button,
+  Divider,
+  Modal,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+  Textarea,
+  TextInput,
+  Timeline,
+} from '@mantine/core'
 import { IconArrowRight, IconMessage } from '@tabler/icons-react'
 import { crearMovimientoCanje, listarMovimientosCanje, listarTiposMovimiento } from '../api/movimientos'
+
+/**
+ * «Ahora» en el formato que espera un `datetime-local`, para el tope del input.
+ *
+ * `toISOString()` no sirve: devuelve UTC, así que en Chile el tope quedaría
+ * cuatro horas adelantado y dejaría elegir fechas futuras. Hay que restar el
+ * desfase del huso antes de recortar.
+ */
+function ahoraLocal(): string {
+  const d = new Date()
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+}
 
 const ETAPA_LABELS: Record<string, string> = {
   SIN_ETAPA: 'Sin etapa',
@@ -27,6 +51,10 @@ export default function SeguimientoModal({
   const queryClient = useQueryClient()
   const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null)
   const [comentario, setComentario] = useState('')
+  // Vacío = ahora. Se deja así en vez de precargarlo con la hora actual para que
+  // el camino habitual --registrar lo que acaba de pasar-- sea exactamente el que
+  // había antes: sin fecha en el cuerpo, el servidor pone la de la petición.
+  const [fecha, setFecha] = useState('')
 
   const { data: movimientos, isLoading } = useQuery({
     queryKey: ['movimientos', canjeId],
@@ -41,12 +69,23 @@ export default function SeguimientoModal({
   })
 
   const crear = useMutation({
-    mutationFn: () => crearMovimientoCanje(canjeId!, { tipo_movimiento: tipoSeleccionado!, comentario: comentario || undefined }),
+    mutationFn: () =>
+      crearMovimientoCanje(canjeId!, {
+        tipo_movimiento: tipoSeleccionado!,
+        comentario: comentario || undefined,
+        // El input da hora local; se manda en ISO con zona para que el servidor
+        // no tenga que adivinar de qué huso viene.
+        fecha: fecha ? new Date(fecha).toISOString() : undefined,
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['movimientos', canjeId] })
-      queryClient.invalidateQueries({ queryKey: ['canjes'] })
+      // La bandeja también: su semáforo se mide desde el último movimiento, y
+      // registrar uno con fecha atrasada le cambia el nivel.
+      ;['movimientos', 'canjes', 'bandeja', 'reporte-semanal'].forEach((k) =>
+        queryClient.invalidateQueries({ queryKey: k === 'movimientos' ? [k, canjeId] : [k] }),
+      )
       setTipoSeleccionado(null)
       setComentario('')
+      setFecha('')
     },
   })
 
@@ -80,13 +119,27 @@ export default function SeguimientoModal({
         {puedeEditar && (
           <>
             <Divider label="Agregar movimiento" />
-            <Select
-              label="Tipo de movimiento"
-              placeholder="Selecciona un tipo"
-              data={tipos?.map((t) => ({ value: t.codigo, label: t.nombre })) ?? []}
-              value={tipoSeleccionado}
-              onChange={setTipoSeleccionado}
-            />
+            {/* La fecha va al lado del tipo porque son la misma decisión: qué
+                pasó y cuándo. Separarlas dejaba la fecha como un detalle
+                opcional al final, y es justamente lo que hay que corregir
+                cuando se anota gestión de días pasados. */}
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+              <Select
+                label="Tipo de movimiento"
+                placeholder="Selecciona un tipo"
+                data={tipos?.map((t) => ({ value: t.codigo, label: t.nombre })) ?? []}
+                value={tipoSeleccionado}
+                onChange={setTipoSeleccionado}
+              />
+              <TextInput
+                label="Fecha y hora"
+                type="datetime-local"
+                description="Vacío = ahora"
+                max={ahoraLocal()}
+                value={fecha}
+                onChange={(e) => setFecha(e.currentTarget.value)}
+              />
+            </SimpleGrid>
             <Textarea
               label="Comentario"
               placeholder="Opcional"
