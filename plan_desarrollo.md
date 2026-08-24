@@ -335,6 +335,9 @@ Ninguna bloquea el arranque.
 | — | **Importar #364 y #367**, que son posteriores al último export de Dataprop. La limpieza de canjes ya no está pendiente: va en la migración `a4e81b6f30c9` y se aplica en el deploy. |
 | — | **Con qué UF se valoriza un negocio abierto.** La planilla los revalorizaba con la UF del día en que se exportaba, o sea que el pipeline se movía solo cada vez. Los dos abiertos quedaron fijos al 20-08-2026, que preserva el monto pero lo congela. Ver `D-046`. |
 | — | **Qué base es la correcta en `VVP-2`.** Esa fila usó dos a la vez: el total sobre 81.505.175 y el reparto sobre los 104.100.248,32 de la UF. El descuadre son los 903.803 que la ficha muestra. Hasta que se decida, la app impide guardarla sin confirmación explícita. |
+| — | **La moneda de `valor_prop` en canjes está equivocada en ~138 de 297 filas**: 26 ventas y 50 arriendos marcados en UF que son pesos, y 62 ventas marcadas en CLP que son UF. Y el campo mezcla precio de venta con arriendo mensual. Hasta que se corrija en el origen, canjes no puede tener eje de plata ni determinarse el tramo de la escala de comisión. Ver `D-054`. |
+| — | **La comisión de canjes necesita la comisión de los corredores participantes.** `comision_dbrokers` está en 0 de 297 filas. Con ese dato cargado se puede aplicar la escala de Dataprop (6/5/4% en venta según tramo en UF, 8% en arriendo). |
+| — | **`fecha_cierre` de un canje significa "cerrado o cancelado", no "cerrado con éxito".** Los 31 con etapa `CERRADO` están todos cancelados y sin fecha. Falta definir cómo se registra un cierre exitoso para que la métrica lo cuente. |
 
 
 

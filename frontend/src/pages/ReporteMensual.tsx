@@ -17,12 +17,14 @@ import { IconChevronLeft, IconChevronRight, IconMinus } from '@tabler/icons-reac
 import {
   obtenerReporteMensual,
   VENTANAS,
+  type Dominio,
   type Comparacion,
   type Variacion,
 } from '../api/reportes'
 import PageHeader from '../components/PageHeader'
 import { clp } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
+import EvolucionMensual, { Veredicto } from '../components/EvolucionMensual'
 
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -96,7 +98,51 @@ function Delta({ v }: { v: Variacion }) {
   )
 }
 
-function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string; c: Comparacion }) {
+/** Un recuadro de titular. Se extrajo porque ahora hay dos juegos --uno por
+ *  dominio-- y repetir el marcado siete veces invita a que se desalineen. */
+function Tile({
+  rotulo: etiqueta,
+  valor: monto,
+  pie,
+}: {
+  rotulo: string
+  valor: string | number
+  pie?: string
+}) {
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Text size="xs" fw={700} c="dimmed">
+        {etiqueta}
+      </Text>
+      <Text size="22px" fw={800} mt={4} lh={1.1}>
+        {monto}
+      </Text>
+      {pie && (
+        <Text size="xs" c="dimmed" mt={4}>
+          {pie}
+        </Text>
+      )}
+    </Paper>
+  )
+}
+
+
+function TablaComparacion({
+  titulo,
+  ayuda,
+  c,
+  dominio,
+}: {
+  titulo: string
+  ayuda: string
+  c: Comparacion
+  /** Qué mitad del reporte se está mirando. El filtro va por este campo y no
+   *  por el nombre visible de la métrica: renombrar una métrica no puede
+   *  cambiar en silencio de qué reporte forma parte. */
+  dominio: Dominio
+}) {
+  const filas = c.variaciones.filter((v) => v.dominio === dominio)
+
   return (
     <Paper withBorder radius="md" p="md">
       <Title order={5}>{titulo}</Title>
@@ -115,7 +161,7 @@ function TablaComparacion({ titulo, ayuda, c }: { titulo: string; ayuda: string;
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {c.variaciones.map((v) => (
+            {filas.map((v) => (
               <Table.Tr key={v.metrica}>
                 <Table.Td>{v.metrica}</Table.Td>
                 <Table.Td ta="right" ff="monospace">
@@ -160,6 +206,9 @@ export default function ReporteMensual() {
   const ahora = new Date()
   const [desplazamiento, setDesplazamiento] = useState(0)
   const [ventana, setVentana] = useState('6')
+  // Arranca en negocios: es donde está la plata, y el reporte de cierre se lee
+  // por ahí. Canjes es volumen de gestión, no resultado.
+  const [dominio, setDominio] = useState<Dominio>('negocios')
 
   const cursor = new Date(ahora.getFullYear(), ahora.getMonth() + desplazamiento, 1)
   const anio = cursor.getFullYear()
@@ -204,18 +253,30 @@ export default function ReporteMensual() {
         <EstadoConsulta de={consulta} alto={240} />
       ) : (
         <>
-          {/* El selector va primero porque manda sobre los tiles de abajo. */}
-          <Group gap="xs">
-            <Text size="xs" c="dimmed">
-              Ventana móvil de
-            </Text>
+          {/* Los dos selectores van primero porque mandan sobre todo lo de
+              abajo: uno elige qué reporte y el otro con qué horizonte. */}
+          <Group gap="lg" wrap="wrap">
             <SegmentedControl
-              size="xs"
               color="accent"
-              value={ventana}
-              onChange={setVentana}
-              data={VENTANAS.map((v) => ({ value: String(v), label: `${v} meses` }))}
+              value={dominio}
+              onChange={(v) => setDominio(v as Dominio)}
+              data={[
+                { value: 'negocios', label: 'Negocios' },
+                { value: 'canjes', label: 'Canjes' },
+              ]}
             />
+            <Group gap="xs">
+              <Text size="xs" c="dimmed">
+                Ventana móvil de
+              </Text>
+              <SegmentedControl
+                size="xs"
+                color="accent"
+                value={ventana}
+                onChange={setVentana}
+                data={VENTANAS.map((v) => ({ value: String(v), label: `${v} meses` }))}
+              />
+            </Group>
           </Group>
 
           {/* Los tiles muestran la **ventana**, no el mes.
@@ -225,56 +286,106 @@ export default function ReporteMensual() {
            * lo primero que se veía era "$0" --cierto para agosto, porque el
            * último cierre es del 1 de junio-- y la conclusión natural era que la
            * app estaba rota. La maquetación contradecía el mensaje. */}
-          <SimpleGrid cols={{ base: 2, sm: 4 }}>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                COMISIÓN REAL VP
+          {dominio === 'negocios' ? (
+            <SimpleGrid cols={{ base: 2, sm: 4 }}>
+              <Tile
+                rotulo="COMISIÓN REAL VP"
+                valor={clp(data.movil.actual.comision_real_vp)}
+                pie={`en ${data.ventana_meses} meses`}
+              />
+              <Tile rotulo="COMISIÓN TOTAL" valor={clp(data.movil.actual.comision_total)} />
+              <Tile
+                rotulo="LIQUIDACIONES"
+                valor={data.movil.actual.hitos_cerrados}
+                pie="cerradas en la ventana"
+              />
+              <Tile rotulo="NEGOCIOS INICIADOS" valor={data.movil.actual.negocios_iniciados} />
+            </SimpleGrid>
+          ) : (
+            <SimpleGrid cols={{ base: 2, sm: 3 }}>
+              <Tile
+                rotulo="CANJES SOLICITADOS"
+                valor={data.movil.actual.canjes_solicitados}
+                pie={`en ${data.ventana_meses} meses`}
+              />
+              <Tile rotulo="CANJES CERRADOS" valor={data.movil.actual.canjes_cerrados} />
+              <Tile rotulo="CANJES CANCELADOS" valor={data.movil.actual.canjes_cancelados} />
+            </SimpleGrid>
+          )}
+
+          {/* La evolución va **antes** de las tablas: es la respuesta a "cómo
+              vamos", y las tablas son el detalle de cuánto. */}
+          {dominio === 'negocios' ? (
+            <>
+              <Paper withBorder radius="md" p="md">
+                <Veredicto
+                  actual={Number(data.serie[data.serie.length - 1]?.comision_real_vp ?? 0)}
+                  promedio={Number(data.promedio.comision_real_vp)}
+                  unidad="comisión"
+                  esPlata
+                />
+              </Paper>
+              <EvolucionMensual
+                titulo="Comisión real ViveProp por mes"
+                subtitulo="La línea punteada es el promedio de la ventana. El mes que se está mirando es la última barra, y su valor va arriba a la derecha."
+                serie={data.serie}
+                series={[{ campo: 'comision_real_vp', nombre: 'Comisión real VP', tono: 'principal' }]}
+                promedio={Number(data.promedio.comision_real_vp)}
+                esPlata
+              />
+              <EvolucionMensual
+                titulo="Liquidaciones y negocios por mes"
+                subtitulo="Cuántos cerraron y cuántos entraron. Van en un gráfico aparte del de plata: un mismo eje para montos y unidades deja elegir la escala a gusto."
+                serie={data.serie}
+                series={[
+                  { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
+                  { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
+                ]}
+              />
+            </>
+          ) : (
+            <>
+              <Paper withBorder radius="md" p="md">
+                <Veredicto
+                  actual={data.serie[data.serie.length - 1]?.canjes_solicitados ?? 0}
+                  promedio={Number(data.promedio.canjes_solicitados)}
+                  unidad="solicitudes"
+                />
+                <Text size="xs" c="dimmed" mt={6}>
+                  Canjes no tiene eje de plata todavía. Sí genera comisión --la de
+                  administración de Dataprop, 6/5/4% en venta según el tramo en UF u 8% en
+                  arriendo-- pero se calcula sobre la comisión de los corredores, y ese dato
+                  está sin cargar en todas las filas.
+                </Text>
+              </Paper>
+              <EvolucionMensual
+                titulo="Solicitudes y cancelaciones por mes"
+                subtitulo="Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
+                serie={data.serie}
+                series={[
+                  { campo: 'canjes_solicitados', nombre: 'Solicitados', tono: 'principal' },
+                  { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },
+                ]}
+              />
+              <Text size="xs" c="dimmed">
+                «Canjes cerrados» va en la tabla y no en el gráfico porque es cero en todos
+                los meses: ningún canje se ha cerrado con éxito. Los que quedaron con la
+                etapa en «Cerrado» están todos cancelados.
               </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {clp(data.movil.actual.comision_real_vp)}
-              </Text>
-              <Text size="xs" c="dimmed" mt={4}>
-                en {data.ventana_meses} meses
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                LIQUIDACIONES
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.movil.actual.hitos_cerrados}
-              </Text>
-              <Text size="xs" c="dimmed" mt={4}>
-                cerradas en la ventana
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                NEGOCIOS INICIADOS
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.movil.actual.negocios_iniciados}
-              </Text>
-            </Paper>
-            <Paper withBorder radius="md" p="md">
-              <Text size="xs" fw={700} c="dimmed">
-                CANJES SOLICITADOS
-              </Text>
-              <Text size="22px" fw={800} mt={4} lh={1.1}>
-                {data.movil.actual.canjes_solicitados}
-              </Text>
-            </Paper>
-          </SimpleGrid>
+            </>
+          )}
 
           <TablaComparacion
             titulo={`Últimos ${data.ventana_meses} meses`}
             ayuda="Contra los mismos meses inmediatamente anteriores, sin solaparse"
             c={data.movil}
+            dominio={dominio}
           />
           <TablaComparacion
             titulo="Año corrido"
             ayuda="Contra el mismo tramo del año pasado, no contra el año entero"
             c={data.anio_corrido}
+            dominio={dominio}
           />
 
           {/* El mes, como detalle y al final.
@@ -287,7 +398,17 @@ export default function ReporteMensual() {
               {rotulo(data.mes.etiqueta)}, el mes suelto
             </Title>
             <Text size="sm" mt={6}>
-              {data.mes.hitos_cerrados === 0 ? (
+              {dominio === 'canjes' ? (
+                data.mes.canjes_solicitados === 0 ? (
+                  <>No entró ninguna solicitud de canje en el mes.</>
+                ) : (
+                  <>
+                    Entraron {data.mes.canjes_solicitados}{' '}
+                    {data.mes.canjes_solicitados === 1 ? 'solicitud' : 'solicitudes'}, de las
+                    que {data.mes.canjes_cancelados} ya están canceladas.
+                  </>
+                )
+              ) : data.mes.hitos_cerrados === 0 ? (
                 <>
                   No se cerró ninguna liquidación en el mes. Con procesos que duran de un
                   mes a varios eso es normal: {data.meses_sin_cierres} de los últimos{' '}
@@ -300,14 +421,11 @@ export default function ReporteMensual() {
                   por {clp(data.mes.comision_real_vp)} de comisión real.
                 </>
               )}{' '}
-              {data.mes.negocios_iniciados > 0 && (
+              {dominio === 'negocios' && data.mes.negocios_iniciados > 0 && (
                 <>
                   Entraron {data.mes.negocios_iniciados}{' '}
-                  {data.mes.negocios_iniciados === 1 ? 'negocio' : 'negocios'}.{' '}
+                  {data.mes.negocios_iniciados === 1 ? 'negocio' : 'negocios'}.
                 </>
-              )}
-              {data.mes.canjes_solicitados > 0 && (
-                <>Se solicitaron {data.mes.canjes_solicitados} canjes.</>
               )}
             </Text>
             <Text size="xs" c="dimmed" mt={6}>

@@ -1015,3 +1015,43 @@ Ahora se lee: la etapa es la del movimiento **más reciente** que traiga una. Es
 El costo de esa decisión es que un movimiento registrado por error deja el canje excluido de la importación **para siempre**. Lo comprobé encima: verificando esto contra `dev` le puse la marca al canje 355 sin querer, y tuve que restaurarla comparándolo con los otros seis cancelados sin movimientos, que estaban en `False`. Si a mí se me pasó teniendo el modelo entero en la cabeza, a cualquiera se le pasa. Así que **el modal lo dice** cuando un canje sin movimientos está marcado: la consecuencia es la misma, pero deja de ser invisible.
 
 **La confirmación va en la fila del movimiento, no en un diálogo.** Un diálogo encima de un modal ya abierto tapa justamente lo que hay que mirar para decidir. Un segundo clic en el mismo lugar —"¿Borrar este movimiento?" con Sí y Cancelar— deja a la vista de cuál se trata.
+
+---
+
+## D-054 · El reporte mensual se separa por dominio y muestra la evolución de la ventana
+
+**Contexto.** El reporte mezclaba negocios y canjes en la misma tabla, y decía cuánto cambió la ventana contra la anterior —un número— pero no en qué dirección venía. Con eso no se puede responder lo que se le pide: si hay avance, estancamiento o retroceso.
+
+**Decisión 1: un selector Negocios / Canjes**, el mismo patrón que Inicio. Cada dominio ocupa la pantalla con sus recuadros, sus gráficos y su tabla. El backend etiqueta cada variación con su `dominio` en vez de dejar que la pantalla filtre por el nombre visible: renombrar una métrica no puede cambiar en silencio de qué reporte forma parte.
+
+**Decisión 2: la serie mes por mes de la ventana**, con el promedio como referencia. Es lo que convierte el gráfico en respuesta: una barra más baja que la anterior no dice si el mes es malo; una barra bajo el promedio de su propia ventana, sí. Va acompañada de una frase —*"el mes va 26% sobre el promedio de la ventana"*— porque eso es lo que se lee en un segundo. El umbral de "en línea" es 10%: con estos volúmenes, menos que eso no es tendencia.
+
+**El promedio incluye los meses en cero.** De 11 meses con actividad, 4 estuvieron vacíos: son parte de la normalidad de este negocio, y excluirlos inflaría la referencia justo en el sentido que hace ver retroceso donde no hay.
+
+**Cuatro consultas para toda la serie, no cinco por mes.** Llamar a `_metricas` doce veces habría costado sesenta viajes. Se traen las filas del rango completo y se agrupan en Python, la misma decisión de `D-051` por el mismo motivo: contra Neon lo que cuesta es la latencia. De paso reemplazó el bucle que contaba los meses vacíos, que recorría la ventana una segunda vez.
+
+**Decisión 3: la plata y las cantidades en gráficos separados.** Nunca dos ejes en el mismo: un eje doble deja que la escala de cada serie se elija sola, y con eso cualquier par de curvas se puede hacer coincidir o divergir a gusto.
+
+### Lo que se descubrió al construirlo, y que cambió el alcance
+
+**Canjes no tiene eje de plata, y no por olvido.** Sí genera comisión —la de administración de Dataprop: 6/5/4% en venta según el tramo en UF, u 8% en arriendo, siempre **sobre la comisión de los corredores participantes**—. Pero:
+
+- `comision_dbrokers` y `valor_negocio` están en **0 de 297 filas**. El campo existe en el formulario y nadie lo llenó nunca; ningún reporte lo usa. Sin la comisión de los corredores no hay base sobre la que aplicar la escala.
+- `valor_prop`, que era la alternativa, **no se puede sumar**. La moneda está equivocada en las dos direcciones: 26 ventas y 50 arriendos marcados en UF con valores de más de 100.000 —que serían miles de millones de pesos, o sea que son pesos— y 62 ventas marcadas en CLP con valores de 1.000 a 100.000 —que como precio de venta en pesos es absurdo, o sea que son UF—. Son **~138 de 297 filas**. Y encima el campo mezcla precio de venta con arriendo mensual, que no suman entre sí.
+
+Se había acordado mostrar el volumen en pesos "por ahora"; se retiró al medirlo, porque daba 185 mil millones para diez canjes. **Un número errado por órdenes de magnitud con una nota al pie sigue siendo un número errado en pantalla** (`D-048`).
+
+**«Canjes cerrados» es cero en todos los meses, y es correcto.** Los 31 canjes con etapa `CERRADO` están **todos cancelados** y ninguno tiene `fecha_cierre`; los 47 que sí tienen fecha están cancelados en etapas intermedias. En esta base no hay un solo canje cerrado con éxito. La métrica queda en la tabla y fuera del gráfico —una serie plana en cero no informa y gastaba un color—, con la explicación escrita en la pantalla.
+
+Queda anotado que su definición es frágil: exige `etapa = CERRADO` **y** `fecha_cierre` en el rango, y el patrón de los 31 sugiere que el primer cierre real también podría llegar sin fecha. No se cambió sobre una suposición.
+
+### Lo que corrigió mirar el gráfico renderizado
+
+Compila, pasa el lint y aun así estaba mal de cuatro formas. Se levantó la página en un render aislado con los datos reales de `dev` y se sacaron capturas en los dos modos:
+
+1. **Ninguna barra se dibujaba.** La animación de entrada las deja en altura 0 y en un render sin ventana visible nunca avanza. Quedó desactivada, que además evita que cada cambio de ventana o de dominio sea un rebote.
+2. **El énfasis del mes actual no servía.** Se dibujaba el mes actual opaco y los anteriores translúcidos; como el mes que se mira es justamente el que suele estar en cero —por eso se lo mira—, el resultado era un gráfico lavado con el foco en una barra ausente. Ahora todas van al mismo tono y lo que ubica el mes actual es su posición, su valor en el encabezado y la línea del promedio.
+3. **La etiqueta directa sobre la última barra no aparecía**: las props que entrega `LabelList` no eran las que se asumieron. El valor se movió al encabezado, al lado de su referencia; se lee mejor y no depende de los internals de Recharts.
+4. **La leyenda salía en orden inverso a las barras** —"Cancelados · Solicitados"— porque Recharts la ordena por `dataKey`, y en la versión 3 ya no acepta un `payload` propio. Se dibuja a mano.
+
+**La paleta se validó con el script, no a ojo.** El modo oscuro no es un aclarado automático del claro: `brand.6` (#3D3EA8) contra fondo oscuro da contraste 2,03, bajo el mínimo de 3:1, así que oscuro usa `brand.4`. Y con tres series el verde y el rojo caían a ΔE 7,9 en deuteranopía; se resolvió dejando dos series por gráfico —que además saca del medio la serie que hoy es cero—. La rejilla y los ejes también van por modo: la escala de grises de Mantine no se invierte, así que un gris recesivo sobre blanco queda prominente sobre negro.

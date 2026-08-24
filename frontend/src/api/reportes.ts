@@ -135,8 +135,14 @@ export type MetricasMes = {
   canjes_cancelados: number
 }
 
+/** Los dos reportes en que se separó la pantalla. */
+export type Dominio = 'negocios' | 'canjes'
+
 export type Variacion = {
   metrica: string
+  /** A qué reporte pertenece. Viene del backend en vez de deducirse del nombre:
+   *  filtrar por el texto visible se rompería al renombrar una métrica. */
+  dominio: Dominio
   actual: string
   referencia: string
   absoluta: string
@@ -160,6 +166,12 @@ export type ReporteMensual = {
   /** El titular: la ventana móvil contra la anterior del mismo largo. */
   movil: Comparacion
   anio_corrido: Comparacion
+  /** Mes por mes de la ventana, del más viejo al más nuevo. Es lo que permite
+   *  ver si el mes actual avanza, se estanca o retrocede: la comparación de
+   *  ventana contra ventana dice cuánto cambió, no en qué dirección venía. */
+  serie: MetricasMes[]
+  /** El promedio mensual de la ventana, para la línea de referencia. */
+  promedio: MetricasMes
 }
 
 export const VENTANAS = [3, 6, 12] as const

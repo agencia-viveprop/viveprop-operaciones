@@ -309,6 +309,7 @@ def test_el_endpoint_sin_parametros_toma_el_mes_actual(cliente):
     assert set(cuerpo) == {
         "mes", "ventana_meses", "movil", "anio_corrido",
         "meses_sin_cierres", "meses_de_la_ventana",
+        "serie", "promedio",
     }
     assert cuerpo["ventana_meses"] == 6
     # Sin datos, los seis meses de la ventana estan vacios. Es el numero que la
@@ -369,3 +370,152 @@ def test_cuenta_los_meses_vacios_de_su_propia_ventana(cliente, db):
     corto = cliente.get("/api/reportes/mensual?anio=2026&mes=6&ventana=3").json()
     assert corto["meses_de_la_ventana"] == 3
     assert corto["meses_sin_cierres"] == 1
+
+
+# ------------------------------------------- la serie mensual de la ventana
+
+
+def test_la_serie_trae_un_mes_por_cada_mes_de_la_ventana(db):
+    """Los meses vacios van en cero, no se omiten.
+
+    Un mes sin cierres es justamente el dato que hay que ver en este negocio, y
+    saltearlo dejaria un grafico con seis barras un mes y cinco al siguiente.
+    """
+    for ventana in (3, 6, 12):
+        r = obtener_reporte_mensual(db, 2026, 8, ventana=ventana)
+        assert len(r.serie) == ventana == r.meses_de_la_ventana
+        assert all(m.hitos_cerrados == 0 for m in r.serie)
+
+
+def test_la_serie_va_del_mes_mas_viejo_al_mas_nuevo(db):
+    """El orden es el del grafico: el tiempo corre hacia la derecha."""
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=6)
+
+    assert [m.etiqueta for m in r.serie] == [
+        "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08",
+    ]
+
+
+def test_la_serie_termina_en_el_mes_que_se_esta_mirando(db):
+    """Es lo que permite leer el mes actual contra los anteriores."""
+    r = obtener_reporte_mensual(db, 2026, 5, ventana=3)
+
+    assert [m.etiqueta for m in r.serie] == ["2026-03", "2026-04", "2026-05"]
+
+
+def test_la_serie_atraviesa_el_cambio_de_ano(db):
+    r = obtener_reporte_mensual(db, 2026, 2, ventana=3)
+
+    assert [m.etiqueta for m in r.serie] == ["2025-12", "2026-01", "2026-02"]
+
+
+def test_cada_mes_de_la_serie_cuenta_lo_que_le_toca(db):
+    """El reparto por mes, con dos cierres en meses distintos y uno afuera."""
+    _negocio(db, "S-1", [_hito(date(2026, 3, 1), date(2026, 4, 10), real=D("100"))])
+    _negocio(db, "S-2", [_hito(date(2026, 5, 1), date(2026, 6, 20), real=D("300"))])
+    # Fuera de la ventana de tres meses que termina en junio.
+    _negocio(db, "S-3", [_hito(date(2026, 1, 5), date(2026, 1, 30), real=D("999"))])
+
+    r = obtener_reporte_mensual(db, 2026, 6, ventana=3)
+    por_mes = {m.etiqueta: m for m in r.serie}
+
+    assert por_mes["2026-04"].hitos_cerrados == 1
+    assert por_mes["2026-04"].comision_real_vp == D("100")
+    assert por_mes["2026-05"].hitos_cerrados == 0
+    assert por_mes["2026-06"].hitos_cerrados == 1
+    assert por_mes["2026-06"].comision_real_vp == D("300")
+    # El de enero no aparece: no esta en la ventana.
+    assert "2026-01" not in por_mes
+    assert sum(m.comision_real_vp for m in r.serie) == D("400")
+
+
+def test_la_serie_coincide_con_la_ventana_movil(db):
+    """Los dos calculos son distintos y tienen que dar lo mismo.
+
+    La ventana movil se calcula con un rango unico; la serie, mes por mes y
+    agrupando en Python. Que sumen igual es lo que dice que el agrupado no perdio
+    ni duplico filas en los bordes de mes.
+    """
+    _negocio(db, "V-1", [_hito(date(2026, 3, 1), date(2026, 3, 31), real=D("111"))])
+    _negocio(db, "V-2", [_hito(date(2026, 4, 1), date(2026, 4, 1), real=D("222"))])
+    _negocio(db, "V-3", [_hito(date(2026, 5, 1), date(2026, 5, 31), real=D("333"))])
+
+    r = obtener_reporte_mensual(db, 2026, 5, ventana=3)
+
+    assert sum(m.comision_real_vp for m in r.serie) == r.movil.actual.comision_real_vp
+    assert sum(m.hitos_cerrados for m in r.serie) == r.movil.actual.hitos_cerrados
+    assert sum(m.negocios_iniciados for m in r.serie) == r.movil.actual.negocios_iniciados
+
+
+def test_los_meses_sin_cierres_salen_de_la_serie(db):
+    """Antes se contaban con un segundo recorrido de la ventana; ahora de la serie."""
+    _negocio(db, "C-1", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("100"))])
+
+    r = obtener_reporte_mensual(db, 2026, 6, ventana=3)
+
+    assert r.meses_sin_cierres == 2
+    assert r.meses_sin_cierres == sum(1 for m in r.serie if m.hitos_cerrados == 0)
+
+
+# ------------------------------------------------------------- el promedio
+
+
+def test_el_promedio_incluye_los_meses_en_cero(db):
+    """Excluirlos inflaria la referencia justo en el sentido que hace ver
+    retroceso donde no hay: en este negocio un mes vacio es normal."""
+    _negocio(db, "P-1", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("300"))])
+
+    r = obtener_reporte_mensual(db, 2026, 6, ventana=3)
+
+    # 300 repartido en tres meses, no en el unico con cierre.
+    assert r.promedio.comision_real_vp == D("100.00")
+
+
+def test_el_promedio_de_una_serie_vacia_es_cero(db):
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=3)
+
+    assert r.promedio.comision_real_vp == D("0.00")
+    assert r.promedio.hitos_cerrados == 0
+
+
+def test_el_promedio_dice_de_cuantos_meses_es(db):
+    """La etiqueta se muestra en pantalla, asi que tiene que ser cierta."""
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=6)
+
+    assert r.promedio.etiqueta == "promedio de 6 meses"
+
+
+# --------------------------------------------- las metricas por dominio
+
+
+def test_las_metricas_se_declaran_separadas_por_dominio():
+    """La pantalla se separo en dos, y el backend dice cual es de cual.
+
+    Si el frontend tuviera que filtrarlas por nombre, renombrar una metrica
+    romperia la separacion sin que nada falle.
+    """
+    from app.services.reporte_mensual import (
+        METRICAS,
+        METRICAS_CANJES,
+        METRICAS_NEGOCIOS,
+    )
+
+    campos_neg = {c for c, _ in METRICAS_NEGOCIOS}
+    campos_can = {c for c, _ in METRICAS_CANJES}
+
+    assert campos_neg == {
+        "comision_real_vp", "comision_total", "hitos_cerrados", "negocios_iniciados",
+    }
+    assert campos_can == {"canjes_solicitados", "canjes_cerrados", "canjes_cancelados"}
+    # Ningun campo en los dos lados, y juntas son todas.
+    assert not (campos_neg & campos_can)
+    assert METRICAS == METRICAS_NEGOCIOS + METRICAS_CANJES
+
+
+def test_las_variaciones_cubren_las_metricas_de_los_dos_dominios(db):
+    """La comparacion sigue trayendo todo: la pantalla elige que mostrar."""
+    from app.services.reporte_mensual import METRICAS
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=3)
+
+    assert [v.metrica for v in r.movil.variaciones] == [n for _, n in METRICAS]

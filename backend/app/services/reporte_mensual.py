@@ -79,6 +79,10 @@ class Variacion(BaseModel):
     """
 
     metrica: str
+    # A qué reporte pertenece. Va como dato y no se deduce del nombre porque la
+    # pantalla se separó en dos: filtrar por el texto visible se rompería al
+    # renombrar una métrica, y sin fallar.
+    dominio: str
     actual: Decimal
     referencia: Decimal
     absoluta: Decimal
@@ -108,19 +112,42 @@ class ReporteMensual(BaseModel):
     # entera de que dejó de valer.
     meses_sin_cierres: int
     meses_de_la_ventana: int
+    # Mes por mes de la ventana, del más viejo al más nuevo. Es lo que permite ver
+    # si el mes actual avanza, se estanca o retrocede contra los que vinieron
+    # antes: la comparación de la ventana contra la ventana anterior dice cuánto
+    # cambió, pero no en qué dirección venía.
+    serie: list[MetricasMes]
+    # El promedio mensual de la ventana, para la línea de referencia del gráfico y
+    # para la frase que compara el mes actual contra su propia normalidad.
+    promedio: MetricasMes
 
 
 # Qué se compara, y con qué nombre se muestra. El orden es el de lectura: la
 # plata primero, el volumen despues.
-METRICAS: tuple[tuple[str, str], ...] = (
+# Se declaran por dominio y no en una lista sola porque la pantalla se separó en
+# dos. Mezclarlas obligaría al frontend a filtrar por nombre, que es la clase de
+# acoplamiento que se rompe en silencio al renombrar una métrica.
+METRICAS_NEGOCIOS: tuple[tuple[str, str], ...] = (
     ("comision_real_vp", "Comisión real ViveProp"),
     ("comision_total", "Comisión total"),
     ("hitos_cerrados", "Liquidaciones cerradas"),
     ("negocios_iniciados", "Negocios iniciados"),
+)
+
+# Canjes no tiene eje de plata, y no es un olvido. Sí genera comisión --la de
+# administración de Dataprop, 6/5/4% en venta según el tramo en UF u 8% en
+# arriendo-- pero se calcula sobre la comisión de los corredores participantes,
+# que está en cero en las 297 filas. Y `valor_prop`, que sería la alternativa, no
+# se puede sumar: la moneda está equivocada en ~138 de las 297 filas --pesos
+# etiquetados UF y UF etiquetados CLP-- y el campo mezcla precio de venta con
+# arriendo mensual. Ver `D-054`.
+METRICAS_CANJES: tuple[tuple[str, str], ...] = (
     ("canjes_solicitados", "Canjes solicitados"),
     ("canjes_cerrados", "Canjes cerrados"),
     ("canjes_cancelados", "Canjes cancelados"),
 )
+
+METRICAS: tuple[tuple[str, str], ...] = METRICAS_NEGOCIOS + METRICAS_CANJES
 
 
 def limites(anio: int, mes: int) -> tuple[date, date]:
@@ -238,6 +265,148 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
     )
 
 
+def _clave(f) -> str:
+    """'2026-08' desde una fecha o un instante."""
+    d = f.date() if isinstance(f, datetime) else f
+    return f"{d.year:04d}-{d.month:02d}"
+
+
+def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[MetricasMes]:
+    """Los meses de la ventana, uno por uno, con **cuatro consultas** en total.
+
+    La forma obvia --llamar a `_metricas` una vez por mes-- costaría cinco
+    consultas por mes, o sesenta para una ventana de doce. Acá se traen las filas
+    del rango completo de una vez y se agrupan en Python. Es la misma decisión que
+    `D-051` tomó para el agrupado por mes del dashboard, por el mismo motivo:
+    contra Neon lo que cuesta es la latencia, no el trabajo.
+
+    **Los meses vacíos van en cero, no se omiten.** Un mes sin cierres es
+    justamente el dato que hay que ver --el negocio los tiene, ver el encabezado
+    de este módulo-- y saltearlo dejaría un gráfico con seis barras un mes y cinco
+    al siguiente.
+    """
+    a_ini, m_ini = correr_meses(anio, mes, -(ventana - 1))
+    desde, _ = limites(a_ini, m_ini)
+    _, hasta = limites(anio, mes)
+    inicio = datetime.combine(desde, time.min, tzinfo=timezone.utc)
+    fin = datetime.combine(hasta, time.max, tzinfo=timezone.utc)
+
+    claves = []
+    for i in range(ventana):
+        ai, mi = correr_meses(a_ini, m_ini, i)
+        claves.append(f"{ai:04d}-{mi:02d}")
+
+    cerrados: dict[str, tuple[int, Decimal, Decimal]] = {}
+    for fecha, real, total in db.execute(
+        select(
+            NegocioHito.fecha_cierre,
+            func.coalesce(NegocioHito.comision_real_vp, 0),
+            func.coalesce(NegocioHito.comision_total, 0),
+        ).where(
+            NegocioHito.estado == EstadoNegocio.CERRADO,
+            NegocioHito.fecha_cierre >= desde,
+            NegocioHito.fecha_cierre <= hasta,
+        )
+    ).all():
+        k = _clave(fecha)
+        n, r, tt = cerrados.get(k, (0, CERO, CERO))
+        cerrados[k] = (n + 1, r + Decimal(real), tt + Decimal(total))
+
+    # Un negocio se cuenta una vez, en el mes de su hito mas antiguo.
+    primeros = (
+        select(
+            NegocioHito.negocio_id.label("negocio_id"),
+            func.min(NegocioHito.fecha_inicio).label("inicio"),
+        )
+        .group_by(NegocioHito.negocio_id)
+        .subquery()
+    )
+    iniciados: dict[str, int] = {}
+    for (fecha,) in db.execute(
+        select(primeros.c.inicio)
+        .join(Negocio, Negocio.id == primeros.c.negocio_id)
+        .where(primeros.c.inicio >= desde, primeros.c.inicio <= hasta)
+    ).all():
+        k = _clave(fecha)
+        iniciados[k] = iniciados.get(k, 0) + 1
+
+    # Solicitados y cancelados salen del mismo recorrido: los dos se cuentan por
+    # fecha de solicitud, porque `canjes` no guarda cuándo se canceló.
+    solicitados: dict[str, int] = {}
+    cancelados: dict[str, int] = {}
+    for fecha, estado in db.execute(
+        select(Canje.fecha_solicitud, Canje.estado).where(
+            Canje.fecha_solicitud >= inicio, Canje.fecha_solicitud <= fin
+        )
+    ).all():
+        k = _clave(fecha)
+        solicitados[k] = solicitados.get(k, 0) + 1
+        if estado == CanjeEstado.CANCELADO:
+            cancelados[k] = cancelados.get(k, 0) + 1
+
+    canjes_cerrados: dict[str, int] = {}
+    for (fecha,) in db.execute(
+        select(Canje.fecha_cierre).where(
+            Canje.etapa == CanjeEtapa.CERRADO,
+            Canje.fecha_cierre >= inicio,
+            Canje.fecha_cierre <= fin,
+        )
+    ).all():
+        k = _clave(fecha)
+        canjes_cerrados[k] = canjes_cerrados.get(k, 0) + 1
+
+    serie = []
+    for k in claves:
+        n, real, total = cerrados.get(k, (0, CERO, CERO))
+        serie.append(
+            MetricasMes(
+                etiqueta=k,
+                hitos_cerrados=n,
+                comision_real_vp=real,
+                comision_total=total,
+                negocios_iniciados=iniciados.get(k, 0),
+                canjes_solicitados=solicitados.get(k, 0),
+                canjes_cerrados=canjes_cerrados.get(k, 0),
+                canjes_cancelados=cancelados.get(k, 0),
+            )
+        )
+    return serie
+
+
+def _promedio(serie: list[MetricasMes]) -> MetricasMes:
+    """El promedio mensual de la ventana.
+
+    Es la referencia contra la que se lee el mes actual: "agosto está 47% bajo el
+    promedio de los últimos 3 meses" dice si hay avance o retroceso, cosa que el
+    número del mes solo no dice.
+
+    **Incluye los meses en cero**, porque son parte de la normalidad de este
+    negocio --de 11 meses con actividad, 4 estuvieron vacíos-- y excluirlos
+    inflaría la referencia justo en el sentido que hace ver retroceso donde no hay.
+    """
+    n = len(serie) or 1
+
+    def prom(campo: str) -> Decimal:
+        total = sum((Decimal(getattr(m, campo)) for m in serie), CERO)
+        return (total / n).quantize(Decimal("0.01"))
+
+    return MetricasMes(
+        etiqueta=f"promedio de {len(serie)} meses",
+        hitos_cerrados=int(prom("hitos_cerrados")),
+        comision_real_vp=prom("comision_real_vp"),
+        comision_total=prom("comision_total"),
+        negocios_iniciados=int(prom("negocios_iniciados")),
+        canjes_solicitados=int(prom("canjes_solicitados")),
+        canjes_cerrados=int(prom("canjes_cerrados")),
+        canjes_cancelados=int(prom("canjes_cancelados")),
+    )
+
+
+DOMINIOS = {campo: "negocios" for campo, _ in METRICAS_NEGOCIOS} | {
+    campo: "canjes" for campo, _ in METRICAS_CANJES
+}
+
+
 def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
     variaciones = []
     for campo, nombre in METRICAS:
@@ -246,6 +415,7 @@ def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
         variaciones.append(
             Variacion(
                 metrica=nombre,
+                dominio=DOMINIOS[campo],
                 actual=a,
                 referencia=r,
                 absoluta=a - r,
@@ -292,21 +462,17 @@ def obtener_reporte_mensual(
     corrido = _metricas(db, desde_a, hasta_a, _rotulo_ventana(desde_a, hasta_a))
     corrido_prev = _metricas(db, desde_ap, hasta_ap, _rotulo_ventana(desde_ap, hasta_ap))
 
-    # Se recorre la ventana mes por mes solo para contar los vacíos. Son tres,
-    # seis o doce consultas cortas; la alternativa era un GROUP BY por mes que
-    # duplicaría la lógica de `_metricas`.
-    vacios = 0
-    for atras in range(ventana):
-        a_i, m_i = correr_meses(anio, mes, -atras)
-        d_i, h_i = limites(a_i, m_i)
-        if _metricas(db, d_i, h_i, "").hitos_cerrados == 0:
-            vacios += 1
+    # La serie reemplazó al bucle que contaba los meses vacíos: los vacíos salen
+    # de ella, así que ya no hace falta recorrer la ventana dos veces.
+    serie = _serie_mensual(db, anio, mes, ventana)
 
     return ReporteMensual(
         mes=detalle,
         ventana_meses=ventana,
         movil=_comparar(movil, movil_prev),
         anio_corrido=_comparar(corrido, corrido_prev),
-        meses_sin_cierres=vacios,
+        meses_sin_cierres=sum(1 for m in serie if m.hitos_cerrados == 0),
         meses_de_la_ventana=ventana,
+        serie=serie,
+        promedio=_promedio(serie),
     )

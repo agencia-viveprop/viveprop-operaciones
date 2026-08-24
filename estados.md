@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Reporte mensual separado en dos, con evolución de la ventana
+
+Pedido tuyo: separar el reporte en negocios y canjes, y agregar una visualización de evolución para los meses de la ventana, para saber rápido si hay avance, estancamiento o retroceso.
+
+Hecho: un selector **Negocios / Canjes** arriba, y para cada dominio una frase que compara el mes con el promedio de la ventana --*"el mes va 26% sobre el promedio"*--, los gráficos mes por mes y la tabla filtrada. La serie sale de cuatro consultas para toda la ventana, no cinco por mes. Ver `D-054`.
+
+**Dos hallazgos de datos que cambiaron el alcance.**
+
+Habíamos acordado mostrar el volumen en pesos de los canjes "por ahora", ya que la comisión no se puede calcular (`comision_dbrokers` está en **0 de 297 filas**). Lo retiré al medirlo: daba **185 mil millones para diez canjes**. La causa es que `moneda_valor` está equivocada en las dos direcciones —26 ventas y 50 arriendos marcados en UF que son pesos, y 62 ventas marcadas en CLP que son UF: **~138 de 297 filas**— y que `valor_prop` mezcla precio de venta con arriendo mensual, que no suman entre sí. Un número errado por órdenes de magnitud con una nota al pie sigue siendo un número errado.
+
+Y **«Canjes cerrados» es cero en todos los meses, correctamente**: los 31 con etapa `CERRADO` están todos cancelados y ninguno tiene `fecha_cierre`; los 47 que sí tienen fecha están cancelados en etapas intermedias. En esta base no hay un solo canje cerrado con éxito. Queda en la tabla y fuera del gráfico, con la explicación en pantalla.
+
+**Mirar el gráfico renderizado corrigió cuatro cosas que compilaban.** Se levantó en un render aislado con los datos reales de `dev`, con capturas en modo claro y oscuro: ninguna barra se dibujaba (la animación de entrada las deja en altura 0), el énfasis del mes actual dejaba el gráfico lavado justo cuando ese mes está en cero, la etiqueta directa no aparecía porque las props de `LabelList` no eran las asumidas, y la leyenda salía en orden inverso a las barras porque Recharts la ordena por `dataKey`. La paleta se validó con el script: el modo oscuro no es un aclarado del claro —`brand.6` da contraste 2,03 sobre fondo oscuro— y con tres series verde y rojo caían bajo el piso de separación en deuteranopía.
+
+**Verificado:** 537 tests, `alembic check` limpio, build y lint sin hallazgos, y los dos modos revisados en captura.
+
 ### 2026-08-22 · Se puede borrar un movimiento mal registrado
 
 Pedido tuyo: eliminar la gestión registrada en el canje #367. No existía forma de hacerlo --se podían agregar movimientos y no sacarlos-- así que un tipeo quedaba para siempre moviendo la etapa y el reloj del semáforo.
