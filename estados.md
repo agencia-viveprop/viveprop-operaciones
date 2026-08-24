@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Se puede borrar un movimiento mal registrado
+
+Pedido tuyo: eliminar la gestión registrada en el canje #367. No existía forma de hacerlo --se podían agregar movimientos y no sacarlos-- así que un tipeo quedaba para siempre moviendo la etapa y el reloj del semáforo.
+
+Ahora cada movimiento de la línea de tiempo tiene su botón de borrar, con confirmación en la misma fila. Es un borrado real, no un anulado: un movimiento "anulado" habría que filtrarlo en la línea de tiempo, el semáforo, el reporte semanal y el cálculo de la etapa, y lo que queda no es historia útil sino ruido.
+
+Lo que arrastra se recalcula: la etapa se vuelve a derivar de lo que queda --si no queda nada, vuelve a «Sin etapa», que es el caso de #367-- y si el borrado era la cancelación y no queda otra, el canje vuelve a activo. Un canje que llegó cancelado del export se queda cancelado. Ver `D-053`.
+
+**Un tropiezo propio que cambió el resultado.** `gestionado_en_app` no se revierte al borrar, y es deliberado: esa marca también la pone editar el canje a mano, así que revertirla dejaría que la importación pise datos corregidos por una persona. El costo es que un movimiento registrado por error deja el canje excluido de la importación para siempre. **Lo comprobé encima:** verificando contra `dev` le puse la marca al canje 355 sin querer y tuve que restaurarla comparándolo con los otros seis cancelados sin movimientos. Si se me pasó a mí, se le pasa a cualquiera, así que el modal ahora lo dice cuando un canje sin movimientos está marcado.
+
+**Verificado en vivo contra `dev`:** registrar un movimiento llevó la etapa a `EN_REVISION`, borrarlo devolvió 204 y la dejó en `SIN_ETAPA` con cero movimientos, y el estado --que venía del export-- no se movió. El canje 355 quedó restaurado en su estado original. 532 tests, build y lint limpios.
+
+**No pude borrar el registro de #367 directamente:** no tengo las credenciales de producción, y la única vía sin ellas es una migración. Con el botón desplegado lo podés borrar vos en un clic.
+
 ### 2026-08-22 · La fecha del movimiento se puede elegir
 
 Pedido tuyo: al registrar un movimiento de canje, poder elegir la fecha, junto al tipo. Antes todo movimiento quedaba con el instante del clic, y en la práctica uno anota el lunes lo que pasó el viernes: esos tres días iban directo al reloj del semáforo.

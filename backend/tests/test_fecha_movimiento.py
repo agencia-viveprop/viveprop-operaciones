@@ -333,3 +333,168 @@ def test_la_cancelacion_no_se_revierte_con_gestion_posterior(canje):
     )
 
     assert canje.get(Canje, 500).estado == CanjeEstado.CANCELADO
+
+
+# ---------------------------------------------------- borrar un movimiento
+
+
+def test_borrar_el_unico_movimiento_devuelve_la_etapa_a_sin_etapa(canje):
+    """El caso real: un canje con una sola gestion, registrada por error.
+
+    La etapa la puso ese movimiento. Al borrarlo no queda nada que la sostenga,
+    asi que el canje vuelve a como llego de Dataprop.
+    """
+    from app.models.movimiento import Movimiento
+    from app.services.movimientos import eliminar_movimiento_canje
+
+    m = crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None,
+                               comentario="Validacion interesado")
+    assert canje.get(Canje, 500).etapa == CanjeEtapa.EN_REVISION
+
+    eliminar_movimiento_canje(canje, 500, m.id)
+
+    c = canje.get(Canje, 500)
+    assert c.etapa == CanjeEtapa.SIN_ETAPA
+    assert canje.get(Movimiento, m.id) is None
+    # Y el canje sigue marcado como gestionado en la app: esa marca tambien la
+    # pone editarlo a mano, asi que revertirla dejaria que la importacion
+    # sobreescriba en silencio datos corregidos por una persona.
+    assert c.gestionado_en_app is True
+
+
+def test_borrar_uno_deja_la_etapa_del_que_queda(canje):
+    """Con dos movimientos, borrar el mas nuevo devuelve la etapa al anterior."""
+    from app.services.movimientos import eliminar_movimiento_canje
+
+    canje.add(TipoMovimiento(
+        codigo="PASO_NEGOCIO", entity_type=EntityType.canje, nombre="En negocio",
+        etapa_resultante="EN_NEGOCIO", orden=5, sla_es_habil=False, activo=True,
+    ))
+    canje.commit()
+
+    crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None,
+                           fecha=datetime(2026, 7, 10, tzinfo=timezone.utc))
+    nuevo = crear_movimiento_canje(canje, 500, "PASO_NEGOCIO", autor_id=None,
+                                   fecha=datetime(2026, 7, 20, tzinfo=timezone.utc))
+    assert canje.get(Canje, 500).etapa == CanjeEtapa.EN_NEGOCIO
+
+    eliminar_movimiento_canje(canje, 500, nuevo.id)
+
+    assert canje.get(Canje, 500).etapa == CanjeEtapa.EN_REVISION
+
+
+def test_borrar_la_cancelacion_reactiva_el_canje(canje):
+    """Si registrarla fue el error, el canje no estaba cancelado."""
+    from app.services.movimientos import eliminar_movimiento_canje
+
+    canje.add(TipoMovimiento(
+        codigo="CANCELACION", entity_type=EntityType.canje, nombre="Cancelación",
+        etapa_resultante=None, orden=8, sla_es_habil=False, activo=True,
+    ))
+    canje.commit()
+
+    m = crear_movimiento_canje(canje, 500, "CANCELACION", autor_id=None)
+    assert canje.get(Canje, 500).estado == CanjeEstado.CANCELADO
+
+    eliminar_movimiento_canje(canje, 500, m.id)
+
+    assert canje.get(Canje, 500).estado == CanjeEstado.ACTIVO
+
+
+def test_si_queda_otra_cancelacion_el_canje_no_revive(canje):
+    """Borrar una de dos cancelaciones no deshace la que sigue registrada."""
+    from app.services.movimientos import eliminar_movimiento_canje
+
+    canje.add(TipoMovimiento(
+        codigo="CANCELACION", entity_type=EntityType.canje, nombre="Cancelación",
+        etapa_resultante=None, orden=8, sla_es_habil=False, activo=True,
+    ))
+    canje.commit()
+
+    primera = crear_movimiento_canje(canje, 500, "CANCELACION", autor_id=None,
+                                     fecha=datetime(2026, 7, 10, tzinfo=timezone.utc))
+    crear_movimiento_canje(canje, 500, "CANCELACION", autor_id=None,
+                           fecha=datetime(2026, 7, 20, tzinfo=timezone.utc))
+
+    eliminar_movimiento_canje(canje, 500, primera.id)
+
+    assert canje.get(Canje, 500).estado == CanjeEstado.CANCELADO
+
+
+def test_borrar_una_gestion_no_reactiva_un_canje_cancelado_por_la_importacion(canje):
+    """El estado que vino de Dataprop no se toca al borrar gestion cualquiera.
+
+    Solo borrar la cancelacion reactiva. Un canje que llego cancelado del export
+    --sin movimiento de cancelacion en la app-- se queda cancelado.
+    """
+    from app.services.movimientos import eliminar_movimiento_canje
+
+    c = canje.get(Canje, 500)
+    c.estado = CanjeEstado.CANCELADO
+    canje.commit()
+
+    m = crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None)
+    eliminar_movimiento_canje(canje, 500, m.id)
+
+    assert canje.get(Canje, 500).estado == CanjeEstado.CANCELADO
+
+
+def test_no_se_puede_borrar_un_movimiento_de_otro_canje(canje):
+    """El id del movimiento no alcanza: tiene que pertenecer a ese canje."""
+    from app.services.movimientos import MovimientoError, eliminar_movimiento_canje
+
+    canje.add(Canje(
+        id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
+        etapa=CanjeEtapa.SIN_ETAPA, comuna="Santiago",
+    ))
+    canje.commit()
+    m = crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None)
+
+    with pytest.raises(MovimientoError, match="no pertenece al canje"):
+        eliminar_movimiento_canje(canje, 501, m.id)
+
+    from app.models.movimiento import Movimiento
+    assert canje.get(Movimiento, m.id) is not None
+
+
+def test_el_endpoint_borra_y_devuelve_204(cliente, canje):
+    creado = cliente.post(
+        "/api/canjes/500/movimientos", json={"tipo_movimiento": "GESTION_INICIAL"}
+    ).json()
+
+    r = cliente.delete(f"/api/canjes/500/movimientos/{creado['id']}")
+
+    assert r.status_code == 204, r.text
+    assert cliente.get("/api/canjes/500/movimientos").json() == []
+    assert cliente.get("/api/canjes/500").json()["etapa"] == "SIN_ETAPA"
+
+
+def test_el_endpoint_rechaza_un_movimiento_de_otro_canje(cliente, canje):
+    """Con los dos canjes existiendo, para que falle por la pertenencia y no
+    porque el canje no exista --que es otro error y otro camino."""
+    canje.add(Canje(
+        id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
+        etapa=CanjeEtapa.SIN_ETAPA, comuna="Santiago",
+    ))
+    canje.commit()
+    creado = cliente.post(
+        "/api/canjes/500/movimientos", json={"tipo_movimiento": "GESTION_INICIAL"}
+    ).json()
+
+    r = cliente.delete(f"/api/canjes/501/movimientos/{creado['id']}")
+
+    assert r.status_code == 400, r.text
+    assert "no pertenece al canje" in r.json()["detail"]
+    assert len(cliente.get("/api/canjes/500/movimientos").json()) == 1
+
+
+def test_el_endpoint_404_no_aplica_a_un_canje_inexistente(cliente, canje):
+    """Un canje que no existe da 400 con su propio mensaje, no el de pertenencia."""
+    creado = cliente.post(
+        "/api/canjes/500/movimientos", json={"tipo_movimiento": "GESTION_INICIAL"}
+    ).json()
+
+    r = cliente.delete(f"/api/canjes/999/movimientos/{creado['id']}")
+
+    assert r.status_code == 400
+    assert "Canje no encontrado" in r.json()["detail"]

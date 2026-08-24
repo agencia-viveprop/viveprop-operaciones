@@ -994,3 +994,24 @@ Ahora se lee: la etapa es la del movimiento **más reciente** que traiga una. Es
 **El estado no se deriva, y eso sí es a propósito.** Un canje que se canceló quedó cancelado; que después alguien anote otra gestión no lo revive. Deshacer una cancelación es una edición manual, no un movimiento. Hay un test que lo fija para que nadie «complete» la simetría por prolijidad.
 
 **La validación se puso en el servicio compartido**, así que cubre canjes y negocios. La pantalla de negocios todavía no ofrece el campo —no se pidió—, pero su endpoint ya aceptaba `fecha`: cerrar el agujero en un dominio y dejarlo abierto en el otro habría sido arreglar la mitad.
+
+---
+
+## D-053 · Un movimiento se borra de verdad, y lo que dependía de él se recalcula
+
+**Contexto.** Se podían agregar movimientos y no sacarlos. Un tipeo —un tipo equivocado, una gestión anotada en el canje de al lado— quedaba para siempre moviendo la etapa y el reloj del semáforo, y corregirlo exigía tocar la base a mano. El pedido fue concreto: borrar la única gestión registrada en el canje #367.
+
+**Decisión: borrado real, no anulado.** Un movimiento marcado como "anulado" hay que filtrarlo en la línea de tiempo, en el semáforo, en el reporte semanal y en el cálculo de la etapa: cuatro lugares donde olvidarlo produce un número mal. Y lo que queda no es historia útil sino ruido —"acá hubo algo que no pasó"—. Para dos personas corrigiendo sus propios registros, borrar es lo proporcionado.
+
+**Lo puede hacer quien los registra** (rol `operaciones`, decidido con el usuario). Corregir un tipeo propio no debería necesitar a otra persona.
+
+**Lo que arrastra se recalcula, no se adivina.**
+
+- **La etapa** se vuelve a derivar de los movimientos que quedan, con el mecanismo de `D-052`. Si no queda ninguno vuelve a `SIN_ETAPA`: la puso el movimiento que se borró y no hay nada más que la sostenga. Es el caso de #367.
+- **Si el borrado era la cancelación** y no queda otra, el canje vuelve a `ACTIVO`. Registrarla fue el error, así que el canje no estaba cancelado. Un canje que llegó cancelado del export —sin movimiento de cancelación— se queda cancelado: borrar gestión cualquiera no lo revive.
+
+**`gestionado_en_app` no se toca, y hay que decirlo en pantalla.** Es tentador devolverlo a `False` cuando no quedan movimientos, pero no lo pone solo el seguimiento: también lo pone crear o editar el canje a mano. Revertirlo dejaría que la próxima importación de Dataprop sobreescriba en silencio datos corregidos por una persona.
+
+El costo de esa decisión es que un movimiento registrado por error deja el canje excluido de la importación **para siempre**. Lo comprobé encima: verificando esto contra `dev` le puse la marca al canje 355 sin querer, y tuve que restaurarla comparándolo con los otros seis cancelados sin movimientos, que estaban en `False`. Si a mí se me pasó teniendo el modelo entero en la cabeza, a cualquiera se le pasa. Así que **el modal lo dice** cuando un canje sin movimientos está marcado: la consecuencia es la misma, pero deja de ser invisible.
+
+**La confirmación va en la fila del movimiento, no en un diálogo.** Un diálogo encima de un modal ya abierto tapa justamente lo que hay que mirar para decidir. Un segundo clic en el mismo lugar —"¿Borrar este movimiento?" con Sí y Cancelar— deja a la vista de cuál se trata.

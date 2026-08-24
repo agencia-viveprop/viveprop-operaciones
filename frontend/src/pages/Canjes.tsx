@@ -450,6 +450,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         opened={seguimientoId !== null}
         onClose={() => setSeguimientoId(null)}
         puedeEditar={puedeEditar}
+        gestionadoEnApp={canjes?.find((c) => c.id === seguimientoId)?.gestionado_en_app}
       />
     </Stack>
   )

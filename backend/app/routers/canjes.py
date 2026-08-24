@@ -13,7 +13,11 @@ from app.models.usuario import RolUsuario, Usuario
 from app.services.bandeja_canjes import Bandeja, obtener_bandeja
 from app.services.estructura_archivo import EstructuraArchivo
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
-from app.services.movimientos import MovimientoError, crear_movimiento_canje
+from app.services.movimientos import (
+    MovimientoError,
+    crear_movimiento_canje,
+    eliminar_movimiento_canje,
+)
 from app.services.plantilla_canjes import estructura_importacion, generar_plantilla
 from app.services.reportes_canjes import ResumenCanjes, obtener_resumen_canjes
 
@@ -259,3 +263,26 @@ def crear_movimiento(
     except MovimientoError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return _a_movimiento_out(db, movimiento)
+
+
+@router.delete(
+    "/{canje_id}/movimientos/{movimiento_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def eliminar_movimiento(
+    canje_id: int,
+    movimiento_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Borra un movimiento mal registrado y recalcula lo que dependía de él.
+
+    Lo puede hacer quien los registra: corregir un tipeo propio no debería
+    necesitar a otra persona. La etapa se vuelve a derivar de lo que queda y, si
+    el borrado era la cancelación, el canje vuelve a activo.
+    """
+    try:
+        eliminar_movimiento_canje(db, canje_id, movimiento_id)
+    except MovimientoError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

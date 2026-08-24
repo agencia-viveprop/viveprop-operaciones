@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ActionIcon,
   Alert,
   Button,
   Divider,
   Modal,
+  Group,
   Select,
   SimpleGrid,
   Stack,
@@ -13,8 +15,13 @@ import {
   TextInput,
   Timeline,
 } from '@mantine/core'
-import { IconArrowRight, IconMessage } from '@tabler/icons-react'
-import { crearMovimientoCanje, listarMovimientosCanje, listarTiposMovimiento } from '../api/movimientos'
+import { IconArrowRight, IconMessage, IconTrash } from '@tabler/icons-react'
+import {
+  crearMovimientoCanje,
+  eliminarMovimientoCanje,
+  listarMovimientosCanje,
+  listarTiposMovimiento,
+} from '../api/movimientos'
 
 /**
  * «Ahora» en el formato que espera un `datetime-local`, para el tope del input.
@@ -42,11 +49,15 @@ export default function SeguimientoModal({
   opened,
   onClose,
   puedeEditar,
+  gestionadoEnApp,
 }: {
   canjeId: number | null
   opened: boolean
   onClose: () => void
   puedeEditar: boolean
+  /** Si el canje quedó marcado como gestionado en la app. Opcional porque no
+   *  todos los lugares que abren este modal tienen el canje completo a mano. */
+  gestionadoEnApp?: boolean
 }) {
   const queryClient = useQueryClient()
   const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null)
@@ -55,6 +66,10 @@ export default function SeguimientoModal({
   // el camino habitual --registrar lo que acaba de pasar-- sea exactamente el que
   // había antes: sin fecha en el cuerpo, el servidor pone la de la petición.
   const [fecha, setFecha] = useState('')
+  // Qué movimiento está esperando confirmación. Borrar historial no puede pasar
+  // con un clic distraído, y un segundo clic en el mismo lugar es menos
+  // ceremonioso que un diálogo encima del que ya está abierto.
+  const [confirmando, setConfirmando] = useState<number | null>(null)
 
   const { data: movimientos, isLoading } = useQuery({
     queryKey: ['movimientos', canjeId],
@@ -68,6 +83,15 @@ export default function SeguimientoModal({
     enabled: opened,
   })
 
+  // Las dos mutaciones tocan lo mismo: la línea de tiempo, el listado, y la
+  // bandeja y el reporte semanal, que se miden desde el último movimiento.
+  const refrescar = () => {
+    queryClient.invalidateQueries({ queryKey: ['movimientos', canjeId] })
+    for (const clave of ['canjes', 'bandeja', 'reporte-semanal']) {
+      queryClient.invalidateQueries({ queryKey: [clave] })
+    }
+  }
+
   const crear = useMutation({
     mutationFn: () =>
       crearMovimientoCanje(canjeId!, {
@@ -80,23 +104,53 @@ export default function SeguimientoModal({
     onSuccess: () => {
       // La bandeja también: su semáforo se mide desde el último movimiento, y
       // registrar uno con fecha atrasada le cambia el nivel.
-      ;['movimientos', 'canjes', 'bandeja', 'reporte-semanal'].forEach((k) =>
-        queryClient.invalidateQueries({ queryKey: k === 'movimientos' ? [k, canjeId] : [k] }),
-      )
+      refrescar()
       setTipoSeleccionado(null)
       setComentario('')
       setFecha('')
     },
   })
 
+  const borrar = useMutation({
+    mutationFn: (movimientoId: number) => eliminarMovimientoCanje(canjeId!, movimientoId),
+    onSuccess: () => {
+      refrescar()
+      setConfirmando(null)
+    },
+  })
+
+  const cerrar = () => {
+    setConfirmando(null)
+    onClose()
+  }
+
   return (
-    <Modal opened={opened} onClose={onClose} title={`Seguimiento — Canje #${canjeId}`} size="md">
+    <Modal opened={opened} onClose={cerrar} title={`Seguimiento — Canje #${canjeId}`} size="md">
       <Stack gap="md">
         {isLoading && <Text size="sm" c="dimmed">Cargando...</Text>}
+        {borrar.isError && (
+          <Alert color="critical" variant="light">
+            {(borrar.error as Error).message}
+          </Alert>
+        )}
         {!isLoading && movimientos?.length === 0 && (
-          <Text size="sm" c="dimmed">
-            Todavía no hay movimientos registrados para este canje.
-          </Text>
+          <Stack gap={4}>
+            <Text size="sm" c="dimmed">
+              Todavía no hay movimientos registrados para este canje.
+            </Text>
+            {/* Sin esto la consecuencia queda muda: registrar un movimiento marca
+                el canje como gestionado, y borrarlo **no** deshace esa marca --la
+                pone también editarlo a mano, así que revertirla dejaría que la
+                importación pisara datos corregidos por una persona--. El
+                resultado es un canje que la importación ya no actualiza, y eso
+                hay que poder verlo. */}
+            {gestionadoEnApp && (
+              <Text size="xs" c="dimmed">
+                El canje quedó marcado como gestionado en la app, así que la importación de
+                Dataprop no lo sobreescribe. Borrar movimientos no deshace esa marca.
+              </Text>
+            )}
+          </Stack>
         )}
         {!isLoading && movimientos && movimientos.length > 0 && (
           <Timeline active={movimientos.length} bulletSize={22} lineWidth={2}>
@@ -104,13 +158,47 @@ export default function SeguimientoModal({
               <Timeline.Item
                 key={m.id}
                 bullet={m.etapa_resultante ? <IconArrowRight size={12} /> : <IconMessage size={12} />}
-                title={m.tipo_nombre}
+                title={
+                  <Group justify="space-between" wrap="nowrap" gap="xs">
+                    <span>{m.tipo_nombre}</span>
+                    {puedeEditar && confirmando !== m.id && (
+                      <ActionIcon
+                        variant="subtle"
+                        color="critical"
+                        size="sm"
+                        aria-label={`Borrar ${m.tipo_nombre}`}
+                        onClick={() => setConfirmando(m.id)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    )}
+                  </Group>
+                }
               >
                 <Text size="xs" c="dimmed">
                   {new Date(m.fecha).toLocaleString('es-CL')} · {m.autor_nombre ?? 'Sistema'}
                   {m.etapa_resultante && ` · nueva etapa: ${ETAPA_LABELS[m.etapa_resultante] ?? m.etapa_resultante}`}
                 </Text>
                 {m.comentario && <Text size="sm">{m.comentario}</Text>}
+
+                {/* La confirmación va acá, en la fila del movimiento, y no en un
+                    diálogo encima del modal: así queda claro cuál se borra. */}
+                {confirmando === m.id && (
+                  <Group gap="xs" mt={6}>
+                    <Text size="xs">¿Borrar este movimiento?</Text>
+                    <Button
+                      size="compact-xs"
+                      color="critical"
+                      loading={borrar.isPending}
+                      onClick={() => borrar.mutate(m.id)}
+                    >
+                      Sí, borrar
+                    </Button>
+                    <Button size="compact-xs" variant="default" onClick={() => setConfirmando(null)}>
+                      Cancelar
+                    </Button>
+                  </Group>
+                )}
               </Timeline.Item>
             ))}
           </Timeline>

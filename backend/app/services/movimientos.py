@@ -18,6 +18,9 @@ class MovimientoError(Exception):
 # rechazaría por venir del futuro.
 HOLGURA_RELOJ = timedelta(minutes=5)
 
+# El unico tipo de movimiento de canje que cambia el estado y no solo la etapa.
+CANCELACION = "CANCELACION"
+
 
 def _etapa_vigente(db: Session, tipo: EntityType, entity_id: int) -> str | None:
     """La etapa del movimiento **más reciente** que traiga una, no la del último
@@ -121,13 +124,79 @@ def crear_movimiento_canje(
     # La cancelacion no se recalcula desde la linea de tiempo: un canje que se
     # canceló quedó cancelado, y que despues alguien anote otra gestion no lo
     # revive. Deshacerlo es una edicion manual, no un movimiento.
-    if tipo.codigo == "CANCELACION":
+    if tipo.codigo == CANCELACION:
         canje.estado = CanjeEstado.CANCELADO
     canje.gestionado_en_app = True
 
     db.commit()
     db.refresh(movimiento)
     return movimiento
+
+
+def eliminar_movimiento_canje(db: Session, canje_id: int, movimiento_id: int) -> None:
+    """Borra un movimiento y deja el canje como si nunca se hubiera registrado.
+
+    **Por qué existe.** Se podían agregar movimientos y no sacarlos, así que un
+    tipeo --un tipo equivocado, una gestión anotada en el canje de al lado--
+    quedaba para siempre, moviendo la etapa y el reloj del semáforo. Corregirlo
+    exigía tocar la base a mano.
+
+    **Es un borrado de verdad, no un anulado.** Un movimiento marcado como
+    "anulado" obliga a filtrarlo en la línea de tiempo, en el semáforo, en el
+    reporte semanal y en el cálculo de la etapa: cinco lugares donde olvidarlo
+    produce un número mal. Y lo que queda no es historia útil sino ruido: "acá
+    hubo algo que no pasó". Para dos personas corrigiendo sus propios registros,
+    el borrado es lo proporcionado.
+
+    **Lo que arrastra se recalcula, no se adivina.**
+
+    - La etapa se vuelve a derivar de los movimientos que quedan. Si no queda
+      ninguno, vuelve a `SIN_ETAPA`: la etapa la puso el movimiento que se acaba
+      de borrar y no hay nada más que la sostenga.
+    - Si el borrado era la cancelación y no queda otra, el canje vuelve a
+      `ACTIVO`. Registrarla fue el error, así que el canje no estaba cancelado.
+    - **`gestionado_en_app` no se toca.** Es tentador devolverlo a `False` cuando
+      no quedan movimientos, pero no lo pone solo el seguimiento: también lo pone
+      crear o editar el canje a mano. Revertirlo dejaría que la próxima
+      importación sobreescriba en silencio datos corregidos por una persona.
+    """
+    canje = db.get(Canje, canje_id)
+    if canje is None:
+        raise MovimientoError("Canje no encontrado")
+
+    movimiento = db.get(Movimiento, movimiento_id)
+    if (
+        movimiento is None
+        or movimiento.entity_type != EntityType.canje
+        or movimiento.entity_id != canje_id
+    ):
+        raise MovimientoError(
+            f"El movimiento {movimiento_id} no pertenece al canje {canje_id}."
+        )
+
+    era_cancelacion = movimiento.tipo_movimiento == CANCELACION
+    db.delete(movimiento)
+    # Sin el flush, el movimiento borrado seguiria contando en las dos consultas
+    # de abajo y el recalculo daria lo mismo que antes.
+    db.flush()
+
+    vigente = _etapa_vigente(db, EntityType.canje, canje_id)
+    canje.etapa = CanjeEtapa(vigente) if vigente is not None else CanjeEtapa.SIN_ETAPA
+
+    if era_cancelacion:
+        queda_otra = db.scalar(
+            select(Movimiento.id)
+            .where(
+                Movimiento.entity_type == EntityType.canje,
+                Movimiento.entity_id == canje_id,
+                Movimiento.tipo_movimiento == CANCELACION,
+            )
+            .limit(1)
+        )
+        if queda_otra is None:
+            canje.estado = CanjeEstado.ACTIVO
+
+    db.commit()
 
 
 # Estos tipos no mueven el negocio en el pipeline, cambian el desenlace de sus

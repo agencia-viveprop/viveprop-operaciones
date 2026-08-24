@@ -37,6 +37,24 @@ export function listarMovimientosCanje(canjeId: number): Promise<Movimiento[]> {
  * `fecha` es opcional y va en ISO con zona. Si no se manda, el servidor pone el
  * instante en que llega la petición, que es el comportamiento de siempre.
  */
+/**
+ * Borra un movimiento de un canje.
+ *
+ * El servidor recalcula lo que dependía de él: la etapa se vuelve a derivar de
+ * los movimientos que quedan --si no queda ninguno, vuelve a «Sin etapa»-- y si
+ * el borrado era la cancelación, el canje vuelve a activo.
+ */
+export async function eliminarMovimientoCanje(canjeId: number, movimientoId: number): Promise<void> {
+  const res = await fetch(`/api/canjes/${canjeId}/movimientos/${movimientoId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const cuerpo = await res.json().catch(() => ({}))
+    throw new Error(cuerpo.detail ?? `Error ${res.status}`)
+  }
+}
+
 export function crearMovimientoCanje(
   canjeId: number,
   payload: { tipo_movimiento: string; comentario?: string; fecha?: string },
