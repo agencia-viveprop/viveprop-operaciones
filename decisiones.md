@@ -1153,3 +1153,22 @@ La primera versión recortaba el promedio y la tendencia al primer registro de c
 Los meses previos al primer negocio no son meses malos, son meses sin negocio, y **dibujarlos era el mismo error que promediarlos**, solo que en la otra mitad del problema. Ahora la serie del gráfico arranca donde arranca el dominio que se está mirando: negocios en 13 meses, canjes en 46. Se ve además lo que antes quedaba comprimido —enero de 2026 con ocho negocios iniciados—.
 
 **El recorte va en la pantalla y no en la API, y solo en la histórica.** En la pantalla porque el dato ya viajaba —`inicio_por_dominio`— y devolver dos series por dominio habría duplicado la respuesta para que cada mitad use la mitad. Y solo en la histórica porque en 3, 6 y 12 meses el largo es lo que se pidió: mostrar menos barras que las elegidas contestaría otra pregunta, y ahí lo que se acota son las líneas, que ya saben su tramo.
+
+---
+
+## D-058 · En el apilado, el total va explícito: leer un alto no es leer un número
+
+**Contexto.** El gráfico apilado de canjes pone el total del mes como **alto de la barra** —`solicitados = activos + cancelados`, exacto— y el globo listaba un renglón por segmento: *"Cancelados: 10", "Siguen activos: 4"*. La cifra completa del mes estaba ahí, en la geometría, pero para decirla había que sumar de cabeza.
+
+Es una distinción que se me pasó al diseñar el apilado: que el total sea **deducible** no es lo mismo que esté **dicho**. El alto de una barra se compara bien contra otras barras y se lee mal como cantidad.
+
+**Decisión: el total va primero y en negrita en el globo, y como etiqueta sobre la barra cuando caben.**
+
+En el globo el orden es el de la pregunta —cuántos entraron, y en qué terminaron—, así que el total es el titular y los segmentos van debajo. **Los segmentos se ordenan de mayor a menor y no en el orden de la pila**: con noventa cancelados y cuatro activos, seguir el orden del apilado pone primero al que no aporta.
+
+**La etiqueta sobre la barra solo aparece con doce meses o menos.** Con cuarenta y seis las etiquetas se pisan entre sí y tapan justamente lo que vienen a explicar; ahí el número vive en el globo. Es la regla de `dataviz` sobre etiquetas directas selectivas, aplicada al caso concreto: doce es lo que entra sin colisión en el ancho de la tarjeta.
+
+**El total viaja como un campo sintético en cada fila**, no como una serie: se lee para el globo y la etiqueta, y no se dibuja como barra. Una tercera barra habría sido justamente lo que el apilado vino a eliminar —una torre al lado de sus propias partes—.
+
+**Aplica solo al apilado.** En los gráficos de una o dos series independientes no hay total que sumar: ahí la suma de las barras no significa nada, y ponerla sería inventar una métrica.
+

@@ -455,6 +455,7 @@ export default function VistaDirectorio() {
         subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó."
         serie={serie}
         apilado
+        etiquetaTotal="Solicitados"
         series={[
           { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
           { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },

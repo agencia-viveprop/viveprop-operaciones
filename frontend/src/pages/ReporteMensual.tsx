@@ -388,6 +388,7 @@ export default function ReporteMensual() {
                 subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó. Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
                 serie={serie}
                 apilado
+                etiquetaTotal="Solicitados"
                 series={[
                   { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
                   { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },

@@ -126,6 +126,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · El total de solicitudes, explícito en el gráfico de canjes
+
+Pedido tuyo: un tercer indicador con la cantidad de solicitados del mes, para tener la cifra completa.
+
+El apilado ya la tenía en el **alto** de la barra --`solicitados = activos + cancelados`-- pero el globo listaba solo los dos segmentos y había que sumarlos de cabeza. Que el total sea deducible no es lo mismo que esté dicho: un alto se compara bien contra otras barras y se lee mal como cantidad.
+
+Ahora el globo dice **«Solicitados: 14»** primero y en negrita, con los segmentos debajo ordenados de mayor a menor --no en el orden de la pila: con noventa cancelados y cuatro activos, seguir el apilado pone primero al que no aporta--. Y el total va además como etiqueta sobre cada barra **cuando hay doce meses o menos**; con cuarenta y seis se pisan entre sí, así que ahí vive solo en el globo.
+
+No se agregó una tercera barra a propósito: sería justo lo que el apilado vino a eliminar, una torre al lado de sus propias partes. El total viaja como campo sintético de cada fila, se lee y no se dibuja. Ver `D-058`.
+
+**Verificado:** build y lint limpios, 573 tests, y las dos ventanas más el globo revisados en captura --el globo renderizado aparte con el payload de producción, porque en una captura no se puede hover--.
+
 ### 2026-08-22 · En histórico, el gráfico de negocios arranca en su primer registro
 
 Corrección de lo anterior, sobre tu observación: en histórico el gráfico de negocios empezaba en diciembre de 2022 con **33 meses vacíos** antes de su primera barra, porque la serie arrancaba en el primer registro de *cualquiera* de los dos dominios y el más viejo es un canje.

@@ -3,13 +3,14 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import { Group, Paper, Text, Title } from '@mantine/core'
+import { Group, Paper, Stack, Text, Title } from '@mantine/core'
 import type { MetricasMes, Tendencia } from '../api/reportes'
 
 /**
@@ -73,11 +74,14 @@ const ESTRUCTURA = {
     eje: 'var(--mantine-color-gray-5)',
     // La del promedio va un paso mas oscura: es un dato, no estructura.
     promedio: 'var(--mantine-color-gray-6)',
+    // La etiqueta del total no compite con la barra: es un dato de apoyo.
+    textoSuave: 'var(--mantine-color-gray-7)',
   },
   dark: {
     rejilla: 'var(--mantine-color-dark-4)',
     eje: 'var(--mantine-color-dark-3)',
     promedio: 'var(--mantine-color-dark-1)',
+    textoSuave: 'var(--mantine-color-dark-1)',
   },
 } as const
 
@@ -97,6 +101,73 @@ const millones = (v: number) => (v === 0 ? '0' : `$${(v / 1_000_000).toFixed(1)}
  *  liquidaciones por mes-- y escribirlo con punto se lee como otro número. */
 const unidades = (v: number) =>
   new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(v)
+
+/** El campo sintético que lleva el total de la pila. No es una serie: no se
+ *  dibuja como barra, solo se lee para el globo y la etiqueta. */
+const CAMPO_TOTAL = '__total'
+
+/**
+ * El globo del gráfico apilado, con el total arriba de sus partes.
+ *
+ * **Por qué no alcanza el globo por defecto.** Lista un renglón por segmento
+ * --"Cancelados: 10", "Siguen activos: 4"-- y deja la cifra del mes para que la
+ * sume quien mira. El alto de la barra la dice, pero leer un alto no es leer un
+ * número. Acá el total va primero y en negrita, y los segmentos abajo, que es el
+ * orden en que se pregunta: cuántos entraron, y en qué terminaron.
+ */
+function GloboApilado({
+  active,
+  payload,
+  label,
+  etiquetaTotal,
+  formato,
+}: {
+  active?: boolean
+  payload?: { name?: string; value?: number; color?: string; dataKey?: string }[]
+  label?: string
+  etiquetaTotal: string
+  formato: (v: number) => string
+}) {
+  if (!active || !payload?.length) return null
+
+  const partes = payload.filter((x) => x.dataKey !== CAMPO_TOTAL)
+  const total = partes.reduce((a, x) => a + Number(x.value ?? 0), 0)
+
+  return (
+    <Paper withBorder radius="md" p="xs" shadow="sm">
+      <Text size="xs" c="dimmed" fw={700}>
+        {label}
+      </Text>
+      <Text size="sm" fw={700} mt={2}>
+        {etiquetaTotal}: {formato(total)}
+      </Text>
+      <Stack gap={2} mt={4}>
+        {/* Del más grande al más chico: con noventa cancelados y cuatro activos,
+            listarlos en el orden de la pila pone primero al que no importa. */}
+        {[...partes]
+          .sort((a, b) => Number(b.value ?? 0) - Number(a.value ?? 0))
+          .map((x) => (
+            <Group key={x.dataKey} gap={6} wrap="nowrap">
+              <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: x.color,
+                  display: 'inline-block',
+                }}
+              />
+              <Text size="xs">
+                {x.name}: {formato(Number(x.value ?? 0))}
+              </Text>
+            </Group>
+          ))}
+      </Stack>
+    </Paper>
+  )
+}
+
 
 export type SerieDef = {
   campo: keyof MetricasMes
@@ -122,6 +193,7 @@ export default function EvolucionMensual({
   promedio,
   esPlata = false,
   apilado = false,
+  etiquetaTotal = 'Total',
   tendencia,
 }: {
   titulo: string
@@ -143,6 +215,9 @@ export default function EvolucionMensual({
    * ven como una raya al lado de una torre --el problema que esto resuelve--.
    */
   apilado?: boolean
+  /** Cómo se llama la suma de los segmentos, para el globo y la etiqueta. Solo
+   *  se usa con `apilado`: es el nombre de la cifra completa del mes. */
+  etiquetaTotal?: string
   /** La recta de tendencia sobre la ventana, tal como la calcula el backend.
    *  Sus montos llegan como texto --son `Decimal`-- y se convierten acá. */
   tendencia?: Tendencia
@@ -154,6 +229,10 @@ export default function EvolucionMensual({
   const datos: Record<string, string | number>[] = serie.map((m) => ({
     mes: rotuloCorto(m.etiqueta),
     ...Object.fromEntries(series.map((s) => [s.campo, Number(m[s.campo])])),
+    // El total de la pila, precalculado. El alto de la barra ya lo dice, pero el
+    // número no estaba en ninguna parte: el globo listaba los dos segmentos y
+    // había que sumarlos de cabeza para tener la cifra del mes.
+    [CAMPO_TOTAL]: series.reduce((a, s) => a + Number(m[s.campo]), 0),
   }))
 
   const ultimo = datos.length - 1
@@ -171,6 +250,10 @@ export default function EvolucionMensual({
         }
       : null
   const conTotal = unaSola || apilado
+  // Doce es lo que entra sin que las etiquetas se toquen en el ancho habitual de
+  // la tarjeta; de ahí para arriba, el número vive en el globo.
+  const etiquetasVisibles = datos.length <= 12
+
   const dibujaTendencia =
     tendencia !== undefined && tendencia.direccion !== 'plana' && datos.length > 1
 
@@ -235,10 +318,18 @@ export default function EvolucionMensual({
             stroke={estructura.eje}
             width={esPlata ? 52 : 34}
           />
-          <Tooltip
-            formatter={(valor, nombre) => [formato(Number(valor)), nombre]}
-            contentStyle={{ borderRadius: 8, fontSize: 13 }}
-          />
+          {apilado ? (
+            <Tooltip
+              content={
+                <GloboApilado etiquetaTotal={etiquetaTotal} formato={formato} />
+              }
+            />
+          ) : (
+            <Tooltip
+              formatter={(valor, nombre) => [formato(Number(valor)), nombre]}
+              contentStyle={{ borderRadius: 8, fontSize: 13 }}
+            />
+          )}
           {/* El promedio también va acotado al tramo que promedia. Dibujado de
               punta a punta afirmaba que ese nivel era la referencia también en los
               meses en que el dominio no existía. */}
@@ -299,6 +390,18 @@ export default function EvolucionMensual({
                   cero --por eso se lo mira-- así que el énfasis caía en una barra
                   ausente. Lo que ubica el mes actual es su posición (siempre el
                   último), su etiqueta directa y la línea del promedio. */}
+
+              {/* El total sobre la barra, solo en el segmento de arriba y solo
+                  cuando hay pocos meses: con cuarenta y seis barras las etiquetas
+                  se pisan y tapan justamente lo que vienen a explicar. */}
+              {apilado && etiquetasVisibles && s === series[series.length - 1] && (
+                <LabelList
+                  dataKey={CAMPO_TOTAL}
+                  position="top"
+                  fontSize={11}
+                  fill={estructura.textoSuave}
+                />
+              )}
             </Bar>
           ))}
 
