@@ -52,6 +52,8 @@ from app.models.catalogo import EstadoNegocio
 from app.models.negocio import Negocio, NegocioHito
 
 CERO = Decimal("0")
+CENTAVO = Decimal("0.01")
+DECIMA = Decimal("0.1")
 
 
 class MetricasMes(BaseModel):
@@ -69,6 +71,36 @@ class MetricasMes(BaseModel):
     canjes_solicitados: int
     canjes_cerrados: int
     canjes_cancelados: int
+    # Los que siguen vivos, contados como los cancelados: por su mes de solicitud.
+    #
+    # `canjes_solicitados = canjes_activos + canjes_cancelados` **exacto**, porque
+    # el estado solo tiene esos dos valores. Esa identidad es la que permite
+    # dibujarlos apilados: el total de la barra es la solicitud y el activo es un
+    # segmento propio, en vez de una barra de 1 al lado de una de 28 donde no se ve.
+    canjes_activos: int
+
+
+class PromedioMes(BaseModel):
+    """El promedio mensual de la ventana. **Todos los campos son decimales.**
+
+    No reusa `MetricasMes` porque ahí los conteos son enteros, y el promedio de un
+    conteo no lo es: cuatro liquidaciones en seis meses son 0,67 por mes, no 0.
+    La primera versión lo truncaba con `int()` y el resultado era que el reporte
+    afirmaba un promedio de **cero** liquidaciones habiendo cuatro, y que la línea
+    de referencia de los canjes activos desaparecía por quedar en cero.
+
+    Un promedio truncado no es un promedio: es un promedio equivocado.
+    """
+
+    etiqueta: str
+    hitos_cerrados: Decimal
+    comision_real_vp: Decimal
+    comision_total: Decimal
+    negocios_iniciados: Decimal
+    canjes_solicitados: Decimal
+    canjes_cerrados: Decimal
+    canjes_cancelados: Decimal
+    canjes_activos: Decimal
 
 
 class Variacion(BaseModel):
@@ -87,6 +119,37 @@ class Variacion(BaseModel):
     referencia: Decimal
     absoluta: Decimal
     pct: Decimal | None
+
+
+class Tendencia(BaseModel):
+    """La recta que mejor ajusta la serie, por mínimos cuadrados.
+
+    **Qué agrega sobre el promedio.** El promedio dice si el mes está por encima o
+    por debajo de lo normal; la tendencia dice **hacia dónde va la ventana**. Son
+    preguntas distintas y las dos hacen falta: una ventana puede estar toda sobre
+    su promedio y venir cayendo.
+
+    `desde` y `hasta` son el valor ajustado en el primer y el último mes. Van
+    calculados acá para que la pantalla dibuje la recta con dos puntos y no tenga
+    que repetir el ajuste --y para que el ajuste tenga tests, que es donde este
+    proyecto los tiene.
+
+    **Con tres meses una tendencia es casi una anécdota.** Se calcula igual porque
+    la ventana la elige quien lee, pero `puntos` viaja con el resto para que la
+    pantalla pueda decir sobre cuántos meses se trazó.
+    """
+
+    metrica: str
+    dominio: str
+    puntos: int
+    # Cuánto cambia por mes, en las unidades de la métrica.
+    pendiente: Decimal
+    # La pendiente como porcentaje del promedio de la serie. Nulo si el promedio
+    # es cero: ahí no hay porcentaje que calcular, igual que en `Variacion`.
+    pct_por_mes: Decimal | None
+    direccion: str  # 'sube' | 'baja' | 'plana'
+    desde: Decimal
+    hasta: Decimal
 
 
 class Comparacion(BaseModel):
@@ -119,7 +182,9 @@ class ReporteMensual(BaseModel):
     serie: list[MetricasMes]
     # El promedio mensual de la ventana, para la línea de referencia del gráfico y
     # para la frase que compara el mes actual contra su propia normalidad.
-    promedio: MetricasMes
+    promedio: PromedioMes
+    # La tendencia de cada métrica sobre la ventana, indexada por su campo.
+    tendencias: dict[str, Tendencia]
 
 
 # Qué se compara, y con qué nombre se muestra. El orden es el de lectura: la
@@ -143,6 +208,7 @@ METRICAS_NEGOCIOS: tuple[tuple[str, str], ...] = (
 # arriendo mensual. Ver `D-054`.
 METRICAS_CANJES: tuple[tuple[str, str], ...] = (
     ("canjes_solicitados", "Canjes solicitados"),
+    ("canjes_activos", "Canjes activos"),
     ("canjes_cerrados", "Canjes cerrados"),
     ("canjes_cancelados", "Canjes cancelados"),
 )
@@ -244,10 +310,18 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
     # Los cancelados se cuentan por fecha de solicitud: `canjes` no guarda cuándo
     # se canceló, así que "cancelados en agosto" no se puede saber. Esto responde
     # "de los que entraron en agosto, cuántos terminaron cancelados", que es una
-    # pregunta distinta y la única que el dato permite.
+    # pregunta distinta y la única que el dato permite. Los activos van con el
+    # mismo criterio, para que sumen con los cancelados el total de solicitados.
     cancelados = db.scalar(
         select(func.count()).select_from(Canje).where(
             Canje.estado == CanjeEstado.CANCELADO,
+            Canje.fecha_solicitud >= inicio,
+            Canje.fecha_solicitud <= fin,
+        )
+    )
+    activos = db.scalar(
+        select(func.count()).select_from(Canje).where(
+            Canje.estado == CanjeEstado.ACTIVO,
             Canje.fecha_solicitud >= inicio,
             Canje.fecha_solicitud <= fin,
         )
@@ -262,6 +336,7 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
         canjes_solicitados=solicitados or 0,
         canjes_cerrados=canjes_cerrados or 0,
         canjes_cancelados=cancelados or 0,
+        canjes_activos=activos or 0,
     )
 
 
@@ -334,6 +409,7 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
     # fecha de solicitud, porque `canjes` no guarda cuándo se canceló.
     solicitados: dict[str, int] = {}
     cancelados: dict[str, int] = {}
+    activos: dict[str, int] = {}
     for fecha, estado in db.execute(
         select(Canje.fecha_solicitud, Canje.estado).where(
             Canje.fecha_solicitud >= inicio, Canje.fecha_solicitud <= fin
@@ -343,6 +419,8 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
         solicitados[k] = solicitados.get(k, 0) + 1
         if estado == CanjeEstado.CANCELADO:
             cancelados[k] = cancelados.get(k, 0) + 1
+        else:
+            activos[k] = activos.get(k, 0) + 1
 
     canjes_cerrados: dict[str, int] = {}
     for (fecha,) in db.execute(
@@ -368,12 +446,13 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
                 canjes_solicitados=solicitados.get(k, 0),
                 canjes_cerrados=canjes_cerrados.get(k, 0),
                 canjes_cancelados=cancelados.get(k, 0),
+                canjes_activos=activos.get(k, 0),
             )
         )
     return serie
 
 
-def _promedio(serie: list[MetricasMes]) -> MetricasMes:
+def _promedio(serie: list[MetricasMes]) -> PromedioMes:
     """El promedio mensual de la ventana.
 
     Es la referencia contra la que se lee el mes actual: "agosto está 47% bajo el
@@ -383,28 +462,92 @@ def _promedio(serie: list[MetricasMes]) -> MetricasMes:
     **Incluye los meses en cero**, porque son parte de la normalidad de este
     negocio --de 11 meses con actividad, 4 estuvieron vacíos-- y excluirlos
     inflaría la referencia justo en el sentido que hace ver retroceso donde no hay.
+
+    **No redondea a entero.** Ver `PromedioMes`: el promedio de un conteo es
+    fraccionario, y truncarlo dio un promedio de cero liquidaciones habiendo cuatro.
     """
     n = len(serie) or 1
 
     def prom(campo: str) -> Decimal:
         total = sum((Decimal(getattr(m, campo)) for m in serie), CERO)
-        return (total / n).quantize(Decimal("0.01"))
+        return (total / n).quantize(CENTAVO)
 
-    return MetricasMes(
+    return PromedioMes(
         etiqueta=f"promedio de {len(serie)} meses",
-        hitos_cerrados=int(prom("hitos_cerrados")),
+        hitos_cerrados=prom("hitos_cerrados"),
         comision_real_vp=prom("comision_real_vp"),
         comision_total=prom("comision_total"),
-        negocios_iniciados=int(prom("negocios_iniciados")),
-        canjes_solicitados=int(prom("canjes_solicitados")),
-        canjes_cerrados=int(prom("canjes_cerrados")),
-        canjes_cancelados=int(prom("canjes_cancelados")),
+        negocios_iniciados=prom("negocios_iniciados"),
+        canjes_solicitados=prom("canjes_solicitados"),
+        canjes_cerrados=prom("canjes_cerrados"),
+        canjes_cancelados=prom("canjes_cancelados"),
+        canjes_activos=prom("canjes_activos"),
     )
 
 
+# A qué reporte pertenece cada métrica. Se deriva de las dos listas por dominio
+# en vez de escribirse de nuevo: una tercera copia de la misma partición es una
+# tercera cosa que se puede desincronizar.
 DOMINIOS = {campo: "negocios" for campo, _ in METRICAS_NEGOCIOS} | {
     campo: "canjes" for campo, _ in METRICAS_CANJES
 }
+
+
+# Debajo de este porcentaje mensual la serie se declara plana. Con volúmenes de
+# ~1 cierre por mes, una pendiente chica es ruido y llamarla tendencia sería
+# darle una lectura que el dato no aguanta.
+UMBRAL_PLANA = Decimal("3")
+
+
+def _tendencia(serie: list[MetricasMes], campo: str, nombre: str) -> Tendencia:
+    """Mínimos cuadrados sobre los meses de la ventana.
+
+    Los meses van como 0, 1, 2... así que la pendiente sale directamente en
+    unidades por mes. Con un solo punto no hay recta: se devuelve plana en su
+    propio valor, que es lo único cierto.
+    """
+    n = len(serie)
+    ys = [Decimal(getattr(m, campo)) for m in serie]
+    media_y = sum(ys, CERO) / n if n else CERO
+
+    if n < 2:
+        return Tendencia(
+            metrica=nombre,
+            dominio=DOMINIOS[campo],
+            puntos=n,
+            pendiente=CERO,
+            pct_por_mes=None,
+            direccion="plana",
+            desde=media_y.quantize(CENTAVO),
+            hasta=media_y.quantize(CENTAVO),
+        )
+
+    media_x = Decimal(n - 1) / 2
+    numerador = sum(
+        ((Decimal(i) - media_x) * (y - media_y) for i, y in enumerate(ys)), CERO
+    )
+    denominador = sum(((Decimal(i) - media_x) ** 2 for i in range(n)), CERO)
+    pendiente = (numerador / denominador) if denominador else CERO
+    intercepto = media_y - pendiente * media_x
+
+    pct = None if media_y == CERO else (pendiente / media_y * 100).quantize(DECIMA)
+    if pct is None or abs(pct) < UMBRAL_PLANA:
+        direccion = "plana"
+    else:
+        direccion = "sube" if pendiente > CERO else "baja"
+
+    return Tendencia(
+        metrica=nombre,
+        dominio=DOMINIOS[campo],
+        puntos=n,
+        pendiente=pendiente.quantize(CENTAVO),
+        pct_por_mes=pct,
+        direccion=direccion,
+        # La recta se recorta en cero: una proyección negativa de un conteo o de
+        # una comisión no existe, y dibujarla bajo el eje sugeriría que sí.
+        desde=max(intercepto, CERO).quantize(CENTAVO),
+        hasta=max(intercepto + pendiente * Decimal(n - 1), CERO).quantize(CENTAVO),
+    )
 
 
 def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
@@ -475,4 +618,7 @@ def obtener_reporte_mensual(
         meses_de_la_ventana=ventana,
         serie=serie,
         promedio=_promedio(serie),
+        tendencias={
+            campo: _tendencia(serie, campo, nombre) for campo, nombre in METRICAS
+        },
     )

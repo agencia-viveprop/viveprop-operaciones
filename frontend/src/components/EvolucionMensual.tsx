@@ -10,7 +10,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Group, Paper, Text, Title } from '@mantine/core'
-import type { MetricasMes } from '../api/reportes'
+import type { MetricasMes, Tendencia } from '../api/reportes'
 
 /**
  * La evolución mes por mes de la ventana elegida.
@@ -48,8 +48,20 @@ import type { MetricasMes } from '../api/reportes'
  * gráfico, que además saca del medio una serie que hoy es cero en todos los meses.
  */
 const PALETA = {
-  light: { principal: '#3D3EA8', secundaria: '#F4545A', negativa: '#DC2626' },
-  dark: { principal: '#7c7dcf', secundaria: '#F4545A', negativa: '#e35252' },
+  light: {
+    principal: '#3D3EA8',
+    secundaria: '#F4545A',
+    negativa: '#DC2626',
+    // La tendencia es una lectura, no una categoría: va en el teal de `info`,
+    // que no está asignado a ninguna serie y así no se confunde con una.
+    tendencia: '#0891B2',
+  },
+  dark: {
+    principal: '#7c7dcf',
+    secundaria: '#F4545A',
+    negativa: '#e35252',
+    tendencia: '#0ab9e3',
+  },
 } as const
 
 /** La rejilla y los ejes tienen que quedar detrás de los datos, no compitiendo.
@@ -81,12 +93,20 @@ const pesos = (v: number) =>
 
 const millones = (v: number) => (v === 0 ? '0' : `$${(v / 1_000_000).toFixed(1)}M`)
 
+/** Un conteo, con coma decimal. El promedio de un conteo es fraccionario --0,67
+ *  liquidaciones por mes-- y escribirlo con punto se lee como otro número. */
+const unidades = (v: number) =>
+  new Intl.NumberFormat('es-CL', { maximumFractionDigits: 2 }).format(v)
+
 export type SerieDef = {
   campo: keyof MetricasMes
   nombre: string
-  /** 'principal' | 'secundaria' | 'negativa' — el rol en la paleta validada. */
-  tono: keyof (typeof PALETA)['light']
+  /** El rol en la paleta validada. `tendencia` no entra: es la recta, no una
+   *  serie de datos. */
+  tono: 'principal' | 'secundaria' | 'negativa'
 }
+
+
 
 /**
  * Un gráfico de barras de la serie mensual.
@@ -101,6 +121,8 @@ export default function EvolucionMensual({
   series,
   promedio,
   esPlata = false,
+  apilado = false,
+  tendencia,
 }: {
   titulo: string
   subtitulo?: string
@@ -111,6 +133,19 @@ export default function EvolucionMensual({
    *  dos, una línea sola no dice a cuál pertenece. */
   promedio?: number
   esPlata?: boolean
+  /**
+   * Apila las series en vez de ponerlas lado a lado.
+   *
+   * Sirve cuando una serie es parte de la otra. En canjes lo son: los activos y
+   * los cancelados suman exactamente los solicitados, así que apilados el alto
+   * total de la barra **es** la solicitud del mes y el activo queda como su
+   * propio segmento. Lado a lado, cuatro activos junto a noventa cancelados se
+   * ven como una raya al lado de una torre --el problema que esto resuelve--.
+   */
+  apilado?: boolean
+  /** La recta de tendencia sobre la ventana, tal como la calcula el backend.
+   *  Sus montos llegan como texto --son `Decimal`-- y se convierten acá. */
+  tendencia?: Tendencia
 }) {
   const modo = useComputedColorScheme('light')
   const paleta = PALETA[modo]
@@ -123,11 +158,23 @@ export default function EvolucionMensual({
 
   const ultimo = datos.length - 1
   const unaSola = series.length === 1
+  // Con apilado el valor del mes es la suma de sus segmentos: es el total de la
+  // barra, que es justamente lo que la forma apilada pone a la vista.
   const ultimoMes =
-    unaSola && datos.length > 0
-      ? { rotulo: datos[ultimo].mes, valor: Number(datos[ultimo][series[0].campo]) }
+    datos.length > 0
+      ? {
+          rotulo: datos[ultimo].mes,
+          valor: (unaSola || apilado ? series : series.slice(0, 1)).reduce(
+            (a, s) => a + Number(datos[ultimo][s.campo]),
+            0,
+          ),
+        }
       : null
-  const formato = esPlata ? pesos : (v: number) => String(v)
+  const conTotal = unaSola || apilado
+  const dibujaTendencia =
+    tendencia !== undefined && tendencia.direccion !== 'plana' && datos.length > 1
+  const formato = esPlata ? pesos : unidades
+  // El eje va sin decimales: sus marcas son enteras y "2,00" solo agrega ruido.
   const ejeY = esPlata ? millones : (v: number) => String(v)
 
   return (
@@ -140,7 +187,7 @@ export default function EvolucionMensual({
             entrega Recharts no eran los que se asumieron. Puesto en el
             encabezado, al lado de su referencia, se lee mejor y no depende de los
             internals de la librería. */}
-        {unaSola && ultimoMes && (
+        {conTotal && ultimoMes && (
           <Text size="xs" c="dimmed">
             <Text span fw={700} c="var(--mantine-color-text)">
               {ultimoMes.rotulo} {formato(ultimoMes.valor)}
@@ -148,7 +195,7 @@ export default function EvolucionMensual({
             {promedio !== undefined && promedio > 0 && <> · promedio {formato(promedio)}</>}
           </Text>
         )}
-        {!unaSola && promedio !== undefined && promedio > 0 && (
+        {!conTotal && promedio !== undefined && promedio > 0 && (
           <Text size="xs" c="dimmed">
             promedio {formato(promedio)}
           </Text>
@@ -177,12 +224,29 @@ export default function EvolucionMensual({
             formatter={(valor, nombre) => [formato(Number(valor)), nombre]}
             contentStyle={{ borderRadius: 8, fontSize: 13 }}
           />
-          {promedio !== undefined && promedio > 0 && unaSola && (
+          {promedio !== undefined && promedio > 0 && conTotal && (
             <ReferenceLine
               y={promedio}
               stroke={estructura.promedio}
               strokeDasharray="4 4"
               strokeWidth={2}
+            />
+          )}
+
+          {/* La recta de tendencia. Va con `segment` --dos puntos-- y no como una
+              serie más: es una lectura de los datos, no un dato, así que se dibuja
+              como referencia y no compite con las barras.
+              Se omite cuando es plana: una recta horizontal ya la cuenta el
+              promedio, y dos líneas paralelas solo agregan tinta. */}
+          {tendencia && tendencia.direccion !== 'plana' && datos.length > 1 && (
+            <ReferenceLine
+              segment={[
+                { x: datos[0].mes as string, y: Number(tendencia.desde) },
+                { x: datos[ultimo].mes as string, y: Number(tendencia.hasta) },
+              ]}
+              stroke={paleta.tendencia}
+              strokeWidth={2}
+              ifOverflow="extendDomain"
             />
           )}
 
@@ -192,7 +256,14 @@ export default function EvolucionMensual({
               dataKey={s.campo}
               name={s.nombre}
               fill={paleta[s.tono]}
-              radius={[4, 4, 0, 0]}
+              stackId={apilado ? 'total' : undefined}
+              /* Solo el segmento de arriba lleva las esquinas redondeadas: en los
+                 de abajo, redondear el tope deja un hueco contra el siguiente. */
+              radius={apilado && s !== series[series.length - 1] ? undefined : [4, 4, 0, 0]}
+              /* Dos píxeles de fondo entre segmentos para que se lean como dos y
+                 no como una mancha con un cambio de color. */
+              stroke={apilado ? 'var(--mantine-color-body)' : undefined}
+              strokeWidth={apilado ? 2 : 0}
               maxBarSize={54}
               /* Sin animación de entrada. Se vuelve a dibujar en cada cambio de
                  ventana o de dominio, así que animar convierte cada clic en un
@@ -219,23 +290,56 @@ export default function EvolucionMensual({
           Solicitados", al revés de las barras-- y en la versión 3 ya no acepta un
           `payload` propio para corregirlo. El orden de la leyenda es el que
           explica el gráfico, así que no puede quedar a criterio de la librería. */}
-      {!unaSola && (
+      {(!unaSola || dibujaTendencia) && (
         <Group gap="lg" justify="center" mt={4}>
-          {series.map((s) => (
-            <Group key={s.campo} gap={6} wrap="nowrap">
+          {!unaSola &&
+            series.map((s) => (
+              <Group key={s.campo} gap={6} wrap="nowrap">
+                <span
+                  aria-hidden
+                  style={{
+                    width: 9,
+                    height: 9,
+                    borderRadius: '50%',
+                    background: paleta[s.tono],
+                    display: 'inline-block',
+                  }}
+                />
+                <Text size="xs">{s.nombre}</Text>
+              </Group>
+            ))}
+          {/* La recta también se nombra: una línea sin explicación en un gráfico
+              de barras se lee como un umbral o una meta. */}
+          {dibujaTendencia && (
+            <Group gap={6} wrap="nowrap">
               <span
                 aria-hidden
                 style={{
-                  width: 9,
-                  height: 9,
-                  borderRadius: '50%',
-                  background: paleta[s.tono],
+                  width: 14,
+                  height: 2,
+                  background: paleta.tendencia,
                   display: 'inline-block',
                 }}
               />
-              <Text size="xs">{s.nombre}</Text>
+              <Text size="xs">
+                Tendencia de {tendencia!.puntos} meses ({tendencia!.direccion})
+              </Text>
             </Group>
-          ))}
+          )}
+          {promedio !== undefined && promedio > 0 && conTotal && (
+            <Group gap={6} wrap="nowrap">
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 0,
+                  borderTop: `2px dashed ${estructura.promedio}`,
+                  display: 'inline-block',
+                }}
+              />
+              <Text size="xs">Promedio de la ventana</Text>
+            </Group>
+          )}
         </Group>
       )}
     </Paper>
@@ -254,15 +358,38 @@ export function Veredicto({
   actual,
   promedio,
   unidad,
+  tendencia,
   esPlata = false,
 }: {
   actual: number
   promedio: number
   /** Cómo se llama lo que se mide, para armar la frase. */
   unidad: string
+  /** La dirección de la ventana. Es la otra mitad de la respuesta: el promedio
+   *  dice si el mes está por encima o por debajo de lo normal, y la tendencia
+   *  hacia dónde va la ventana. Una ventana puede estar toda sobre su promedio y
+   *  venir cayendo. */
+  tendencia?: Tendencia
   esPlata?: boolean
 }) {
-  const formato = esPlata ? pesos : (v: number) => String(v)
+  const formato = esPlata ? pesos : unidades
+
+  // Del porcentaje de la pendiente no se dice nada a propósito: con tres meses
+  // una serie que cae a cero da "-150% por mes", que es correcto y se lee como un
+  // error. La dirección y la recta del gráfico cuentan lo mismo sin ese número.
+  const frase =
+    tendencia && tendencia.direccion !== 'plana' ? (
+      <>
+        {' '}
+        La ventana de {tendencia.puntos} meses viene{' '}
+        <Text span fw={700} c={tendencia.direccion === 'sube' ? 'good.7' : 'critical.7'}>
+          {tendencia.direccion === 'sube' ? 'al alza' : 'a la baja'}
+        </Text>
+        .
+      </>
+    ) : tendencia ? (
+      <> La ventana de {tendencia.puntos} meses viene plana.</>
+    ) : null
 
   if (promedio === 0) {
     return (
@@ -293,6 +420,7 @@ export function Veredicto({
           el promedio de la ventana ({formato(promedio)}).
         </>
       )}
+      {frase}
     </Text>
   )
 }

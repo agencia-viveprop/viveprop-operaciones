@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · Tendencia en los gráficos, y los canjes activos visibles
+
+Pedido tuyo: línea de tendencia en el tiempo, reflejar los canjes activos sin que se diluyan entre las solicitudes, y un recuadro de activos arriba de los gráficos.
+
+**Los tres, hechos.** El recuadro **CANJES ACTIVOS** va al lado de los solicitados, porque son parte de ellos: de los que entraron en la ventana, los que siguen vivos. Sobre `dev` son 4 de 94.
+
+**Los activos van apilados sobre los cancelados**, no al lado. `solicitados = activos + cancelados` exacto --el estado solo tiene esos dos valores-- así que el alto de la barra es la solicitud del mes y el activo queda como su propio segmento anclado al eje. Lado a lado eran una raya junto a una torre, que es justamente la dilución que había que resolver. Y además tienen un gráfico propio en su propia escala: apilados se ve su peso, solos se ve su forma.
+
+**La tendencia es una recta por mínimos cuadrados**, calculada en el backend --que es donde este proyecto tiene los tests-- y dibujada con sus dos extremos. Se recorta en cero, porque una proyección negativa de un conteo no existe. Debajo de 3% mensual se declara plana y no se dibuja: una recta horizontal ya la cuenta el promedio.
+
+El porcentaje de la pendiente viaja en la respuesta pero **no se muestra**: con tres meses una serie que cae a cero da *"−150% por mes"*, que es correcto y se lee como un error. Se muestra la dirección más la recta. Sobre `dev`, la ventana de 6 meses de comisión viene **a la baja** y los canjes activos **al alza**.
+
+**Y mirarlo renderizado encontró un error de cálculo mío.** El promedio truncaba los conteos con `int()`: cuatro liquidaciones en seis meses daban promedio **cero**, así que el reporte afirmaba que en promedio no se cierra nada habiendo cuatro cierres, y la línea de referencia de los activos desaparecía. Se vio porque ese gráfico salió sin su línea. El promedio pasó a su propio modelo con campos decimales --el promedio de un conteo no es entero-- y tiene test: 0,67 y no 0. De paso los decimales van con coma: `15,67`, no `15.67`. Ver `D-055`.
+
+**Verificado:** 547 tests, `alembic check` limpio, build y lint sin hallazgos, y los gráficos revisados en captura en los dos modos.
+
 ### 2026-08-22 · Reporte mensual separado en dos, con evolución de la ventana
 
 Pedido tuyo: separar el reporte en negocios y canjes, y agregar una visualización de evolución para los meses de la ventana, para saber rápido si hay avance, estancamiento o retroceso.

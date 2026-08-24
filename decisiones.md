@@ -1055,3 +1055,39 @@ Compila, pasa el lint y aun así estaba mal de cuatro formas. Se levantó la pá
 4. **La leyenda salía en orden inverso a las barras** —"Cancelados · Solicitados"— porque Recharts la ordena por `dataKey`, y en la versión 3 ya no acepta un `payload` propio. Se dibuja a mano.
 
 **La paleta se validó con el script, no a ojo.** El modo oscuro no es un aclarado automático del claro: `brand.6` (#3D3EA8) contra fondo oscuro da contraste 2,03, bajo el mínimo de 3:1, así que oscuro usa `brand.4`. Y con tres series el verde y el rojo caían a ΔE 7,9 en deuteranopía; se resolvió dejando dos series por gráfico —que además saca del medio la serie que hoy es cero—. La rejilla y los ejes también van por modo: la escala de grises de Mantine no se invierte, así que un gris recesivo sobre blanco queda prominente sobre negro.
+
+---
+
+## D-055 · Tendencia de la ventana, y los canjes activos como segmento en vez de barra aparte
+
+**Contexto.** El reporte ya mostraba la serie de la ventana con su promedio, pero faltaban dos cosas: hacia **dónde va** la ventana, y los canjes **activos**, que en un gráfico de solicitudes contra cancelaciones quedaban invisibles —cuatro activos junto a noventa cancelados—.
+
+**Decisión 1: una recta de tendencia por mínimos cuadrados, calculada en el backend.**
+
+El promedio y la tendencia responden preguntas distintas y las dos hacen falta: el promedio dice si el mes está por encima o por debajo de lo normal, la tendencia dice hacia dónde va la ventana. **Una ventana puede estar toda sobre su promedio y venir cayendo.**
+
+Se calcula en el backend y no en la pantalla porque es donde este proyecto tiene los tests. Viaja con sus dos extremos ya ajustados, así que la pantalla dibuja la recta con dos puntos y no repite el ajuste.
+
+**La recta se recorta en cero.** Una proyección negativa de un conteo o de una comisión no existe, y dibujarla bajo el eje sugeriría que sí.
+
+**Debajo de 3% mensual se declara plana**, y una tendencia plana no se dibuja: una recta horizontal ya la cuenta el promedio, y dos líneas paralelas solo agregan tinta.
+
+**El porcentaje de la pendiente viaja en la respuesta pero no se muestra.** Con tres meses, una serie que cae a cero da *"−150% por mes"*: correcto, y se lee como un error. Lo que se muestra es la dirección más la recta dibujada, que es la misma información sin el número absurdo.
+
+**Decisión 2: los canjes activos van apilados sobre los cancelados**, no al lado.
+
+`canjes_solicitados = canjes_activos + canjes_cancelados` **exacto**, porque el estado solo tiene esos dos valores. Esa identidad —que tiene su propio test, para que agregar un tercer estado falle en vez de hacer mentir al gráfico sobre su total— es la que habilita el apilado: el alto de la barra **es** la solicitud del mes y el activo es su propio segmento, anclado al eje para que se pueda comparar entre meses.
+
+Lado a lado no servía: cuatro activos junto a noventa cancelados son una raya junto a una torre, que es exactamente el problema de dilución que había que resolver.
+
+**Y además un gráfico propio de activos, en su propia escala.** Apilados se ve su peso relativo; solos se ve su forma. Los dos juntos responden "cuántos son" y "cómo vienen", que no es lo mismo.
+
+**Activos en índigo y cancelados en rojo, no verde y rojo.** En un apilado los segmentos se tocan, y el validador da verde↔rojo en ΔE 7,9 en deuteranopía en modo oscuro: bajo el piso. Índigo↔rojo pasa en los dos modos. Es una diferencia con los recuadros de Inicio, donde activo es verde, y se acepta porque acá los segmentos están pegados y la leyenda los nombra.
+
+### El error que encontró mirarlo renderizado
+
+**El promedio truncaba los conteos.** `_promedio` casteaba con `int()`, así que cuatro liquidaciones en seis meses daban un promedio de **cero**: el reporte afirmaba que en promedio no se cierra nada habiendo cuatro cierres, y la línea de referencia de los canjes activos desaparecía por quedar bajo cero. Se vio porque el gráfico de activos salió sin su línea.
+
+El promedio pasó a su propio modelo, `PromedioMes`, con todos los campos decimales. No reusa `MetricasMes` porque ahí los conteos son enteros y **el promedio de un conteo no lo es**. Hay un test que lo fija: 0,67 y no 0.
+
+De paso, los conteos fraccionarios van con coma decimal: `15,67` y no `15.67`, que se lee como otro número.

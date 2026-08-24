@@ -302,11 +302,18 @@ export default function ReporteMensual() {
               <Tile rotulo="NEGOCIOS INICIADOS" valor={data.movil.actual.negocios_iniciados} />
             </SimpleGrid>
           ) : (
-            <SimpleGrid cols={{ base: 2, sm: 3 }}>
+            <SimpleGrid cols={{ base: 2, sm: 4 }}>
               <Tile
                 rotulo="CANJES SOLICITADOS"
                 valor={data.movil.actual.canjes_solicitados}
                 pie={`en ${data.ventana_meses} meses`}
+              />
+              {/* Los activos van al lado de los solicitados porque son parte de
+                  ellos: de los que entraron en la ventana, los que siguen vivos. */}
+              <Tile
+                rotulo="CANJES ACTIVOS"
+                valor={data.movil.actual.canjes_activos}
+                pie="de los solicitados en la ventana"
               />
               <Tile rotulo="CANJES CERRADOS" valor={data.movil.actual.canjes_cerrados} />
               <Tile rotulo="CANJES CANCELADOS" valor={data.movil.actual.canjes_cancelados} />
@@ -322,6 +329,7 @@ export default function ReporteMensual() {
                   actual={Number(data.serie[data.serie.length - 1]?.comision_real_vp ?? 0)}
                   promedio={Number(data.promedio.comision_real_vp)}
                   unidad="comisión"
+                  tendencia={data.tendencias.comision_real_vp}
                   esPlata
                 />
               </Paper>
@@ -331,6 +339,7 @@ export default function ReporteMensual() {
                 serie={data.serie}
                 series={[{ campo: 'comision_real_vp', nombre: 'Comisión real VP', tono: 'principal' }]}
                 promedio={Number(data.promedio.comision_real_vp)}
+                tendencia={data.tendencias.comision_real_vp}
                 esPlata
               />
               <EvolucionMensual
@@ -341,6 +350,7 @@ export default function ReporteMensual() {
                   { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
                   { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
                 ]}
+                tendencia={data.tendencias.hitos_cerrados}
               />
             </>
           ) : (
@@ -350,6 +360,7 @@ export default function ReporteMensual() {
                   actual={data.serie[data.serie.length - 1]?.canjes_solicitados ?? 0}
                   promedio={Number(data.promedio.canjes_solicitados)}
                   unidad="solicitudes"
+                  tendencia={data.tendencias.canjes_solicitados}
                 />
                 <Text size="xs" c="dimmed" mt={6}>
                   Canjes no tiene eje de plata todavía. Sí genera comisión --la de
@@ -358,19 +369,36 @@ export default function ReporteMensual() {
                   está sin cargar en todas las filas.
                 </Text>
               </Paper>
+              {/* Apilado y no lado a lado: los activos y los cancelados suman
+                  exactamente los solicitados, así que el alto total de la barra es
+                  la solicitud del mes y el activo queda como su propio segmento.
+                  Lado a lado, cuatro activos junto a noventa cancelados eran una
+                  raya al lado de una torre. */}
               <EvolucionMensual
-                titulo="Solicitudes y cancelaciones por mes"
-                subtitulo="Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
+                titulo="Solicitudes por mes, y qué pasó con ellas"
+                subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó. Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
                 serie={data.serie}
+                apilado
                 series={[
-                  { campo: 'canjes_solicitados', nombre: 'Solicitados', tono: 'principal' },
+                  { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
                   { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },
                 ]}
+                promedio={Number(data.promedio.canjes_solicitados)}
+                tendencia={data.tendencias.canjes_solicitados}
+              />
+              <EvolucionMensual
+                titulo="Canjes activos por mes"
+                subtitulo="Los mismos activos, en su propia escala. En el gráfico de arriba son un segmento chico sobre el total; acá se ve su forma."
+                serie={data.serie}
+                series={[{ campo: 'canjes_activos', nombre: 'Activos', tono: 'principal' }]}
+                promedio={Number(data.promedio.canjes_activos)}
+                tendencia={data.tendencias.canjes_activos}
               />
               <Text size="xs" c="dimmed">
-                «Canjes cerrados» va en la tabla y no en el gráfico porque es cero en todos
-                los meses: ningún canje se ha cerrado con éxito. Los que quedaron con la
-                etapa en «Cerrado» están todos cancelados.
+                «Canjes cerrados» va en la tabla y no en los gráficos porque es cero en todos
+                los meses: ningún canje se ha cerrado con éxito. Los que quedaron con la etapa
+                en «Cerrado» están todos cancelados, así que un canje que no está cancelado
+                está activo, y por eso los dos segmentos suman el total.
               </Text>
             </>
           )}
@@ -404,8 +432,11 @@ export default function ReporteMensual() {
                 ) : (
                   <>
                     Entraron {data.mes.canjes_solicitados}{' '}
-                    {data.mes.canjes_solicitados === 1 ? 'solicitud' : 'solicitudes'}, de las
-                    que {data.mes.canjes_cancelados} ya están canceladas.
+                    {data.mes.canjes_solicitados === 1 ? 'solicitud' : 'solicitudes'}:{' '}
+                    {data.mes.canjes_activos}{' '}
+                    {data.mes.canjes_activos === 1 ? 'sigue activa' : 'siguen activas'} y{' '}
+                    {data.mes.canjes_cancelados} ya{' '}
+                    {data.mes.canjes_cancelados === 1 ? 'está cancelada' : 'están canceladas'}.
                   </>
                 )
               ) : data.mes.hitos_cerrados === 0 ? (

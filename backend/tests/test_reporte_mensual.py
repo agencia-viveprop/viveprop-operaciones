@@ -309,7 +309,7 @@ def test_el_endpoint_sin_parametros_toma_el_mes_actual(cliente):
     assert set(cuerpo) == {
         "mes", "ventana_meses", "movil", "anio_corrido",
         "meses_sin_cierres", "meses_de_la_ventana",
-        "serie", "promedio",
+        "serie", "promedio", "tendencias",
     }
     assert cuerpo["ventana_meses"] == 6
     # Sin datos, los seis meses de la ventana estan vacios. Es el numero que la
@@ -506,7 +506,9 @@ def test_las_metricas_se_declaran_separadas_por_dominio():
     assert campos_neg == {
         "comision_real_vp", "comision_total", "hitos_cerrados", "negocios_iniciados",
     }
-    assert campos_can == {"canjes_solicitados", "canjes_cerrados", "canjes_cancelados"}
+    assert campos_can == {
+        "canjes_solicitados", "canjes_activos", "canjes_cerrados", "canjes_cancelados",
+    }
     # Ningun campo en los dos lados, y juntas son todas.
     assert not (campos_neg & campos_can)
     assert METRICAS == METRICAS_NEGOCIOS + METRICAS_CANJES
@@ -519,3 +521,191 @@ def test_las_variaciones_cubren_las_metricas_de_los_dos_dominios(db):
     r = obtener_reporte_mensual(db, 2026, 8, ventana=3)
 
     assert [v.metrica for v in r.movil.variaciones] == [n for _, n in METRICAS]
+
+
+# ------------------------------------------------------- los canjes activos
+
+
+def _solicitud(db, id_canje, fecha, estado=CanjeEstado.ACTIVO, etapa=CanjeEtapa.EN_REVISION):
+    db.add(Canje(
+        id=id_canje,
+        fecha_solicitud=datetime.combine(fecha, datetime.min.time(), tzinfo=timezone.utc),
+        estado=estado,
+        etapa=etapa,
+        comuna="Santiago",
+    ))
+
+
+def test_los_activos_y_los_cancelados_suman_los_solicitados(db):
+    """La identidad que permite dibujarlos apilados.
+
+    El estado de un canje solo tiene dos valores, asi que la suma es exacta. Si
+    algun dia se agrega un tercero, este test falla y hay que decidir a que
+    segmento va antes de que el grafico empiece a mentir sobre su total.
+    """
+    _solicitud(db, 1, date(2026, 4, 5), CanjeEstado.ACTIVO)
+    _solicitud(db, 2, date(2026, 4, 20), CanjeEstado.CANCELADO)
+    _solicitud(db, 3, date(2026, 4, 22), CanjeEstado.CANCELADO)
+    _solicitud(db, 4, date(2026, 6, 1), CanjeEstado.ACTIVO)
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 6, ventana=3)
+    por_mes = {m.etiqueta: m for m in r.serie}
+
+    abril = por_mes["2026-04"]
+    assert (abril.canjes_solicitados, abril.canjes_activos, abril.canjes_cancelados) == (3, 1, 2)
+    junio = por_mes["2026-06"]
+    assert (junio.canjes_solicitados, junio.canjes_activos, junio.canjes_cancelados) == (1, 1, 0)
+
+    for m in r.serie:
+        assert m.canjes_solicitados == m.canjes_activos + m.canjes_cancelados
+
+    # Y tambien en la ventana completa, que se calcula por otro camino.
+    v = r.movil.actual
+    assert v.canjes_solicitados == v.canjes_activos + v.canjes_cancelados == 4
+
+
+def test_los_activos_se_cuentan_por_mes_de_solicitud(db):
+    """Igual que los cancelados, y por el mismo motivo.
+
+    Un canje activo no tiene fecha propia que lo ubique en un mes: lo unico que
+    se sabe es cuando entro. Contarlo en el mes en que entro es lo que hace que
+    sume con los cancelados de ese mes.
+    """
+    _solicitud(db, 10, date(2026, 3, 15), CanjeEstado.ACTIVO)
+    db.commit()
+
+    r = obtener_reporte_mensual(db, 2026, 6, ventana=6)
+    por_mes = {m.etiqueta: m for m in r.serie}
+
+    assert por_mes["2026-03"].canjes_activos == 1
+    assert por_mes["2026-06"].canjes_activos == 0
+
+
+def test_los_activos_estan_en_las_metricas_de_canjes():
+    from app.services.reporte_mensual import METRICAS_CANJES, METRICAS_NEGOCIOS
+
+    campos = {c for c, _ in METRICAS_CANJES}
+    assert "canjes_activos" in campos
+    assert "canjes_activos" not in {c for c, _ in METRICAS_NEGOCIOS}
+
+
+# ----------------------------------------------------------- la tendencia
+
+
+def test_una_serie_que_sube_da_tendencia_al_alza(db):
+    """Con un cierre mas grande cada mes, la recta sube."""
+    _negocio(db, "T-1", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("100"))])
+    _negocio(db, "T-2", [_hito(date(2026, 5, 1), date(2026, 5, 10), real=D("200"))])
+    _negocio(db, "T-3", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("300"))])
+
+    te = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
+
+    assert te.direccion == "sube"
+    assert te.pendiente == D("100.00")
+    assert te.puntos == 3
+    # La recta ajustada pasa por los extremos de una serie perfectamente lineal.
+    assert (te.desde, te.hasta) == (D("100.00"), D("300.00"))
+
+
+def test_una_serie_que_baja_da_tendencia_a_la_baja(db):
+    _negocio(db, "T-4", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("300"))])
+    _negocio(db, "T-5", [_hito(date(2026, 5, 1), date(2026, 5, 10), real=D("200"))])
+    _negocio(db, "T-6", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("100"))])
+
+    te = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
+
+    assert te.direccion == "baja"
+    assert te.pendiente == D("-100.00")
+    assert (te.desde, te.hasta) == (D("300.00"), D("100.00"))
+
+
+def test_una_serie_estable_da_tendencia_plana(db):
+    """Debajo del umbral no se llama tendencia: con estos volumenes es ruido."""
+    _negocio(db, "T-7", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("1000"))])
+    _negocio(db, "T-8", [_hito(date(2026, 5, 1), date(2026, 5, 10), real=D("1010"))])
+    _negocio(db, "T-9", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("1005"))])
+
+    te = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
+
+    assert te.direccion == "plana"
+
+
+def test_la_recta_no_baja_de_cero(db):
+    """Una proyeccion negativa de un conteo o de una comision no existe.
+
+    La serie 300 / 0 / 0 tiene pendiente tan negativa que la recta ajustada
+    cruzaria el eje. Dibujarla bajo cero sugeriria comisiones negativas.
+    """
+    _negocio(db, "T-10", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("300"))])
+
+    te = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
+
+    assert te.direccion == "baja"
+    assert te.hasta == D("0.00")
+    assert te.desde >= D("0")
+
+
+def test_sin_datos_la_tendencia_es_plana_y_sin_porcentaje(db):
+    te = obtener_reporte_mensual(db, 2026, 8, ventana=6).tendencias["comision_real_vp"]
+
+    assert te.direccion == "plana"
+    assert te.pct_por_mes is None, "sin base no hay porcentaje que calcular"
+    assert (te.desde, te.hasta) == (D("0.00"), D("0.00"))
+
+
+def test_hay_una_tendencia_por_cada_metrica(db):
+    from app.services.reporte_mensual import METRICAS
+
+    r = obtener_reporte_mensual(db, 2026, 8, ventana=6)
+
+    assert set(r.tendencias) == {campo for campo, _ in METRICAS}
+    # Cada una sabe de que dominio es y sobre cuantos meses se trazo.
+    assert all(te.puntos == 6 for te in r.tendencias.values())
+    assert r.tendencias["comision_real_vp"].dominio == "negocios"
+    assert r.tendencias["canjes_activos"].dominio == "canjes"
+
+
+def test_la_tendencia_usa_los_meses_de_la_ventana_elegida(db):
+    """Cambiar la ventana cambia la tendencia: son horizontes distintos."""
+    _negocio(db, "T-11", [_hito(date(2026, 1, 1), date(2026, 1, 10), real=D("900"))])
+    _negocio(db, "T-12", [_hito(date(2026, 6, 1), date(2026, 6, 10), real=D("100"))])
+
+    corta = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
+    larga = obtener_reporte_mensual(db, 2026, 6, ventana=6).tendencias["comision_real_vp"]
+
+    assert corta.puntos == 3
+    assert larga.puntos == 6
+    # En la corta el unico cierre es el de junio, asi que sube; en la larga el de
+    # enero queda dentro y pesa mas, asi que baja.
+    assert corta.direccion == "sube"
+    assert larga.direccion == "baja"
+
+
+def test_el_promedio_de_un_conteo_no_se_trunca(db):
+    """El bug que este test fija.
+
+    La primera version del promedio casteaba los conteos con `int()`, asi que
+    cuatro liquidaciones en seis meses daban un promedio de **cero**. El reporte
+    afirmaba que en promedio no se cierra nada habiendo cuatro cierres, y la linea
+    de referencia de los canjes activos desaparecia por quedar en cero.
+
+    Un promedio truncado no es un promedio: es un promedio equivocado.
+    """
+    _negocio(db, "PR-1", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("600"))])
+    _negocio(db, "PR-2", [_hito(date(2026, 5, 1), date(2026, 5, 10), real=D("600"))])
+
+    p = obtener_reporte_mensual(db, 2026, 6, ventana=3).promedio
+
+    # Dos cierres en tres meses: 0,67 por mes, no 0.
+    assert p.hitos_cerrados == D("0.67")
+    assert p.comision_real_vp == D("400.00")
+
+
+def test_el_promedio_de_los_activos_tampoco_se_trunca(db):
+    _solicitud(db, 20, date(2026, 5, 3), CanjeEstado.ACTIVO)
+    db.commit()
+
+    p = obtener_reporte_mensual(db, 2026, 6, ventana=6).promedio
+
+    assert p.canjes_activos == D("0.17")

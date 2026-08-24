@@ -133,6 +133,9 @@ export type MetricasMes = {
   canjes_solicitados: number
   canjes_cerrados: number
   canjes_cancelados: number
+  /** Los que siguen vivos. `solicitados = activos + cancelados` exacto, y esa
+   *  identidad es la que permite dibujarlos apilados. */
+  canjes_activos: number
 }
 
 /** Los dos reportes en que se separó la pantalla. */
@@ -148,6 +151,38 @@ export type Variacion = {
   absoluta: string
   /** Nulo cuando la referencia fue cero: no hay porcentaje que calcular. */
   pct: string | null
+}
+
+/**
+ * La recta que mejor ajusta la serie de la ventana.
+ *
+ * `pct_por_mes` viene en la respuesta pero **no se muestra**: con tres meses una
+ * serie que cae a cero da pendientes de "-150% por mes", que es correcto y se lee
+ * como un error. Lo que se muestra es la dirección y la recta dibujada, que es la
+ * misma información sin el número absurdo.
+ */
+export type Tendencia = {
+  metrica: string
+  dominio: Dominio
+  puntos: number
+  pendiente: string
+  pct_por_mes: string | null
+  direccion: 'sube' | 'baja' | 'plana'
+  desde: string
+  hasta: string
+}
+
+/** El promedio de la ventana. Todos sus campos llegan como texto: son decimales. */
+export type PromedioMes = {
+  etiqueta: string
+  hitos_cerrados: string
+  comision_real_vp: string
+  comision_total: string
+  negocios_iniciados: string
+  canjes_solicitados: string
+  canjes_cerrados: string
+  canjes_cancelados: string
+  canjes_activos: string
 }
 
 export type Comparacion = {
@@ -170,8 +205,16 @@ export type ReporteMensual = {
    *  ver si el mes actual avanza, se estanca o retrocede: la comparación de
    *  ventana contra ventana dice cuánto cambió, no en qué dirección venía. */
   serie: MetricasMes[]
-  /** El promedio mensual de la ventana, para la línea de referencia. */
-  promedio: MetricasMes
+  /**
+   * El promedio mensual de la ventana, para la línea de referencia.
+   *
+   * Tipo propio y no `MetricasMes`: acá los conteos son decimales, porque el
+   * promedio de un conteo lo es. Cuatro liquidaciones en seis meses son 0,67 por
+   * mes, y truncarlo a 0 hacía que el reporte afirmara que no se cierra nada.
+   */
+  promedio: PromedioMes
+  /** La tendencia de cada métrica sobre la ventana, indexada por su campo. */
+  tendencias: Record<string, Tendencia>
 }
 
 export const VENTANAS = [3, 6, 12] as const
