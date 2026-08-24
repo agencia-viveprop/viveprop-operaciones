@@ -1145,3 +1145,11 @@ Las dos quedaron acotadas al tramo que describen, usando el `puntos` que la tend
 De paso, el veredicto decía *"la ventana de 13 meses viene a la baja"* en una pantalla rotulada "46 meses". Ahora dice *"la tendencia sobre 13 meses"*, que es lo que es.
 
 **Las etiquetas del eje no colisionan**: Recharts las adelgaza solo, y con 46 barras muestra una de cada dos. Se verificó en captura antes de darlo por bueno.
+
+### Corrección: el gráfico también arranca donde arranca el dominio
+
+La primera versión recortaba el promedio y la tendencia al primer registro de cada dominio, pero **dejaba la serie completa en el gráfico**. El resultado, visto en pantalla: el gráfico de negocios empezaba en diciembre de 2022 con **33 meses vacíos** antes de su primera barra, la forma real apretada en el último cuarto, y las líneas de referencia colgando en el aire desde agosto de 2025.
+
+Los meses previos al primer negocio no son meses malos, son meses sin negocio, y **dibujarlos era el mismo error que promediarlos**, solo que en la otra mitad del problema. Ahora la serie del gráfico arranca donde arranca el dominio que se está mirando: negocios en 13 meses, canjes en 46. Se ve además lo que antes quedaba comprimido —enero de 2026 con ocho negocios iniciados—.
+
+**El recorte va en la pantalla y no en la API, y solo en la histórica.** En la pantalla porque el dato ya viajaba —`inicio_por_dominio`— y devolver dos series por dominio habría duplicado la respuesta para que cada mitad use la mitad. Y solo en la histórica porque en 3, 6 y 12 meses el largo es lo que se pidió: mostrar menos barras que las elegidas contestaría otra pregunta, y ahí lo que se acota son las líneas, que ya saben su tramo.

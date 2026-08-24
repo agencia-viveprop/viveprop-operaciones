@@ -126,6 +126,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-22 · En histórico, el gráfico de negocios arranca en su primer registro
+
+Corrección de lo anterior, sobre tu observación: en histórico el gráfico de negocios empezaba en diciembre de 2022 con **33 meses vacíos** antes de su primera barra, porque la serie arrancaba en el primer registro de *cualquiera* de los dos dominios y el más viejo es un canje.
+
+El promedio y la tendencia ya arrancaban bien; lo que faltaba era la serie del gráfico. Los meses previos al primer negocio no son meses malos --son meses sin negocio-- y dibujarlos era el mismo error que promediarlos, en la otra mitad del problema.
+
+Ahora **negocios va en 13 meses** (desde agosto de 2025) y **canjes en 46**, sin cambios. Se ve además lo que antes quedaba comprimido en el último cuarto: enero de 2026 con ocho negocios iniciados.
+
+El recorte va en la pantalla --el dato `inicio_por_dominio` ya viajaba en la respuesta-- y **solo en la histórica**: en 3, 6 y 12 meses el largo es lo que se pidió, y mostrar menos barras que las elegidas contestaría otra pregunta. Ver `D-057`.
+
+**Verificado:** 573 tests, build y lint limpios, los dos dominios revisados en captura.
+
 ### 2026-08-22 · Ventana «Histórico» en el reporte mensual y en el directorio
 
 Pedido tuyo: una ventana más que muestre todo desde el inicio, sin filtros de tramos, en las dos pantallas.

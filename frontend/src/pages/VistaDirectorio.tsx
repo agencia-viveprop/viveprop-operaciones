@@ -16,6 +16,7 @@ import { IconInfoCircle, IconPrinter } from '@tabler/icons-react'
 import {
   obtenerVistaDirectorio,
   rotuloVentana,
+  serieDelDominio,
   VENTANAS,
   type Conteo,
   type Dominio,
@@ -170,6 +171,10 @@ export default function VistaDirectorio() {
 
   if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
+  // Igual que en el reporte mensual: en la histórica la serie del gráfico arranca
+  // donde arranca el dominio que se está mirando.
+  const serie = serieDelDominio(data.serie, data.es_historico, data.inicio_por_dominio[dominio])
+
   const { conversion: c, proyeccion: p, ticket: t } = data
   const anioActual = Number(data.anio_corrido.comision_real_vp)
   const anioAnterior = Number(data.anio_corrido_anterior.comision_real_vp)
@@ -262,7 +267,7 @@ export default function VistaDirectorio() {
           "cómo vamos", que es lo que se pregunta en una reunión. */}
       <Paper withBorder radius="md" p="md">
         <Veredicto
-          actual={Number(data.serie[data.serie.length - 1]?.comision_real_vp ?? 0)}
+          actual={Number(serie[serie.length - 1]?.comision_real_vp ?? 0)}
           promedio={Number(data.promedio.comision_real_vp)}
           unidad="comisión"
           tendencia={data.tendencias.comision_real_vp}
@@ -272,7 +277,7 @@ export default function VistaDirectorio() {
       <EvolucionMensual
         titulo="Comisión real ViveProp por mes"
         subtitulo="La línea punteada es el promedio de la ventana; la recta, su tendencia."
-        serie={data.serie}
+        serie={serie}
         series={[{ campo: 'comision_real_vp', nombre: 'Comisión real VP', tono: 'principal' }]}
         promedio={Number(data.promedio.comision_real_vp)}
         tendencia={data.tendencias.comision_real_vp}
@@ -281,7 +286,7 @@ export default function VistaDirectorio() {
       <EvolucionMensual
         titulo="Liquidaciones y negocios por mes"
         subtitulo="Cuántos cerraron y cuántos entraron."
-        serie={data.serie}
+        serie={serie}
         series={[
           { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
           { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
@@ -432,7 +437,7 @@ export default function VistaDirectorio() {
 
       <Paper withBorder radius="md" p="md">
         <Veredicto
-          actual={data.serie[data.serie.length - 1]?.canjes_solicitados ?? 0}
+          actual={serie[serie.length - 1]?.canjes_solicitados ?? 0}
           promedio={Number(data.promedio.canjes_solicitados)}
           unidad="solicitudes"
           tendencia={data.tendencias.canjes_solicitados}
@@ -448,7 +453,7 @@ export default function VistaDirectorio() {
       <EvolucionMensual
         titulo="Solicitudes por mes, y qué pasó con ellas"
         subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó."
-        serie={data.serie}
+        serie={serie}
         apilado
         series={[
           { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
@@ -460,7 +465,7 @@ export default function VistaDirectorio() {
       <EvolucionMensual
         titulo="Canjes activos por mes"
         subtitulo="Los mismos activos, en su propia escala. Apilados son un segmento chico; acá se ve su forma."
-        serie={data.serie}
+        serie={serie}
         series={[{ campo: 'canjes_activos', nombre: 'Activos', tono: 'principal' }]}
         promedio={Number(data.promedio.canjes_activos)}
         tendencia={data.tendencias.canjes_activos}

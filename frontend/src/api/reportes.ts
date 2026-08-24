@@ -232,6 +232,32 @@ export const VENTANA_HISTORICO = 0
 
 export const VENTANAS = [3, 6, 12, VENTANA_HISTORICO] as const
 
+/**
+ * La parte de la serie desde que el dominio que se está mirando existe.
+ *
+ * **Solo recorta en la ventana histórica.** Ahí la serie arranca en el primer
+ * registro de *cualquiera* de los dos dominios --hoy noviembre de 2022, que es un
+ * canje-- así que el gráfico de negocios empezaba con 33 meses vacíos antes de su
+ * primera barra. No son meses malos: son meses sin negocio, y dibujarlos deja el
+ * gráfico casi todo en blanco y la forma real apretada al final.
+ *
+ * En 3, 6 y 12 meses **no** recorta: ahí el largo es lo que se pidió, y mostrar
+ * menos barras que las elegidas sería contestar otra pregunta. Si el dominio
+ * arrancó dentro de esa ventana, las barras vacías del principio se quedan y lo
+ * que se acota son las líneas de referencia, que ya saben su tramo.
+ */
+export function serieDelDominio(
+  serie: MetricasMes[],
+  esHistorico: boolean,
+  inicio: string | null | undefined,
+): MetricasMes[] {
+  if (!esHistorico || !inicio) return serie
+  const desde = serie.filter((m) => m.etiqueta >= inicio)
+  // Si el recorte deja la serie vacía se devuelve entera: un gráfico sin barras
+  // no explica nada, y es mejor mostrar los meses en cero que nada.
+  return desde.length > 0 ? desde : serie
+}
+
 /** Cómo se llama cada ventana en el selector. */
 export function rotuloVentana(v: number): string {
   return v === VENTANA_HISTORICO ? 'Histórico' : `${v} meses`

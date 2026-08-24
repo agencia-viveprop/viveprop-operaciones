@@ -17,6 +17,7 @@ import { IconChevronLeft, IconChevronRight, IconMinus } from '@tabler/icons-reac
 import {
   obtenerReporteMensual,
   rotuloVentana,
+  serieDelDominio,
   VENTANAS,
   type Dominio,
   type Comparacion,
@@ -221,6 +222,13 @@ export default function ReporteMensual() {
   })
   const { data } = consulta
 
+  // La serie que se dibuja: en la ventana histórica arranca donde arranca el
+  // dominio que se está mirando, no en el primer registro de cualquiera de los
+  // dos. Ver `serieDelDominio`.
+  const serie = data
+    ? serieDelDominio(data.serie, data.es_historico, data.inicio_por_dominio[dominio])
+    : []
+
   return (
     <Stack gap="md">
       <PageHeader
@@ -327,7 +335,7 @@ export default function ReporteMensual() {
             <>
               <Paper withBorder radius="md" p="md">
                 <Veredicto
-                  actual={Number(data.serie[data.serie.length - 1]?.comision_real_vp ?? 0)}
+                  actual={Number(serie[serie.length - 1]?.comision_real_vp ?? 0)}
                   promedio={Number(data.promedio.comision_real_vp)}
                   unidad="comisión"
                   tendencia={data.tendencias.comision_real_vp}
@@ -337,7 +345,7 @@ export default function ReporteMensual() {
               <EvolucionMensual
                 titulo="Comisión real ViveProp por mes"
                 subtitulo="La línea punteada es el promedio de la ventana. El mes que se está mirando es la última barra, y su valor va arriba a la derecha."
-                serie={data.serie}
+                serie={serie}
                 series={[{ campo: 'comision_real_vp', nombre: 'Comisión real VP', tono: 'principal' }]}
                 promedio={Number(data.promedio.comision_real_vp)}
                 tendencia={data.tendencias.comision_real_vp}
@@ -346,7 +354,7 @@ export default function ReporteMensual() {
               <EvolucionMensual
                 titulo="Liquidaciones y negocios por mes"
                 subtitulo="Cuántos cerraron y cuántos entraron. Van en un gráfico aparte del de plata: un mismo eje para montos y unidades deja elegir la escala a gusto."
-                serie={data.serie}
+                serie={serie}
                 series={[
                   { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
                   { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
@@ -358,7 +366,7 @@ export default function ReporteMensual() {
             <>
               <Paper withBorder radius="md" p="md">
                 <Veredicto
-                  actual={data.serie[data.serie.length - 1]?.canjes_solicitados ?? 0}
+                  actual={serie[serie.length - 1]?.canjes_solicitados ?? 0}
                   promedio={Number(data.promedio.canjes_solicitados)}
                   unidad="solicitudes"
                   tendencia={data.tendencias.canjes_solicitados}
@@ -378,7 +386,7 @@ export default function ReporteMensual() {
               <EvolucionMensual
                 titulo="Solicitudes por mes, y qué pasó con ellas"
                 subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó. Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
-                serie={data.serie}
+                serie={serie}
                 apilado
                 series={[
                   { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
@@ -390,7 +398,7 @@ export default function ReporteMensual() {
               <EvolucionMensual
                 titulo="Canjes activos por mes"
                 subtitulo="Los mismos activos, en su propia escala. En el gráfico de arriba son un segmento chico sobre el total; acá se ve su forma."
-                serie={data.serie}
+                serie={serie}
                 series={[{ campo: 'canjes_activos', nombre: 'Activos', tono: 'principal' }]}
                 promedio={Number(data.promedio.canjes_activos)}
                 tendencia={data.tendencias.canjes_activos}
