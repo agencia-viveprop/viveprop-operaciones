@@ -1224,3 +1224,13 @@ Los niveles pasan a ser seis: `vencido` y `para_hoy` salen de un compromiso regi
 Lo medí encima: verificando esto borré un movimiento del canje 360 y lo mandé de «En oferta» a «Recepción», perdiendo un dato que el borrado no había puesto. Tuve que restaurarlo comparando contra la salida de una verificación anterior de esta misma sesión.
 
 Ahora la etapa **solo se mueve si queda algún movimiento que declare una**. Si ninguno lo hace, no se toca: quedarse con una etapa vieja es preferible a borrar una que era correcta.
+
+### El alcance se revisó después y se mantuvo
+
+El pedido, en rigor, era más chico: **adaptar la lista de tipos de movimiento**, sin tocar etapas. Se hicieron dos cosas de más —el selector de Etapa en la bitácora y el renombre de `SIN_ETAPA`— y al revisarlo se decidió dejarlas.
+
+Queda anotado el detalle que motivó la revisión, porque cambia cómo se lee la pantalla: **la etapa se puede cambiar desde dos lugares**, la ficha del canje y la bitácora. Eso ya era así antes, solo que en la bitácora pasaba implícito: cinco de los diecisiete tipos movían la etapa al registrarse sin decirlo. Hacerlo explícito no agrega una vía, hace visible la que había —y de paso deja en la línea de tiempo **cuándo** cambió y **con qué gestión**, que la ficha no registra—.
+
+**Y un efecto que hay que tener presente: «Gestión inicial» ya no mueve el canje a «En revisión» por su cuenta.** Antes lo hacía, porque su `etapa_resultante` lo decía; ahora la etapa la elige quien registra. Es la consecuencia directa de separar los dos campos, no un olvido.
+
+Se verificó al revisar que **ningún registro histórico se alteró**: los 605 movimientos de canje están intactos, y ninguno tenía etapa guardada —la migración solo tocó `tipos_movimiento` y el tipo enumerado—.

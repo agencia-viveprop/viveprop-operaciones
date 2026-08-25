@@ -144,6 +144,8 @@ Los 15 tipos que salen del selector pasaron a `activo = false`: **no se borran**
 
 **Verificado:** 606 tests, `alembic check` limpio, build y lint sin hallazgos, el modal revisado en captura.
 
+**Alcance revisado después y mantenido.** El pedido en rigor era solo adaptar la lista de tipos; se hicieron dos cosas de más --el selector de Etapa en la bitácora y el renombre de `SIN_ETAPA`-- y se decidió dejarlas. Queda anotado que **la etapa se puede cambiar desde dos lugares**, la ficha y la bitácora: ya era así antes, solo que en la bitácora era implícito porque cinco tipos la movían sin decirlo. Y que **«Gestión inicial» ya no mueve el canje a «En revisión» solo**, que es la consecuencia directa de separar los campos.
+
 ### 2026-08-25 · Fecha de próximo seguimiento, y «Qué me toca hoy» la usa
 
 Pedido tuyo: al registrar un movimiento de canje, poder agendar el próximo seguimiento --opcional--, que eso ordene «Qué me toca hoy», y que si no se indica nada se agende para dos días hacia adelante, corridos al día hábil siguiente si caen sábado, domingo o feriado.
