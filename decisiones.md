@@ -1234,3 +1234,31 @@ Queda anotado el detalle que motivó la revisión, porque cambia cómo se lee la
 **Y un efecto que hay que tener presente: «Gestión inicial» ya no mueve el canje a «En revisión» por su cuenta.** Antes lo hacía, porque su `etapa_resultante` lo decía; ahora la etapa la elige quien registra. Es la consecuencia directa de separar los dos campos, no un olvido.
 
 Se verificó al revisar que **ningún registro histórico se alteró**: los 605 movimientos de canje están intactos, y ninguno tenía etapa guardada —la migración solo tocó `tipos_movimiento` y el tipo enumerado—.
+
+---
+
+## D-061 · Cambiar la etapa desde la ficha deja rastro en la bitácora
+
+**Contexto.** La etapa de un canje se puede cambiar por dos caminos: registrando un movimiento, o editando la ficha. El primero quedaba en la línea de tiempo y el segundo no.
+
+Medido en `dev`, respondiendo una pregunta del usuario: se editó la ficha a «En oferta» y la bitácora siguió mostrando que el último movimiento la había dejado en «En negocio». Las dos pantallas decían cosas distintas, y el cambio no tenía fecha ni autor.
+
+Eso es especialmente malo para lo que la bitácora existe —el pedido original hablaba de *"registrar historial, poder ver el historial, y de futuro generar reportes consolidados en línea de tiempo con gestiones y actividades"*—: un cambio de etapa sin rastro no aparece en ninguno de los tres.
+
+**Decisión: editar la etapa en la ficha registra un movimiento automático**, de tipo `CAMBIO_ETAPA`, con fecha, autor y un comentario que dice de qué etapa a cuál. Las dos vías quedan con la misma memoria.
+
+**Solo cuando la etapa cambia de verdad.** Guardar la ficha sin tocarla, o guardar la misma etapa, no registra nada: apretar Guardar no puede ensuciar la bitácora. Y corregir un email tampoco deja rastro — eso no es historial.
+
+**El tipo va como `activo = false`, y no es una contradicción.** El campo significa "se ofrece en el selector", y este no se elige: lo escribe el sistema. Existe en el catálogo porque `movimientos.tipo_movimiento` tiene clave foránea contra él.
+
+**No agenda seguimiento**, y eso obligó a cambiar la bandeja. Corregir un dato no es una gestión: agendar uno metería el canje en «Qué me toca hoy» por una razón que nadie eligió. Pero la bandeja tomaba el compromiso **del último movimiento**, así que un registro sin seguimiento habría borrado el que había y el canje habría reaparecido en la lista.
+
+Ahora la bandeja toma el último compromiso **que exista**, no el del último movimiento. Es además la lectura correcta en general: un compromiso sigue en pie hasta que alguien pone otro.
+
+**El comentario usa los rótulos y no los códigos** —«En oferta», no `EN_OFERTA`—: lo lee una persona en la línea de tiempo. Para eso, `ETAPA_LABELS` se mudó de `reportes_canjes` a `app/models/canje.py`, al lado del enum, que es donde corresponde el nombre canónico de un valor.
+
+**Queda pendiente lo mismo en negocios.** Su formulario también permite editar la etapa sin dejar rastro. No se tocó porque el pedido era sobre canjes, y hacerlo de paso habría metido un cambio de comportamiento en un dominio que nadie estaba mirando.
+
+### Nota de método
+
+La primera corrida de esta verificación dio un resultado **falso**: dijo que la edición de la ficha se perdía al borrar un movimiento. El servidor local estaba corriendo código anterior al arreglo de `D-060`. Se detectó porque el resultado contradecía un arreglo que sí estaba en el código, se reinició y se volvió a medir. Vale anotarlo: un servidor de desarrollo que no se reinició es una fuente de conclusiones equivocadas que parecen mediciones.

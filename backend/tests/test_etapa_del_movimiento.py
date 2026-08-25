@@ -46,6 +46,12 @@ def base(db):
                        nombre="Acuerdo de canje firmado",
                        etapa_resultante="PROCESO_DE_ACUERDO", orden=20,
                        sla_es_habil=False, activo=False),
+        # El que escribe el sistema al editar la etapa en la ficha. Inactivo
+        # porque nadie lo elige, pero tiene que existir: `movimientos.
+        # tipo_movimiento` tiene clave foránea contra el catálogo.
+        TipoMovimiento(codigo="CAMBIO_ETAPA", entity_type=EntityType.canje,
+                       nombre="Cambio de etapa", etapa_resultante=None, orden=90,
+                       sla_es_habil=False, activo=False),
     ])
     db.add(Canje(id=1, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
                  etapa=CanjeEtapa.RECEPCION, comuna="Santiago"))
@@ -231,3 +237,104 @@ def test_el_endpoint_solo_ofrece_los_activos(cliente, base):
     assert codigos == [
         "GESTION_INICIAL", "SEG_LLAMADO", "SEG_WHATSAPP", "RESPUESTA_CORREDOR", "CANCELACION",
     ]
+
+
+# --------------------------------- el rastro del cambio hecho en la ficha
+
+
+def test_cambiar_la_etapa_en_la_ficha_deja_rastro(cliente, base):
+    """El hueco que esto cierra.
+
+    La etapa se puede cambiar por dos caminos --registrar un movimiento o editar
+    la ficha-- y el segundo no dejaba nada en la linea de tiempo. Medido en `dev`:
+    se editaba la ficha a «En oferta» y la bitacora seguia mostrando que el ultimo
+    movimiento la habia dejado en «En negocio». Las dos pantallas decian cosas
+    distintas y el cambio no tenia fecha ni autor.
+    """
+    ficha = cliente.get("/api/canjes/1").json()
+    assert ficha["etapa"] == "RECEPCION"
+
+    r = cliente.patch("/api/canjes/1", json={"etapa": "EN_OFERTA"})
+
+    assert r.status_code == 200, r.text
+    assert r.json()["etapa"] == "EN_OFERTA"
+
+    movs = cliente.get("/api/canjes/1/movimientos").json()
+    assert len(movs) == 1, "el cambio quedo registrado"
+    assert movs[0]["tipo_movimiento"] == "CAMBIO_ETAPA"
+    assert movs[0]["etapa_resultante"] == "EN_OFERTA"
+    # El comentario dice de donde a donde, con los rotulos y no los codigos: lo
+    # lee una persona en la linea de tiempo, y "EN_OFERTA" ahi es ruido.
+    assert "Recepción" in movs[0]["comentario"]
+    assert "En oferta" in movs[0]["comentario"]
+    assert "ficha del canje" in movs[0]["comentario"]
+
+
+def test_editar_la_ficha_sin_tocar_la_etapa_no_registra_nada(cliente, base):
+    """Solo el cambio de etapa deja rastro. Corregir un email no es historial."""
+    r = cliente.patch("/api/canjes/1", json={"comuna": "Providencia"})
+
+    assert r.status_code == 200
+    assert cliente.get("/api/canjes/1/movimientos").json() == []
+
+
+def test_guardar_la_misma_etapa_no_registra_nada(cliente, base):
+    """Apretar Guardar sin cambiar la etapa no puede ensuciar la bitacora."""
+    cliente.patch("/api/canjes/1", json={"etapa": "RECEPCION"})
+
+    assert cliente.get("/api/canjes/1/movimientos").json() == []
+
+
+def test_el_tipo_del_rastro_no_se_ofrece_en_el_selector(cliente, base):
+    """Nadie lo elige: lo escribe el sistema. Existe para la clave foranea."""
+    codigos = [t["codigo"] for t in cliente.get("/api/tipos-movimiento?entity_type=canje").json()]
+
+    assert "CAMBIO_ETAPA" not in codigos
+
+
+def test_el_rastro_no_agenda_seguimiento_ni_borra_el_que_habia(cliente, base):
+    """Corregir un dato no es una gestion.
+
+    Y por eso la bandeja toma el ultimo compromiso **que exista** y no el del
+    ultimo movimiento: si mirara solo el mas reciente, este registro borraria el
+    compromiso que habia y el canje reapareceria en «Que me toca hoy» por una
+    razon que nadie eligio.
+    """
+    from datetime import date, timedelta
+
+    from app.services.bandeja_canjes import obtener_bandeja
+
+    manana = date.today() + timedelta(days=1)
+    cliente.post("/api/canjes/1/movimientos", json={
+        "tipo_movimiento": "SEG_LLAMADO",
+        "etapa": "EN_REVISION",
+        "proximo_seguimiento": manana.isoformat(),
+    })
+    assert obtener_bandeja(base).resumen.agendados == 1
+
+    cliente.patch("/api/canjes/1", json={"etapa": "EN_OFERTA"})
+
+    movs = cliente.get("/api/canjes/1/movimientos").json()
+    assert movs[0]["tipo_movimiento"] == "CAMBIO_ETAPA"
+    assert movs[0]["proximo_seguimiento"] is None, "no agenda nada"
+    # Y el compromiso que habia sigue en pie.
+    b = obtener_bandeja(base)
+    assert b.resumen.agendados == 1, "el canje sigue agendado, no reaparecio"
+    assert b.filas == []
+
+
+def test_las_dos_vias_quedan_en_la_misma_linea_de_tiempo(cliente, base):
+    """Es el punto: un solo historial, sin importar por dónde se cambió."""
+    cliente.post("/api/canjes/1/movimientos", json={
+        "tipo_movimiento": "SEG_LLAMADO", "etapa": "EN_REVISION",
+        "fecha": "2026-07-01T10:00:00+00:00",
+    })
+    cliente.patch("/api/canjes/1", json={"etapa": "EN_NEGOCIO"})
+
+    movs = cliente.get("/api/canjes/1/movimientos").json()
+
+    # Más nuevo primero, que es como los ordena el endpoint.
+    assert [m["tipo_movimiento"] for m in movs] == ["CAMBIO_ETAPA", "SEG_LLAMADO"]
+    assert [m["etapa_resultante"] for m in movs] == ["EN_NEGOCIO", "EN_REVISION"]
+    # Y la ficha coincide con lo último de la bitácora, que es lo que antes no pasaba.
+    assert cliente.get("/api/canjes/1").json()["etapa"] == movs[0]["etapa_resultante"]

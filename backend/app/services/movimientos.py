@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa
+from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa
 from app.models.catalogo import EstadoNegocio
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio
@@ -20,6 +20,11 @@ HOLGURA_RELOJ = timedelta(minutes=5)
 
 # El unico tipo de movimiento de canje que cambia el estado y no solo la etapa.
 CANCELACION = "CANCELACION"
+
+# El tipo que registra un cambio de etapa hecho desde la ficha del canje. No se
+# ofrece en el selector --nadie lo elige, lo escribe el sistema-- y por eso va
+# como `activo = false` en el catalogo.
+CAMBIO_ETAPA = "CAMBIO_ETAPA"
 
 
 # Cuántos días hacia adelante se agenda un seguimiento cuando no se indica uno.
@@ -204,6 +209,46 @@ def crear_movimiento_canje(
 
     db.commit()
     db.refresh(movimiento)
+    return movimiento
+
+
+def registrar_cambio_de_etapa(
+    db: Session,
+    canje: Canje,
+    anterior: CanjeEtapa,
+    nueva: CanjeEtapa,
+    autor_id: int | None,
+) -> Movimiento:
+    """Deja en la bitácora un cambio de etapa hecho desde la ficha del canje.
+
+    **Por qué hace falta.** La etapa se puede cambiar por dos caminos: registrando
+    un movimiento, o editando la ficha. El primero quedaba en la línea de tiempo y
+    el segundo no, así que la ficha podía decir «En oferta» mientras la bitácora
+    seguía mostrando que el último movimiento la había dejado en «En negocio».
+    Peor para lo que esto sirve: un cambio de etapa sin rastro no tiene fecha ni
+    autor, y un reporte de línea de tiempo no lo ve.
+
+    **No agenda seguimiento.** Corregir un dato no es una gestión: agendar uno
+    metería el canje en «Qué me toca hoy» por una razón que nadie eligió. Por eso
+    la bandeja toma el último compromiso **que exista**, y no el del último
+    movimiento: si no, este registro borraría el que había.
+
+    No comitea: lo hace quien llama, en la misma transacción que el cambio.
+    """
+    movimiento = Movimiento(
+        entity_type=EntityType.canje,
+        entity_id=canje.id,
+        tipo_movimiento=CAMBIO_ETAPA,
+        etapa_resultante=nueva.value,
+        autor_id=autor_id,
+        # Los rótulos y no los códigos: el comentario lo lee una persona en la
+        # línea de tiempo, y «EN_OFERTA» ahí es ruido.
+        comentario=(
+            f"De «{ETAPA_LABELS[anterior]}» a «{ETAPA_LABELS[nueva]}». "
+            "Editado desde la ficha del canje."
+        ),
+    )
+    db.add(movimiento)
     return movimiento
 
 

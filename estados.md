@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Cambiar la etapa en la ficha deja rastro en la bitácora
+
+Salió de una pregunta tuya: si cambio la etapa en la bitácora, ¿se actualiza en el canje? ¿Y al revés?
+
+**Verificado contra `dev`:** bitácora → ficha **sí**; ficha → bitácora **no**. Editar la etapa en la ficha cambiaba el canje y no dejaba nada en la línea de tiempo, así que la ficha podía decir «En oferta» mientras la bitácora mostraba «En negocio», y el cambio no tenía fecha ni autor. Contra el objetivo declarado --historial y reportes de línea de tiempo-- ese cambio era invisible.
+
+Ahora editar la etapa en la ficha registra un movimiento automático «Cambio de etapa», con autor y un comentario que dice *«De "En oferta" a "Proceso de acuerdo". Editado desde la ficha del canje.»*. Solo cuando la etapa cambia de verdad: guardar la misma no registra nada.
+
+**No agenda seguimiento**, y eso obligó a cambiar la bandeja: tomaba el compromiso del último movimiento, así que este registro habría borrado el que había y el canje habría reaparecido en «Qué me toca hoy» sin razón. Ahora toma el último compromiso **que exista**, que además es la lectura correcta en general. Ver `D-061`.
+
+**Queda pendiente lo mismo en negocios**: su formulario también permite editar la etapa sin dejar rastro. No se tocó porque el pedido era sobre canjes.
+
+**Nota de método.** La primera corrida de esta verificación dio un resultado **falso** --dijo que la edición de la ficha se perdía-- porque el servidor local estaba con código anterior al arreglo de `D-060`. Se detectó porque contradecía un arreglo que sí estaba en el código; se reinició y se volvió a medir.
+
+**Verificado:** 612 tests, `alembic check` limpio, y el rastro comprobado en vivo sobre el canje 344, que quedó restaurado.
+
 ### 2026-08-25 · Etapa y tipo de movimiento, dos campos que conviven
 
 Pedido tuyo: además del tipo de movimiento, que exista Etapa; que las dos coexistan y se relacionen para el historial y para reportes consolidados de línea de tiempo; y que las dos funcionen como funciona hoy el tipo.

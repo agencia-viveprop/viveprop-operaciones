@@ -122,24 +122,24 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
         .subquery()
     )
 
-    # El compromiso vigente es el del movimiento más reciente, igual que la etapa
-    # (`D-052`). Se une por (canje, fecha) contra el subquery de máximos en vez de
-    # traer todos los movimientos y quedarse con el último en Python.
-    seguimientos: dict[int, date] = {
-        canje_id: seguimiento
-        for canje_id, seguimiento in db.execute(
-            select(Movimiento.entity_id, Movimiento.proximo_seguimiento)
-            .join(
-                ultimos,
-                (ultimos.c.canje_id == Movimiento.entity_id)
-                & (ultimos.c.fecha == Movimiento.fecha),
-            )
-            .where(
-                Movimiento.entity_type == EntityType.canje,
-                Movimiento.proximo_seguimiento.is_not(None),
-            )
-        ).all()
-    }
+    # El compromiso vigente es el del último movimiento **que tenga uno**, no el
+    # del último movimiento.
+    #
+    # La diferencia importa: registrar un cambio de etapa desde la ficha crea un
+    # movimiento sin seguimiento --corregir un dato no es una gestión-- y si se
+    # mirara solo el más reciente, esa corrección borraría el compromiso que
+    # había. Un compromiso sigue en pie hasta que alguien pone otro.
+    seguimientos: dict[int, date] = {}
+    for canje_id, seguimiento in db.execute(
+        select(Movimiento.entity_id, Movimiento.proximo_seguimiento)
+        .where(
+            Movimiento.entity_type == EntityType.canje,
+            Movimiento.proximo_seguimiento.is_not(None),
+        )
+        # Ascendente: el último que se escribe sobre cada canje es el más nuevo.
+        .order_by(Movimiento.fecha, Movimiento.id)
+    ).all():
+        seguimientos[canje_id] = seguimiento
 
     filas = db.execute(
         select(Canje, ultimos.c.fecha)

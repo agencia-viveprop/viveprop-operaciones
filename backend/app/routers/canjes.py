@@ -17,6 +17,7 @@ from app.services.movimientos import (
     MovimientoError,
     crear_movimiento_canje,
     eliminar_movimiento_canje,
+    registrar_cambio_de_etapa,
 )
 from app.services.plantilla_canjes import estructura_importacion, generar_plantilla
 from app.services.reportes_canjes import ResumenCanjes, obtener_resumen_canjes
@@ -182,9 +183,19 @@ def actualizar(
     if canje is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Canje no encontrado")
 
-    for campo, valor in payload.model_dump(exclude_unset=True).items():
+    cambios = payload.model_dump(exclude_unset=True)
+
+    # Se lee antes de asignar: después el objeto ya tiene la etapa nueva.
+    etapa_anterior = canje.etapa
+    for campo, valor in cambios.items():
         setattr(canje, campo, valor)
     canje.gestionado_en_app = True
+
+    # Un cambio de etapa desde la ficha deja rastro en la bitácora. Sin esto, la
+    # ficha y la línea de tiempo podían decir cosas distintas, y el cambio no
+    # tenía fecha ni autor.
+    if "etapa" in cambios and canje.etapa != etapa_anterior:
+        registrar_cambio_de_etapa(db, canje, etapa_anterior, canje.etapa, usuario.id)
 
     db.commit()
     db.refresh(canje)

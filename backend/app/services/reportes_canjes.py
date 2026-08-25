@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa
+from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa
 
 
 class ConteoEtiqueta(BaseModel):
@@ -40,18 +40,6 @@ class ResumenCanjes(BaseModel):
     por_operacion: list[ConteoEtiqueta]
 
 
-# Los rótulos que se muestran. `CERRADO` se rotula «Cierre» --es el nombre de la
-# etapa-- y se guarda como `CERRADO`: ese valor está escrito como texto en
-# `movimientos.etapa_resultante`, así que renombrarlo pediría actualizar filas
-# para ganar nada. Ver `b8f3a71c904e`.
-ETAPA_LABELS = {
-    CanjeEtapa.RECEPCION: "Recepción",
-    CanjeEtapa.EN_REVISION: "En revisión",
-    CanjeEtapa.PROCESO_DE_ACUERDO: "Proceso de acuerdo",
-    CanjeEtapa.EN_OFERTA: "En oferta",
-    CanjeEtapa.EN_NEGOCIO: "En negocio",
-    CanjeEtapa.CERRADO: "Cierre",
-}
 
 
 def obtener_resumen_canjes(db: Session) -> ResumenCanjes:

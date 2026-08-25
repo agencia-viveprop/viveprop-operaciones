@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa, OperacionTipo
-from app.services.reportes_canjes import ETAPA_LABELS, obtener_resumen_canjes
+from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa, OperacionTipo
+from app.services.reportes_canjes import obtener_resumen_canjes
 
 
 def _canje(db, id_canje: int, etapa: CanjeEtapa, estado: CanjeEstado, **extra) -> Canje:
