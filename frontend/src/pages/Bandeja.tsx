@@ -17,6 +17,7 @@ import PageHeader from '../components/PageHeader'
 import SeguimientoModal from '../components/SeguimientoModal'
 import { fecha } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
+import { rotuloEtapa } from '../components/canjesEtiquetas'
 
 /**
  * El nivel se muestra siempre con su palabra, nunca con el color solo. En este
@@ -84,15 +85,6 @@ function atraso(dias: number | null): string {
   if (dias === 0) return 'es hoy'
   if (dias === 1) return 'venció ayer'
   return `venció hace ${dias} días`
-}
-
-const ETAPA_LABELS: Record<string, string> = {
-  RECEPCION: 'Recepción',
-  EN_REVISION: 'En revisión',
-  PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
-  EN_OFERTA: 'En oferta',
-  EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cierre',
 }
 
 function espera(f: FilaBandeja): string {
@@ -300,7 +292,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text size="sm">{ETAPA_LABELS[f.etapa] ?? f.etapa}</Text>
+                    <Text size="sm">{rotuloEtapa(f.etapa)}</Text>
                   </Table.Td>
                   <Table.Td ta="right" ff="monospace">
                     {espera(f)}

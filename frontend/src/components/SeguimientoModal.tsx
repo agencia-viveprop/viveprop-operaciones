@@ -22,6 +22,7 @@ import {
   listarMovimientosCanje,
   listarTiposMovimiento,
 } from '../api/movimientos'
+import { ETAPA_LABELS, ETAPAS, rotuloCorredor, rotuloEtapa } from './canjesEtiquetas'
 
 /**
  * «Ahora» en el formato que espera un `datetime-local`, para el tope del input.
@@ -45,30 +46,6 @@ function hoyLocal(): string {
 function ahoraLocal(): string {
   const d = new Date()
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-}
-
-/** El orden de avance, que es el de lectura del selector. */
-const ETAPAS = [
-  'RECEPCION',
-  'EN_REVISION',
-  'PROCESO_DE_ACUERDO',
-  'EN_OFERTA',
-  'EN_NEGOCIO',
-  'CERRADO',
-] as const
-
-const CORREDOR_LABELS: Record<string, string> = {
-  SOLICITANTE: 'Corredor solicitante',
-  PROPIETARIO: 'Corredor propietario',
-}
-
-const ETAPA_LABELS: Record<string, string> = {
-  RECEPCION: 'Recepción',
-  EN_REVISION: 'En revisión',
-  PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
-  EN_OFERTA: 'En oferta',
-  EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cierre',
 }
 
 export default function SeguimientoModal({
@@ -239,8 +216,8 @@ export default function SeguimientoModal({
               >
                 <Text size="xs" c="dimmed">
                   {new Date(m.fecha).toLocaleString('es-CL')} · {m.autor_nombre ?? 'Sistema'}
-                  {m.etapa_resultante && ` · nueva etapa: ${ETAPA_LABELS[m.etapa_resultante] ?? m.etapa_resultante}`}
-                  {m.corredor && ` · sobre el ${CORREDOR_LABELS[m.corredor].toLowerCase()}`}
+                  {m.etapa_resultante && ` · nueva etapa: ${rotuloEtapa(m.etapa_resultante)}`}
+                  {m.corredor && ` · sobre el ${rotuloCorredor(m.corredor).toLowerCase()}`}
                 </Text>
                 {/* Lo que se prometió en ese movimiento. Solo el del más reciente
                     manda, pero verlos todos deja seguir cómo se fue corriendo. */}

@@ -154,3 +154,74 @@ export type Bandeja = {
 export function obtenerBandeja(): Promise<Bandeja> {
   return fetch('/api/canjes/bandeja', { credentials: 'include' }).then(parseOrThrow)
 }
+
+// -------------------------------------------------- listado de canjes activos
+
+/** Un movimiento del historial desplegado, en el listado de activos. */
+export type MovimientoDelListado = {
+  id: number
+  /** Cuándo se hizo la gestión. Es la fecha que elige la persona al registrar. */
+  fecha: string
+  tipo_nombre: string
+  etapa_resultante: string | null
+  corredor: string | null
+  autor_nombre: string | null
+  comentario: string | null
+  /** Días entre la gestión y su registro, cuando pasó más de un día. Nulo cuando
+   *  se registró el mismo día o el siguiente, que es lo habitual.
+   *
+   *  **No es una señal de estado**: si se registró tarde no cambia que la gestión
+   *  ocurrió cuando ocurrió. Va al lado del movimiento para que un registro
+   *  atrasado no deje un canje con cara de al día sin que se pueda saber por qué.
+   *
+   *  Nulo también en los que vinieron de una carga masiva: ahí el atraso es la
+   *  definición de la carga y no una señal de nada. */
+  dias_hasta_el_registro: number | null
+  /** Si entró en una carga masiva. Se sabe porque comparte el instante exacto de
+   *  creación con otros: una carga es una sola transacción. */
+  de_carga_masiva: boolean
+}
+
+export type EstadoGestion = 'al_dia' | 'pendiente'
+
+export type FilaCanjeActivo = {
+  canje_id: number
+  fecha_solicitud: string
+  etapa: CanjeEtapa
+  corredor_solicitante_nombre: string | null
+  corredor_propietario_nombre: string | null
+  comuna: string | null
+  direccion: string | null
+  estado: EstadoGestion
+  /** Nulo cuando el canje nunca se gestionó. **No es cero**: un cero diría que se
+   *  gestionó hoy. */
+  horas_sin_gestion: number | null
+  ultima_gestion: string | null
+  proximo_seguimiento: string | null
+  /** Positivo si el compromiso venció, cero si es para hoy, negativo si es a
+   *  futuro, nulo si nadie agendó nada. */
+  dias_de_atraso: number | null
+  /** Cuántos de sus registros vinieron de una carga masiva, y de cuándo. Se dice
+   *  una vez arriba del historial en vez de repetirlo en cada línea. */
+  registros_de_carga: number
+  fecha_de_carga: string | null
+  /** El historial completo, del más viejo al más nuevo. */
+  movimientos: MovimientoDelListado[]
+}
+
+/**
+ * Es un **reporte**, no una lista de trabajo, y por eso muestra **todos** los
+ * canjes abiertos --incluso los agendados para adelante, que «Qué me toca hoy»
+ * esconde a propósito--. Un reporte que esconde filas no sirve para saber cuántos
+ * canjes abiertos hay.
+ */
+export type ListadoCanjesActivos = {
+  filas: FilaCanjeActivo[]
+  al_dia: number
+  pendientes: number
+  umbral_horas: number
+}
+
+export function obtenerCanjesActivos(): Promise<ListadoCanjesActivos> {
+  return fetch('/api/canjes/reportes/activos', { credentials: 'include' }).then(parseOrThrow)
+}

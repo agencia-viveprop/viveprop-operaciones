@@ -126,6 +126,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Listado de canjes activos con su historial desplegable
+
+Pedido tuyo: bajo Canjes, un listado de los activos con su estado --Al día o Pendiente-- y que al pinchar una fila se desplieguen sus registros en orden cronológico.
+
+Está en **Canjes → pestaña «Activos y su gestión»**. Cada fila se abre en el lugar y muestra su bitácora completa, del registro más antiguo al más reciente --al revés de la ficha, y a propósito: para leer una historia el orden cronológico es el correcto--.
+
+**Dos correcciones antes de escribirlo, las dos por tu observación.**
+
+La primera: te dije que los cuatro canjes activos llevaban 13 días sin gestión, y ese número salió de `dev`, no de producción. En `dev` no significa nada: los 605 movimientos entraron en una sola carga del Excel el 22 de agosto y no hay ni una gestión registrada desde la app. Vos trabajás en producción, a la que no tengo acceso. La regla que me queda: decir de qué base sale cada número.
+
+La segunda: tu frase nombraba **dos** fechas y yo las había leído como una. `fecha` es cuándo se hizo la gestión --la elegís vos-- y `creado_en` es cuándo quedó registrada. **El estado se calcula sobre la primera**, porque "hace cuánto que nadie toca este canje" es una pregunta sobre el trabajo y no sobre cuándo se tipeó. La segunda se muestra al lado del movimiento cuando se separan, sin ser un indicador de estado, como pediste.
+
+**El umbral quedó en 48 horas**, el mismo de la bandeja, como elegiste: una sola definición de "atrasado" en toda la app.
+
+**Es un reporte, no una lista de trabajo**, y eso tiene una consecuencia visible: muestra **todos** los canjes abiertos, incluso los agendados para adelante que «Qué me toca hoy» esconde a propósito.
+
+**Un detalle que solo se vio mirando la pantalla:** los 35 movimientos de los cuatro canjes decían todos "registrado 10 días después", porque una carga masiva es por definición un registro posterior. Ahora eso va una vez arriba del historial --"todos vienen de la carga del histórico del 22-08-2026"--, que dice algo más útil: qué parte de la historia es Excel y qué parte es trabajo en la app.
+
+**Verificado:** 656 tests, `alembic check` limpio, build y lint sin hallazgos, y captura contra `dev` con una fila desplegada. Ver `D-065`.
+
 ### 2026-08-25 · El reparto de la comisión en reporte mensual y directorio
 
 Pedido tuyo: ver los montos de los negocios, la comisión de los corredores, la de los concentradores y la del equipo, sin distorsionar los gráficos. Propusiste un multiselect y pediste mi sugerencia.

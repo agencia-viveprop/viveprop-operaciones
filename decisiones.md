@@ -1386,3 +1386,54 @@ Cambiar el orden de los segmentos por estética vuelve a juntar el par que colis
 ### Nota de método
 
 Otra vez el servidor local viejo: la primera captura mostró `$NaN` en el panel de montos porque el uvicorn seguía sirviendo `valor_base` después de partirlo en dos. Es la tercera aparición de la misma trampa (`D-061`, `D-063`). Y el hallazgo 2 --el que no estaba en el pedido-- salió **solo de mirar la pantalla renderizada**: dos barras sobre seis meses no se detectan leyendo código ni corriendo tests.
+
+---
+
+## D-065 · Listado de canjes activos con su historial desplegable
+
+**Pedido.** Bajo Canjes, un listado de los canjes activos con su estado --Al día o Pendiente-- y que al pinchar una fila se desplieguen sus registros en orden cronológico.
+
+### Primero, una corrección de método
+
+La primera respuesta afirmó *"hoy las cuatro filas van a decir Pendiente, porque la gestión más reciente tiene 13 días"*. El usuario respondió que todos los canjes activos habían sido actualizados hoy, y tenía razón en dudar: **ese número salió de `dev`**, y en `dev` no significa nada. Ahí los 605 movimientos de canje se insertaron en una sola transacción el 22 de agosto a las 02:24, desde el Excel; no hay ni una gestión registrada desde la app. El usuario trabaja en producción, a la que este entorno no tiene acceso.
+
+La regla que queda: **decir de qué base sale cada número.** Un dato de `dev` presentado como la realidad del usuario es peor que no darlo.
+
+### Y una corrección de lectura, que cambió el diseño
+
+El pedido decía *"según la fecha de último registro respecto de la última fecha de gestión"*. La primera lectura tomó eso como una sola cosa dicha dos veces. No lo es: son **dos columnas que existen de verdad** en `movimientos`.
+
+- `fecha` — cuándo se hizo la gestión. La elige la persona en el modal.
+- `creado_en` — cuándo quedó registrada. La pone el servidor y no se edita.
+
+En los 605 migrados se separan por **años**. Y de acá en adelante se separan cada vez que alguien registra el lunes lo que hizo el viernes.
+
+**El estado se calcula sobre `fecha`.** "Hace cuánto que nadie toca este canje" es una pregunta sobre el trabajo, no sobre cuándo se tipeó. Un test lo fija con dos canjes de igual registro y distinta gestión.
+
+**Y la otra fecha se muestra, sin ser una señal de estado.** Si se registró tarde no cambia que la gestión ocurrió cuando ocurrió; pero sin decirlo, un registro atrasado deja un canje con cara de al día y nadie puede saber por qué. El usuario pidió explícitamente **no** convertirlo en un segundo indicador de estado, y así quedó: un dato al lado del movimiento.
+
+### El umbral es el de la bandeja, por decisión del usuario
+
+48 horas, las de la hoja `CONFIG`. Se le ofreció 7 o 14 días con el argumento de que en un ciclo de días casi todo va a estar Pendiente casi siempre, y un estado que casi nunca cambia deja de informar. Eligió la consistencia: **una sola definición de "atrasado" en toda la app**, y las dos pantallas nunca se contradicen. La constante se importa de `bandeja_canjes` en vez de copiarse.
+
+### Es un reporte, no una lista de trabajo
+
+Se pisa a propósito con «Qué me toca hoy» en las filas, pero contesta otra pregunta, y de ahí salen las diferencias:
+
+- **Muestra todos los activos**, incluso los agendados para adelante que la bandeja esconde. La bandeja los saca de la vista con razón --si te comprometiste a llamar el jueves, el martes no es tu problema-- pero un reporte que esconde filas no sirve para saber cuántos canjes abiertos hay.
+- **Dos estados y no seis.** Para "cómo viene" el detalle del semáforo es ruido.
+- **El historial va del más viejo al más nuevo**, al revés que la ficha. Para leer una historia el orden cronológico es el correcto; para ver qué pasó último, el inverso.
+
+El compromiso sigue mandando sobre el tiempo cuando existe, igual que en la bandeja: un canje agendado a futuro está al día aunque lleve un mes sin tocarse, porque eso es exactamente lo que significa haberlo agendado.
+
+### Los registros de una carga masiva no llevan el aviso de atraso
+
+Esto **no se detectó leyendo código ni corriendo tests**: se vio en la captura. Los 35 movimientos de los cuatro canjes abiertos decían todos *"registrado 10 días después"*, porque una carga masiva es, por definición, un registro posterior a la gestión. Repetido en cada línea deja de ser una señal y se vuelve empapelado.
+
+**La primera hipótesis para distinguirlos era falsa, y se verificó antes de usarla:** "los migrados no tienen autor" --384 de ellos sí tienen, porque la carga corrió como el usuario admin.
+
+Lo que sí los distingue no necesita ningún dato nuevo ni ninguna constante: **una carga comparte el `creado_en` al microsegundo**, porque es una sola transacción. Dos movimientos con el mismo instante de creación entraron juntos. El aviso se reemplaza por uno solo arriba del historial --"todos vienen de la carga del histórico del 22-08-2026"-- que además dice algo más útil que el original: qué parte de la historia es Excel y qué parte es trabajo hecho en la app.
+
+### De paso: los rótulos de etapa estaban en tres copias
+
+`ETAPA_LABELS` estaba escrito en el modal de seguimiento, en la bandeja y en la pantalla de canjes. Este listado iba a ser la cuarta. Las tres decían lo mismo --se comparó, no había un error todavía-- pero eran tres lugares donde renombrar una etapa deja las pantallas diciendo cosas distintas de la misma cosa, sin que nada falle. Quedaron en `canjesEtiquetas.ts`, con dos helpers para el caso en que la etapa llega como texto suelto: `movimientos.etapa_resultante` es `String(20)` y no un tipo enumerado, porque la tabla es polimórfica.

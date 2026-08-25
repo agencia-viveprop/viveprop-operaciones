@@ -11,6 +11,7 @@ import {
   Modal,
   NumberInput,
   Select,
+  Tabs,
   SimpleGrid,
   Stack,
   Table,
@@ -32,20 +33,12 @@ import {
 } from '../api/canjes'
 import { obtenerEstructuraCanjes } from '../api/estructura'
 import EstructuraArchivo from '../components/EstructuraArchivo'
+import ReporteCanjesActivos from '../components/ReporteCanjesActivos'
 import SeguimientoModal from '../components/SeguimientoModal'
 import PageHeader from '../components/PageHeader'
-
-const ETAPA_LABELS: Record<CanjeEtapa, string> = {
-  RECEPCION: 'Recepción',
-  EN_REVISION: 'En revisión',
-  PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
-  EN_OFERTA: 'En oferta',
-  EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cierre',
-}
+import { ETAPA_LABELS, ETAPAS } from '../components/canjesEtiquetas'
 
 const ESTADOS: CanjeEstado[] = ['ACTIVO', 'CANCELADO']
-const ETAPAS = Object.keys(ETAPA_LABELS) as CanjeEtapa[]
 const OPERACIONES = ['VENTA', 'ARRIENDO', 'OTRO']
 const MONEDAS = ['CLP', 'UF', 'OTRA']
 
@@ -91,6 +84,9 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const [form, setForm] = useState(vacio())
 
   const [seguimientoId, setSeguimientoId] = useState<number | null>(null)
+  // Qué pestaña se está mirando. El listado completo arranca puesto: es la
+  // pantalla que la gente ya conoce, y el reporte es lo que se va a buscar.
+  const [vista, setVista] = useState('listado')
 
   const [importAbierto, setImportAbierto] = useState(false)
   const [archivo, setArchivo] = useState<File | null>(null)
@@ -196,96 +192,114 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         }
       />
 
-      <Group>
-        <Select
-          placeholder="Estado"
-          data={ESTADOS}
-          value={filtros.estado || null}
-          onChange={(v) => setFiltros({ ...filtros, estado: v ?? '' })}
-          clearable
-          w={160}
-        />
-        <Select
-          placeholder="Etapa"
-          data={ETAPAS.map((e) => ({ value: e, label: ETAPA_LABELS[e] }))}
-          value={filtros.etapa || null}
-          onChange={(v) => setFiltros({ ...filtros, etapa: v ?? '' })}
-          clearable
-          w={200}
-        />
-        <TextInput
-          placeholder="Comuna"
-          value={filtros.comuna}
-          onChange={(e) => setFiltros({ ...filtros, comuna: e.currentTarget.value })}
-          w={160}
-        />
-      </Group>
+      <Tabs value={vista} onChange={(v) => setVista(v ?? "listado")}>
+        <Tabs.List mb="md">
+          <Tabs.Tab value="listado">Todos los canjes</Tabs.Tab>
+          <Tabs.Tab value="activos">Activos y su gestión</Tabs.Tab>
+        </Tabs.List>
 
-      {/* Los dos corredores van en una sola columna, uno sobre otro, que es lo
-          que hace que la tabla quepa sin desplazamiento horizontal. Los nombres
-          van completos: acortarlos era resolver el problema equivocado.
-          Cada fila ocupa dos lineas, y ese es el precio elegido. */}
-      <div className="tabla-scroll-x">
-      <Table striped withTableBorder highlightOnHover fz="xs" className="tabla-una-linea">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>N°</Table.Th>
-            <Table.Th>Fecha</Table.Th>
-            <Table.Th>Corredores</Table.Th>
-            <Table.Th>Comuna</Table.Th>
-            <Table.Th>Operación</Table.Th>
-            <Table.Th>Estado</Table.Th>
-            <Table.Th>Etapa</Table.Th>
-            <Table.Th>Acciones</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {!isLoading &&
-            canjes?.map((c) => (
-              <Table.Tr key={c.id}>
-                <Table.Td fw={600} ff="monospace">{c.id}</Table.Td>
-                <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
-                <Table.Td>
-                  {/* La etiqueta va en cada linea: la posicion sola no alcanza
-                      para saber cual es cual al escanear la tabla. */}
-                  <Group gap={6} wrap="nowrap">
-                    <Text size="xs" c="dimmed" w={30} ta="right">
-                      Sol.
-                    </Text>
-                    <Text size="xs">{c.corredor_solicitante_nombre ?? '—'}</Text>
-                  </Group>
-                  <Group gap={6} wrap="nowrap">
-                    <Text size="xs" c="dimmed" w={30} ta="right">
-                      Prop.
-                    </Text>
-                    <Text size="xs">{c.corredor_propietario_nombre ?? '—'}</Text>
-                  </Group>
-                </Table.Td>
-                <Table.Td>{c.comuna}</Table.Td>
-                <Table.Td>{c.tipo_operacion}</Table.Td>
-                <Table.Td>
-                  <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
-                    {c.estado}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>{ETAPA_LABELS[c.etapa]}</Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon variant="subtle" onClick={() => setSeguimientoId(c.id)} aria-label="Seguimiento">
-                      <IconClockHour4 size={18} />
-                    </ActionIcon>
-                    {puedeEditar && (
-                      <ActionIcon variant="subtle" onClick={() => abrirEditar(c)} aria-label="Editar">
-                        <IconPencil size={18} />
-                      </ActionIcon>
-                    )}
-                  </Group>
-                </Table.Td>
+        <Tabs.Panel value="listado">
+          <Stack gap="md">
+          <Group>
+            <Select
+              placeholder="Estado"
+              data={ESTADOS}
+              value={filtros.estado || null}
+              onChange={(v) => setFiltros({ ...filtros, estado: v ?? '' })}
+              clearable
+              w={160}
+            />
+            <Select
+              placeholder="Etapa"
+              data={ETAPAS.map((e) => ({ value: e, label: ETAPA_LABELS[e] }))}
+              value={filtros.etapa || null}
+              onChange={(v) => setFiltros({ ...filtros, etapa: v ?? '' })}
+              clearable
+              w={200}
+            />
+            <TextInput
+              placeholder="Comuna"
+              value={filtros.comuna}
+              onChange={(e) => setFiltros({ ...filtros, comuna: e.currentTarget.value })}
+              w={160}
+            />
+          </Group>
+
+          {/* Los dos corredores van en una sola columna, uno sobre otro, que es lo
+              que hace que la tabla quepa sin desplazamiento horizontal. Los nombres
+              van completos: acortarlos era resolver el problema equivocado.
+              Cada fila ocupa dos lineas, y ese es el precio elegido. */}
+          <div className="tabla-scroll-x">
+          <Table striped withTableBorder highlightOnHover fz="xs" className="tabla-una-linea">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>N°</Table.Th>
+                <Table.Th>Fecha</Table.Th>
+                <Table.Th>Corredores</Table.Th>
+                <Table.Th>Comuna</Table.Th>
+                <Table.Th>Operación</Table.Th>
+                <Table.Th>Estado</Table.Th>
+                <Table.Th>Etapa</Table.Th>
+                <Table.Th>Acciones</Table.Th>
               </Table.Tr>
-            ))}
-        </Table.Tbody>
-      </Table>
-      </div>
+            </Table.Thead>
+            <Table.Tbody>
+              {!isLoading &&
+                canjes?.map((c) => (
+                  <Table.Tr key={c.id}>
+                    <Table.Td fw={600} ff="monospace">{c.id}</Table.Td>
+                    <Table.Td>{c.fecha_solicitud?.slice(0, 10)}</Table.Td>
+                    <Table.Td>
+                      {/* La etiqueta va en cada linea: la posicion sola no alcanza
+                          para saber cual es cual al escanear la tabla. */}
+                      <Group gap={6} wrap="nowrap">
+                        <Text size="xs" c="dimmed" w={30} ta="right">
+                          Sol.
+                        </Text>
+                        <Text size="xs">{c.corredor_solicitante_nombre ?? '—'}</Text>
+                      </Group>
+                      <Group gap={6} wrap="nowrap">
+                        <Text size="xs" c="dimmed" w={30} ta="right">
+                          Prop.
+                        </Text>
+                        <Text size="xs">{c.corredor_propietario_nombre ?? '—'}</Text>
+                      </Group>
+                    </Table.Td>
+                    <Table.Td>{c.comuna}</Table.Td>
+                    <Table.Td>{c.tipo_operacion}</Table.Td>
+                    <Table.Td>
+                      <Badge color={c.estado === 'ACTIVO' ? 'good' : 'critical'} variant="light">
+                        {c.estado}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>{ETAPA_LABELS[c.etapa]}</Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <ActionIcon variant="subtle" onClick={() => setSeguimientoId(c.id)} aria-label="Seguimiento">
+                          <IconClockHour4 size={18} />
+                        </ActionIcon>
+                        {puedeEditar && (
+                          <ActionIcon variant="subtle" onClick={() => abrirEditar(c)} aria-label="Editar">
+                            <IconPencil size={18} />
+                          </ActionIcon>
+                        )}
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+            </Table.Tbody>
+          </Table>
+          </div>
+          </Stack>
+        </Tabs.Panel>
+
+        {/* Un reporte, no una lista de trabajo: muestra todos los abiertos
+            --incluso los agendados a futuro que la bandeja esconde-- y cada
+            fila despliega su historial en orden cronológico. */}
+        <Tabs.Panel value="activos">
+          <ReporteCanjesActivos />
+        </Tabs.Panel>
+      </Tabs>
       {!isLoading && canjes?.length === 0 && <Text c="dimmed">No hay canjes que calcen con el filtro.</Text>}
 
       <Modal opened={modalAbierto} onClose={() => setModalAbierto(false)} title={editandoId ? `Canje #${editandoId}` : 'Nuevo canje'} size="lg">

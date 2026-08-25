@@ -18,6 +18,7 @@ from app.models.canje import (
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.bandeja_canjes import Bandeja, obtener_bandeja
+from app.services.canjes_activos import ListadoCanjesActivos, obtener_listado
 from app.services.estructura_archivo import EstructuraArchivo
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import (
@@ -112,6 +113,19 @@ class CanjeUpdate(BaseModel):
 def bandeja(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
     """Que canje hay que tocar hoy, ordenado por urgencia (sprint 20)."""
     return obtener_bandeja(db)
+
+
+@router.get("/reportes/activos", response_model=ListadoCanjesActivos)
+def reporte_activos(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Los canjes abiertos, con su estado de gestión y su historial completo.
+
+    Va antes de `/{canje_id}` en el archivo: FastAPI resuelve por orden y
+    `activos` calzaría con el parámetro de ruta.
+    """
+    return obtener_listado(db)
 
 
 @router.get("/reportes/resumen", response_model=ResumenCanjes)
