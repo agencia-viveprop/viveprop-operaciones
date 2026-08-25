@@ -1172,3 +1172,29 @@ En el globo el orden es el de la pregunta —cuántos entraron, y en qué termin
 
 **Aplica solo al apilado.** En los gráficos de una o dos series independientes no hay total que sumar: ahí la suma de las barras no significa nada, y ponerla sería inventar una métrica.
 
+
+---
+
+## D-059 · El próximo seguimiento se agenda, y manda sobre el semáforo
+
+**Contexto.** «Qué me toca hoy» ordenaba por horas sin gestión. Eso es un **proxy**: mide cuánto hace que nadie toca un canje, no qué se prometió hacer. Un canje que se llamó ayer y quedó en retomarse el jueves se veía igual que uno abandonado.
+
+**Decisión: cada movimiento puede agendar cuándo volver a mirar el canje, y el compromiso vigente manda sobre el semáforo.** Cuando los dos opinan, gana el que no es una inferencia.
+
+Los niveles pasan a ser seis: `vencido` y `para_hoy` salen de un compromiso registrado y van antes que los cuatro del semáforo, que quedan para los canjes sin fecha agendada.
+
+**Va en `movimientos` y no en `canjes`.** El compromiso lo asume una gestión —"llamé y quedamos en que sigo el jueves"— así que pertenece a ese registro. En `canjes` sería un campo que se sobreescribe sin dejar rastro de quién lo movió; en la línea de tiempo queda al lado del movimiento que lo generó, y **el vigente es el del más reciente**, igual que la etapa (`D-052`). Como se deriva y no se acumula, borrar un movimiento devuelve el compromiso anterior sin ningún paso extra.
+
+**El default nunca deja el campo en nulo.** Sin fecha, el canje volvería a depender del reloj de horas, que es justamente el proxy que esto reemplaza. Se agendan **dos días corridos** —no dos hábiles— y el resultado se corre al lunes si cae fin de semana: un viernes más dos da domingo, y el hábil siguiente es el lunes. Contar hábiles daría martes, y "te llamo en un par de días" son días de calendario.
+
+**Se ancla al más nuevo entre la fecha del movimiento y hoy.** Anclarlo solo al movimiento haría que anotar hoy una gestión de hace tres meses agendara un seguimiento vencido hace tres meses, y la bandeja se llenaría de vencidos que nadie prometió. Anclarlo solo a hoy perdería el caso normal. El mayor de los dos resuelve ambos.
+
+**Una fecha escrita a mano no se corrige.** El default evita el fin de semana; si alguien escribe sábado es porque va a trabajar el sábado, y moverle la fecha que acaba de escribir sería el sistema opinando sobre su agenda.
+
+**Los feriados no se saltan, y está declarado en pantalla.** Saltarlos necesita la lista de los de Chile —con los movibles de la ley de traslado, Pascua y los días de elección— y calcularla mal dejaría el error escondido hasta que alguien agende un seguimiento para el 18 de septiembre. Se decidió empezar por fines de semana; hasta que haya una lista verificada, el campo y el pie de la bandeja lo dicen en vez de dar a entender que los conoce. **Hay un test que fija que hoy no se saltan**, para que agregarlos sea un cambio deliberado y no algo que pase de casualidad.
+
+**Lo agendado para más adelante no se lista.** La pantalla se llama «qué me toca hoy»: listar lo que no toca es lo que hace que se deje de mirar. Se cuentan aparte y se dice cuántos son, para que no parezca que se perdieron.
+
+### El error que corrigió mirarlo renderizado
+
+**El contador de «Requieren atención» no incluía los niveles nuevos.** Seguía sumando los tres del semáforo, así que el chip decía «Requieren atención (2)» sobre una tabla de seis filas. Un contador que no cuadra con su propia lista no se vuelve a creer. Y el subtítulo contaba como abiertos solo los listados, dejando afuera a los agendados —que están abiertos, solo que su día no es hoy—: decía «2 de 6» donde eran 6 de 12.

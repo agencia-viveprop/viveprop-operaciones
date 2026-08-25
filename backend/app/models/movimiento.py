@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -32,7 +32,12 @@ class Movimiento(Base):
     __tablename__ = "movimientos"
     # Creado por la migracion `b2dbf50bc5fc`. Sin declararlo, `autogenerate`
     # propondria borrarlo, y es el indice que sostiene la linea de tiempo.
-    __table_args__ = (Index("idx_movimientos_entity", "entity_type", "entity_id", "fecha"),)
+    __table_args__ = (
+        Index("idx_movimientos_entity", "entity_type", "entity_id", "fecha"),
+        # Creado por `a7e4c92f18b3`. Sostiene la consulta de la bandeja, que
+        # busca el seguimiento pendiente de cada canje.
+        Index("idx_movimientos_proximo_seguimiento", "entity_type", "proximo_seguimiento"),
+    )
 
     # `BigInteger` con variante `Integer` para SQLite: en Postgres es `bigint`,
     # como lo creo la migracion, y en SQLite un `INTEGER PRIMARY KEY`, que es el
@@ -49,4 +54,9 @@ class Movimiento(Base):
     fecha: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     autor_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("usuarios.id"), nullable=True)
     comentario: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Cuándo hay que volver a mirar esto. El compromiso lo asume el movimiento
+    # --"llamé y quedamos en que sigo el jueves"-- así que vive acá y no en la
+    # ficha del canje: puesto allá se sobreescribiría sin dejar rastro de quién lo
+    # movió. El vigente es el del movimiento más reciente, igual que la etapa.
+    proximo_seguimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

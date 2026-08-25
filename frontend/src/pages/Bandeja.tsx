@@ -24,6 +24,8 @@ import EstadoConsulta from '../components/EstadoConsulta'
  * crítico se parecen entre sí, así que el color por sí mismo no distingue.
  */
 const NIVELES: Record<NivelSemaforo, { texto: string; color: string }> = {
+  vencido: { texto: 'Vencido', color: 'critical' },
+  para_hoy: { texto: 'Para hoy', color: 'accent' },
   sin_gestion: { texto: 'Sin gestión', color: 'gray' },
   critico: { texto: 'Crítico', color: 'critical' },
   advertencia: { texto: 'Advertencia', color: 'warning' },
@@ -40,6 +42,10 @@ const NIVELES: Record<NivelSemaforo, { texto: string; color: string }> = {
  */
 function ayudaDe(nivel: NivelSemaforo, critico: number, advertencia: number): string {
   switch (nivel) {
+    case 'vencido':
+      return 'El seguimiento agendado ya pasó'
+    case 'para_hoy':
+      return 'El seguimiento agendado es hoy'
     case 'sin_gestion':
       return 'Nunca se registró un movimiento en la app'
     case 'critico':
@@ -51,7 +57,34 @@ function ayudaDe(nivel: NivelSemaforo, critico: number, advertencia: number): st
   }
 }
 
-const ORDEN: NivelSemaforo[] = ['sin_gestion', 'critico', 'advertencia', 'al_dia']
+// El orden de lectura: primero lo que alguien se comprometió a hacer, después lo
+// que el semáforo infiere por tiempo sin gestión. Un compromiso registrado vale
+// más que una inferencia.
+const ORDEN: NivelSemaforo[] = [
+  'vencido',
+  'para_hoy',
+  'sin_gestion',
+  'critico',
+  'advertencia',
+  'al_dia',
+]
+
+/** Una fecha suelta --sin hora-- en formato chileno.
+ *
+ *  El mediodía en el `Date` es deliberado: `new Date('2026-08-27')` se parsea como
+ *  medianoche **UTC**, que en Chile es el 26 a las 20:00, así que la fecha se
+ *  mostraría un día antes. Al mediodía ningún huso la corre de día. */
+function fechaSola(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('es-CL')
+}
+
+/** El atraso en palabras. */
+function atraso(dias: number | null): string {
+  if (dias === null) return ''
+  if (dias === 0) return 'es hoy'
+  if (dias === 1) return 'venció ayer'
+  return `venció hace ${dias} días`
+}
 
 const ETAPA_LABELS: Record<string, string> = {
   SIN_ETAPA: 'Sin etapa',
@@ -132,8 +165,20 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
   if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
   const { resumen, filas } = data
+  // Todo lo que no está al día ni agendado para después. Incluye los dos niveles
+  // de compromiso: la primera versión de este cálculo se quedó con los tres del
+  // semáforo, así que el chip decía "Requieren atención (2)" y la tabla mostraba
+  // seis filas. Un contador que no cuadra con su propia lista no se vuelve a creer.
   const requierenAtencion =
-    resumen.sin_gestion + resumen.critico + resumen.advertencia
+    resumen.vencido +
+    resumen.para_hoy +
+    resumen.sin_gestion +
+    resumen.critico +
+    resumen.advertencia
+
+  // Los abiertos son los listados más los agendados: los agendados están abiertos,
+  // solo que su día no es hoy.
+  const abiertos = filas.length + resumen.agendados
 
   const visibles =
     filtro === 'todos'
@@ -146,11 +191,15 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
     <Stack gap="md">
       <PageHeader
         title="Qué me toca hoy"
-        subtitle={`${requierenAtencion} de ${filas.length} canjes abiertos requieren atención. Los umbrales son los de CONFIG: ${data.umbral_critico_horas} horas es crítico, ${data.umbral_advertencia_horas} es advertencia.`}
+        subtitle={
+          `${requierenAtencion} de ${abiertos} canjes abiertos requieren atención. ` +
+          'Manda el seguimiento agendado; donde no hay ninguno, el reloj de horas sin ' +
+          `gestión: ${data.umbral_critico_horas} horas es crítico, ${data.umbral_advertencia_horas} es advertencia.`
+        }
         action={selector}
       />
 
-      <SimpleGrid cols={{ base: 2, sm: 4 }}>
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Group gap="xs" mb={4}>
@@ -168,14 +217,30 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         ))}
       </SimpleGrid>
 
+      {/* Los agendados no van como recuadro porque no requieren atención: son
+          trabajo comprometido para otro día. Pero tienen que estar dichos, o el
+          conteo de arriba se lee como si fueran los únicos canjes abiertos. */}
+      {resumen.agendados > 0 && (
+        <Text size="sm" c="dimmed">
+          {resumen.agendados}{' '}
+          {resumen.agendados === 1
+            ? 'canje tiene seguimiento agendado para más adelante y no se lista acá'
+            : 'canjes tienen seguimiento agendado para más adelante y no se listan acá'}
+          . Cada uno aparece el día que le toca.
+        </Text>
+      )}
+
       <SegmentedControl
         value={filtro}
         onChange={setFiltro}
         data={[
           { value: 'atencion', label: `Requieren atención (${requierenAtencion})` },
+          { value: 'vencido', label: `Vencidos (${resumen.vencido})` },
+          { value: 'para_hoy', label: `Para hoy (${resumen.para_hoy})` },
           { value: 'sin_gestion', label: `Sin gestión (${resumen.sin_gestion})` },
-          { value: 'critico', label: `Críticos (${resumen.critico})` },
-          { value: 'todos', label: `Todos (${filas.length})` },
+          // "Todos" son los que se listan, que no son todos los abiertos: los
+          // agendados para más adelante quedan fuera a propósito.
+          { value: 'todos', label: `Todos los de hoy (${filas.length})` },
         ]}
       />
 
@@ -197,6 +262,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Th>Etapa</Table.Th>
                 <Table.Th ta="right">Espera</Table.Th>
                 <Table.Th>Última gestión</Table.Th>
+                <Table.Th>Seguimiento</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -251,6 +317,26 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
                       </Text>
                     )}
                   </Table.Td>
+                  <Table.Td>
+                    {f.proximo_seguimiento === null ? (
+                      <Text size="sm" c="dimmed">
+                        Sin agendar
+                      </Text>
+                    ) : (
+                      <>
+                        <Text size="sm">{fechaSola(f.proximo_seguimiento)}</Text>
+                        {/* El atraso en palabras, no solo la fecha: "era el 21-08"
+                            obliga a restar de cabeza para saber si es de ayer o de
+                            la semana pasada. */}
+                        <Text
+                          size="xs"
+                          c={(f.dias_de_atraso ?? 0) > 0 ? 'critical.7' : 'dimmed'}
+                        >
+                          {atraso(f.dias_de_atraso)}
+                        </Text>
+                      </>
+                    )}
+                  </Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
@@ -259,8 +345,10 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
       )}
 
       <Text size="xs" c="dimmed">
-        Hacer clic en una fila abre el seguimiento del canje. Registrar un movimiento lo saca
-        de "sin gestión" y reinicia el reloj.
+        Hacer clic en una fila abre el seguimiento del canje. Registrar un movimiento agenda
+        el próximo --dos días hacia adelante si no se indica otro, corridos al lunes si caen
+        fin de semana-- y saca el canje de esta lista hasta ese día. Los feriados todavía no
+        se saltan.
       </Text>
 
       <SeguimientoModal

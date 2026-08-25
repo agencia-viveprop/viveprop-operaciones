@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
 from pydantic import BaseModel
@@ -215,12 +215,18 @@ class MovimientoOut(BaseModel):
     fecha: datetime
     autor_nombre: str | None
     comentario: str | None
+    # Cuándo se prometió volver a mirar el canje. El del movimiento más reciente
+    # es el que manda en «Qué me toca hoy».
+    proximo_seguimiento: date | None
 
 
 class MovimientoCreate(BaseModel):
     tipo_movimiento: str
     comentario: str | None = None
     fecha: datetime | None = None
+    # Opcional. Sin él, el servicio agenda dos días corridos hacia adelante,
+    # corridos al siguiente hábil si caen fin de semana.
+    proximo_seguimiento: date | None = None
 
 
 def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
@@ -234,6 +240,7 @@ def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
         fecha=m.fecha,
         autor_nombre=autor.nombre if autor else None,
         comentario=m.comentario,
+        proximo_seguimiento=m.proximo_seguimiento,
     )
 
 
@@ -258,7 +265,13 @@ def crear_movimiento(
 ):
     try:
         movimiento = crear_movimiento_canje(
-            db, canje_id, payload.tipo_movimiento, usuario.id, payload.comentario, payload.fecha
+            db,
+            canje_id,
+            payload.tipo_movimiento,
+            usuario.id,
+            payload.comentario,
+            payload.fecha,
+            payload.proximo_seguimiento,
         )
     except MovimientoError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

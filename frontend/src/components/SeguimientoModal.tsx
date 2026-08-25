@@ -30,6 +30,18 @@ import {
  * cuatro horas adelantado y dejaría elegir fechas futuras. Hay que restar el
  * desfase del huso antes de recortar.
  */
+/** Cuántos días agenda el servidor cuando no se indica nada. Está acá para que
+ *  el texto del campo lo diga y no haya que adivinarlo; el cálculo es del
+ *  backend, que es donde tiene tests. */
+const DIAS_SEGUIMIENTO = 2
+
+/** Hoy, para el mínimo del campo de agenda: agendar un seguimiento en el pasado
+ *  es un tipeo, y el que ya venció se ve en «Qué me toca hoy». */
+function hoyLocal(): string {
+  const d = new Date()
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
+
 function ahoraLocal(): string {
   const d = new Date()
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
@@ -70,6 +82,10 @@ export default function SeguimientoModal({
   // con un clic distraído, y un segundo clic en el mismo lugar es menos
   // ceremonioso que un diálogo encima del que ya está abierto.
   const [confirmando, setConfirmando] = useState<number | null>(null)
+  // Vacío = lo agenda el servidor: dos días corridos, corridos al lunes si caen
+  // fin de semana. Se deja vacío por defecto para que el caso habitual --seguir
+  // en un par de días-- no pida escribir nada.
+  const [seguimiento, setSeguimiento] = useState('')
 
   const { data: movimientos, isLoading } = useQuery({
     queryKey: ['movimientos', canjeId],
@@ -100,6 +116,10 @@ export default function SeguimientoModal({
         // El input da hora local; se manda en ISO con zona para que el servidor
         // no tenga que adivinar de qué huso viene.
         fecha: fecha ? new Date(fecha).toISOString() : undefined,
+        // Va como fecha suelta y no en ISO con zona: es un día de agenda, no un
+        // instante. Mandarlo con hora lo haría depender del huso para saber si
+        // "el jueves" es jueves.
+        proximo_seguimiento: seguimiento || undefined,
       }),
     onSuccess: () => {
       // La bandeja también: su semáforo se mide desde el último movimiento, y
@@ -108,6 +128,7 @@ export default function SeguimientoModal({
       setTipoSeleccionado(null)
       setComentario('')
       setFecha('')
+      setSeguimiento('')
     },
   })
 
@@ -179,6 +200,16 @@ export default function SeguimientoModal({
                   {new Date(m.fecha).toLocaleString('es-CL')} · {m.autor_nombre ?? 'Sistema'}
                   {m.etapa_resultante && ` · nueva etapa: ${ETAPA_LABELS[m.etapa_resultante] ?? m.etapa_resultante}`}
                 </Text>
+                {/* Lo que se prometió en ese movimiento. Solo el del más reciente
+                    manda, pero verlos todos deja seguir cómo se fue corriendo. */}
+                {m.proximo_seguimiento && (
+                  <Text size="xs" c="dimmed">
+                    Próximo seguimiento:{' '}
+                    <Text span fw={600}>
+                      {new Date(`${m.proximo_seguimiento}T12:00:00`).toLocaleDateString('es-CL')}
+                    </Text>
+                  </Text>
+                )}
                 {m.comentario && <Text size="sm">{m.comentario}</Text>}
 
                 {/* La confirmación va acá, en la fila del movimiento, y no en un
@@ -228,6 +259,19 @@ export default function SeguimientoModal({
                 onChange={(e) => setFecha(e.currentTarget.value)}
               />
             </SimpleGrid>
+
+            {/* El próximo seguimiento va en su propia fila y no junto a los
+                otros dos: los de arriba describen la gestión que ya pasó, este
+                compromete la que viene. Es lo que después ordena «Qué me toca
+                hoy», así que conviene que no se lea como un detalle más. */}
+            <TextInput
+              label="Próximo seguimiento"
+              type="date"
+              description={`Vacío = en ${DIAS_SEGUIMIENTO} días, corrido al lunes si cae fin de semana. Los feriados no se saltan todavía.`}
+              min={hoyLocal()}
+              value={seguimiento}
+              onChange={(e) => setSeguimiento(e.currentTarget.value)}
+            />
             <Textarea
               label="Comentario"
               placeholder="Opcional"

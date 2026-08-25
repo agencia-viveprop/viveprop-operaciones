@@ -13,6 +13,7 @@ export type Movimiento = {
   fecha: string
   autor_nombre: string | null
   comentario: string | null
+  proximo_seguimiento: string | null
 }
 
 async function parseOrThrow(res: Response) {
@@ -57,7 +58,14 @@ export async function eliminarMovimientoCanje(canjeId: number, movimientoId: num
 
 export function crearMovimientoCanje(
   canjeId: number,
-  payload: { tipo_movimiento: string; comentario?: string; fecha?: string },
+  payload: {
+    tipo_movimiento: string
+    comentario?: string
+    fecha?: string
+    /** Cuándo volver a mirar el canje. Sin él, el servidor agenda dos días
+     *  corridos hacia adelante, corridos al lunes si caen fin de semana. */
+    proximo_seguimiento?: string
+  },
 ): Promise<Movimiento> {
   return fetch(`/api/canjes/${canjeId}/movimientos`, {
     method: 'POST',

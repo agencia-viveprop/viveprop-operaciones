@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Fecha de próximo seguimiento, y «Qué me toca hoy» la usa
+
+Pedido tuyo: al registrar un movimiento de canje, poder agendar el próximo seguimiento --opcional--, que eso ordene «Qué me toca hoy», y que si no se indica nada se agende para dos días hacia adelante, corridos al día hábil siguiente si caen sábado, domingo o feriado.
+
+Hecho, con una salvedad que decidiste: **los feriados todavía no se saltan**. Saltarlos necesita la lista de los de Chile --con los movibles de la ley de traslado, Pascua y los días de elección-- y calcularla mal dejaría el error escondido hasta que alguien agende para el 18 de septiembre. Se empezó por fines de semana, y el campo y el pie de la bandeja lo declaran. Hay un test que fija que hoy no se saltan, para que agregarlos sea deliberado.
+
+**El compromiso manda sobre el semáforo.** «Qué me toca hoy» ordenaba por horas sin gestión, que es un proxy: mide cuánto hace que nadie toca un canje, no qué se prometió. Ahora hay seis niveles --`vencido` y `para_hoy` salen de una fecha agendada y van antes que los cuatro del reloj, que quedan para los canjes sin agenda--. Lo agendado para más adelante **no se lista**: la pantalla se llama «qué me toca hoy», y se cuenta aparte para que no parezca perdido.
+
+El campo vive en `movimientos` y no en `canjes`: el compromiso lo asume una gestión, y el vigente es el del movimiento más reciente --igual que la etapa--, así que borrar un movimiento devuelve el compromiso anterior sin ningún paso extra.
+
+**Verificado en vivo contra `dev`:** martes 25 sin indicar fecha agendó el jueves 27, y el canje pasó de `critico` a `agendados` y salió de la lista; borrar el movimiento lo devolvió a `critico`. El movimiento de prueba se borró.
+
+**Y mirarlo renderizado corrigió un error mío:** el contador de «Requieren atención» seguía sumando solo los tres niveles del semáforo, así que el chip decía «(2)» sobre una tabla de seis filas. El subtítulo además contaba como abiertos solo los listados, dejando afuera a los agendados: decía «2 de 6» donde eran 6 de 12. Ver `D-059`.
+
+**Verificado:** 593 tests, `alembic check` limpio, build y lint sin hallazgos, la bandeja y el modal revisados en captura.
+
 ### 2026-08-22 · El total de solicitudes, explícito en el gráfico de canjes
 
 Pedido tuyo: un tercer indicador con la cantidad de solicitados del mes, para tener la cifra completa.

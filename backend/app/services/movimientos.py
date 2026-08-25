@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +20,48 @@ HOLGURA_RELOJ = timedelta(minutes=5)
 
 # El unico tipo de movimiento de canje que cambia el estado y no solo la etapa.
 CANCELACION = "CANCELACION"
+
+
+# Cuántos días hacia adelante se agenda un seguimiento cuando no se indica uno.
+DIAS_SEGUIMIENTO = 2
+
+# El sábado es 5 y el domingo 6 en `weekday()`.
+FIN_DE_SEMANA = (5, 6)
+
+
+def proximo_habil(desde: date, dias: int = DIAS_SEGUIMIENTO) -> date:
+    """`desde` más `dias`, corrido al siguiente día hábil si cae fin de semana.
+
+    **Los feriados no se saltan, y hay que decirlo.** Saltarlos necesita saber
+    cuáles son, y los de Chile incluyen movibles --la ley de traslado de San Pedro
+    y del 12 de octubre-- más Pascua y los días de elección. Calcularlos mal
+    dejaría el error escondido en el código hasta que alguien agende un
+    seguimiento para el 18 de septiembre. Se decidió empezar por fines de semana
+    y dejar los feriados para cuando haya una lista verificada; hasta entonces la
+    pantalla lo declara en vez de dar a entender que los conoce.
+
+    Los días se cuentan de corrido y **después** se corre el resultado, que no es
+    lo mismo que contar dos días hábiles: un viernes más dos da domingo, y el
+    lunes es el hábil siguiente. Contar hábiles daría martes. Dos días de corrido
+    es lo que uno quiere decir con "te llamo en un par de días".
+    """
+    fecha = desde + timedelta(days=dias)
+    while fecha.weekday() in FIN_DE_SEMANA:
+        fecha += timedelta(days=1)
+    return fecha
+
+
+def seguimiento_por_defecto(fecha_movimiento: date, hoy: date) -> date:
+    """El seguimiento que se agenda cuando nadie indica uno.
+
+    **Se cuenta desde el más nuevo de los dos.** Anclarlo solo a la fecha del
+    movimiento haría que anotar hoy una gestión de hace tres meses agendara un
+    seguimiento vencido hace tres meses, y la bandeja se llenaría de vencidos que
+    nadie prometió. Anclarlo solo a hoy perdería el caso normal --la gestión es de
+    hoy y el seguimiento sale de ella--. Tomando el mayor, los dos casos dan lo
+    que uno esperaría.
+    """
+    return proximo_habil(max(fecha_movimiento, hoy))
 
 
 def _etapa_vigente(db: Session, tipo: EntityType, entity_id: int) -> str | None:
@@ -92,7 +134,15 @@ def crear_movimiento_canje(
     autor_id: int | None,
     comentario: str | None = None,
     fecha: datetime | None = None,
+    proximo_seguimiento: date | None = None,
 ) -> Movimiento:
+    """Registra la gestión y agenda cuándo hay que volver a mirar el canje.
+
+    `proximo_seguimiento` es opcional: si no viene, se agenda para dos días
+    corridos después, corrido al siguiente hábil si cae fin de semana. **Nunca
+    queda en nulo**, porque un canje sin seguimiento agendado vuelve a depender
+    del reloj de horas sin gestión, que es el proxy que esto vino a reemplazar.
+    """
     canje = db.get(Canje, canje_id)
     if canje is None:
         raise MovimientoError("Canje no encontrado")
@@ -103,6 +153,9 @@ def crear_movimiento_canje(
 
     _validar_fecha(fecha, canje.fecha_solicitud, "la fecha de solicitud del canje")
 
+    hoy = datetime.now(timezone.utc).date()
+    fecha_base = (fecha or datetime.now(timezone.utc)).date()
+
     movimiento = Movimiento(
         entity_type=EntityType.canje,
         entity_id=canje_id,
@@ -110,6 +163,11 @@ def crear_movimiento_canje(
         etapa_resultante=tipo.etapa_resultante,
         autor_id=autor_id,
         comentario=comentario,
+        proximo_seguimiento=(
+            proximo_seguimiento
+            if proximo_seguimiento is not None
+            else seguimiento_por_defecto(fecha_base, hoy)
+        ),
         **({"fecha": fecha} if fecha is not None else {}),
     )
     db.add(movimiento)

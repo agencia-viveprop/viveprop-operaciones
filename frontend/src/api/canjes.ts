@@ -102,7 +102,18 @@ export function importarCanjes(archivo: File): Promise<ImportarResumen> {
  * `sin_gestion` es un nivel aparte y no "crítico": nunca tocado y abandonado
  * tres días son problemas distintos. Ver el servicio del sprint 20.
  */
-export type NivelSemaforo = 'sin_gestion' | 'critico' | 'advertencia' | 'al_dia'
+/**
+ * Los dos primeros salen de un compromiso registrado --alguien agendó una fecha--
+ * y los cuatro siguientes del semáforo, que infiere urgencia del tiempo sin
+ * gestión. Cuando hay compromiso, manda el compromiso.
+ */
+export type NivelSemaforo =
+  | 'vencido'
+  | 'para_hoy'
+  | 'sin_gestion'
+  | 'critico'
+  | 'advertencia'
+  | 'al_dia'
 
 export type FilaBandeja = {
   canje_id: number
@@ -116,10 +127,25 @@ export type FilaBandeja = {
   horas_sin_gestion: number | null
   ultimo_movimiento: string | null
   ultimo_movimiento_nombre: string | null
+  /** Lo que se prometió: la fecha del movimiento más reciente que agendó algo. */
+  proximo_seguimiento: string | null
+  /** Días de atraso: positivo si venció, cero si es para hoy, nulo sin compromiso.
+   *  Lo calcula el servidor, para que el "hoy" no dependa del reloj del navegador. */
+  dias_de_atraso: number | null
 }
 
 export type Bandeja = {
-  resumen: { sin_gestion: number; critico: number; advertencia: number; al_dia: number }
+  resumen: {
+    vencido: number
+    para_hoy: number
+    sin_gestion: number
+    critico: number
+    advertencia: number
+    al_dia: number
+    /** Los agendados para más adelante. **No están en `filas`**: la pantalla se
+     *  llama «qué me toca hoy». Se cuentan para que se sepa que no se perdieron. */
+    agendados: number
+  }
   filas: FilaBandeja[]
   umbral_critico_horas: number
   umbral_advertencia_horas: number

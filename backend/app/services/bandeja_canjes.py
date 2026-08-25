@@ -13,7 +13,7 @@ críticos, la bandeja abriría con 194 filas rojas y el color dejaría de inform
 nada. "Nunca se tocó" y "se tocó y se dejó estar tres días" son problemas
 distintos y se resuelven distinto.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -27,7 +27,17 @@ UMBRAL_CRITICO = 48
 UMBRAL_ADVERTENCIA = 24
 
 # Orden de atención: primero lo que nunca se tocó, después lo más abandonado.
-PRIORIDAD = {"sin_gestion": 0, "critico": 1, "advertencia": 2, "al_dia": 3}
+# Los dos primeros salen de un compromiso registrado --alguien dijo "sigo el
+# jueves"-- y por eso van antes que el semáforo, que es una inferencia sobre
+# cuánto hace que nadie toca el canje.
+PRIORIDAD = {
+    "vencido": 0,
+    "para_hoy": 1,
+    "sin_gestion": 2,
+    "critico": 3,
+    "advertencia": 4,
+    "al_dia": 5,
+}
 
 
 class FilaBandeja(BaseModel):
@@ -43,17 +53,33 @@ class FilaBandeja(BaseModel):
     horas_sin_gestion: float | None
     ultimo_movimiento: datetime | None
     ultimo_movimiento_nombre: str | None
+    # Lo que se prometió: la fecha del movimiento más reciente que agendó algo.
+    # Nulo en los canjes que nunca se gestionaron desde la app.
+    proximo_seguimiento: date | None
+    # Días de atraso. Positivo si el seguimiento venció, cero si es para hoy,
+    # nulo si no hay compromiso. Va calculado para que la pantalla no reste
+    # fechas: el "hoy" del cálculo tiene que ser el del servidor.
+    dias_de_atraso: int | None
 
 
 class ResumenBandeja(BaseModel):
+    vencido: int
+    para_hoy: int
     sin_gestion: int
     critico: int
     advertencia: int
     al_dia: int
+    # Los que tienen seguimiento agendado para más adelante. **No están en
+    # `filas`**: la pantalla se llama "qué me toca hoy", y listar lo que no toca
+    # es lo que hace que se deje de mirar. Se cuentan para que se sepa que
+    # existen y que no se perdieron.
+    agendados: int
 
     @property
     def requieren_atencion(self) -> int:
-        return self.sin_gestion + self.critico + self.advertencia
+        return (
+            self.vencido + self.para_hoy + self.sin_gestion + self.critico + self.advertencia
+        )
 
 
 class Bandeja(BaseModel):
@@ -83,6 +109,8 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
     """
     ahora = ahora or datetime.now(timezone.utc)
 
+    hoy = ahora.date()
+
     # Último movimiento de cada canje, en una sola vuelta.
     ultimos = (
         select(
@@ -93,6 +121,25 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
         .group_by(Movimiento.entity_id)
         .subquery()
     )
+
+    # El compromiso vigente es el del movimiento más reciente, igual que la etapa
+    # (`D-052`). Se une por (canje, fecha) contra el subquery de máximos en vez de
+    # traer todos los movimientos y quedarse con el último en Python.
+    seguimientos: dict[int, date] = {
+        canje_id: seguimiento
+        for canje_id, seguimiento in db.execute(
+            select(Movimiento.entity_id, Movimiento.proximo_seguimiento)
+            .join(
+                ultimos,
+                (ultimos.c.canje_id == Movimiento.entity_id)
+                & (ultimos.c.fecha == Movimiento.fecha),
+            )
+            .where(
+                Movimiento.entity_type == EntityType.canje,
+                Movimiento.proximo_seguimiento.is_not(None),
+            )
+        ).all()
+    }
 
     filas = db.execute(
         select(Canje, ultimos.c.fecha)
@@ -120,7 +167,10 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
             nombres[canje_id] = nombre
 
     resultado: list[FilaBandeja] = []
-    conteo = {"sin_gestion": 0, "critico": 0, "advertencia": 0, "al_dia": 0}
+    conteo = {
+        "vencido": 0, "para_hoy": 0, "sin_gestion": 0,
+        "critico": 0, "advertencia": 0, "al_dia": 0, "agendados": 0,
+    }
 
     for canje, ultima in filas:
         if ultima is None:
@@ -130,7 +180,23 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
                 ultima = ultima.replace(tzinfo=timezone.utc)
             horas = round((ahora - ultima).total_seconds() / 3600, 1)
 
-        nivel = clasificar(horas)
+        seguimiento = seguimientos.get(canje.id)
+        atraso = (hoy - seguimiento).days if seguimiento is not None else None
+
+        # Un compromiso registrado manda sobre el semáforo: el semáforo infiere
+        # que algo está abandonado por el tiempo que pasó, y el compromiso dice
+        # qué se prometió. Cuando los dos opinan, gana el que no es una inferencia.
+        if atraso is None:
+            nivel = clasificar(horas)
+        elif atraso > 0:
+            nivel = "vencido"
+        elif atraso == 0:
+            nivel = "para_hoy"
+        else:
+            # Agendado para más adelante: se cuenta y no se lista.
+            conteo["agendados"] += 1
+            continue
+
         conteo[nivel] += 1
         resultado.append(
             FilaBandeja(
@@ -145,6 +211,8 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
                 horas_sin_gestion=horas,
                 ultimo_movimiento=ultima,
                 ultimo_movimiento_nombre=nombres.get(canje.id),
+                proximo_seguimiento=seguimiento,
+                dias_de_atraso=atraso,
             )
         )
 
@@ -153,6 +221,8 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
     resultado.sort(
         key=lambda f: (
             PRIORIDAD[f.nivel],
+            # Entre dos vencidos, el que lleva más días de atraso.
+            -(f.dias_de_atraso or 0),
             -(f.horas_sin_gestion or 0),
             f.fecha_solicitud,
         )
