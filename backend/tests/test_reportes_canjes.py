@@ -37,7 +37,7 @@ def cartera(db):
     _canje(db, 1, CanjeEtapa.EN_OFERTA, CanjeEstado.ACTIVO)
     _canje(db, 2, CanjeEtapa.EN_OFERTA, CanjeEstado.CANCELADO)
     _canje(db, 3, CanjeEtapa.EN_OFERTA, CanjeEstado.CANCELADO)
-    _canje(db, 4, CanjeEtapa.SIN_ETAPA, CanjeEstado.CANCELADO)
+    _canje(db, 4, CanjeEtapa.RECEPCION, CanjeEstado.CANCELADO)
     _canje(db, 5, CanjeEtapa.EN_NEGOCIO, CanjeEstado.ACTIVO)
     _canje(db, 6, CanjeEtapa.CERRADO, CanjeEstado.CANCELADO)
     db.commit()
@@ -54,8 +54,8 @@ def test_cada_etapa_trae_su_total_y_su_desglose(cartera):
     negocio = por_etiqueta["En negocio"]
     assert (negocio.cantidad, negocio.activos, negocio.cancelados) == (1, 1, 0)
 
-    sin_etapa = por_etiqueta["Sin etapa"]
-    assert (sin_etapa.cantidad, sin_etapa.activos, sin_etapa.cancelados) == (1, 0, 1)
+    recepcion = por_etiqueta["Recepción"]
+    assert (recepcion.cantidad, recepcion.activos, recepcion.cancelados) == (1, 0, 1)
 
 
 def test_las_seis_etapas_aparecen_siempre_aunque_esten_en_cero(cartera):

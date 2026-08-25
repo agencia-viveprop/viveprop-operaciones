@@ -57,7 +57,7 @@ class CanjeCreate(BaseModel):
     id: int
     fecha_solicitud: datetime
     estado: CanjeEstado = CanjeEstado.ACTIVO
-    etapa: CanjeEtapa = CanjeEtapa.SIN_ETAPA
+    etapa: CanjeEtapa = CanjeEtapa.RECEPCION
     corredor_solicitante_nombre: str | None = None
     corredor_solicitante_email: str | None = None
     corredor_propietario_nombre: str | None = None
@@ -227,6 +227,10 @@ class MovimientoCreate(BaseModel):
     # Opcional. Sin él, el servicio agenda dos días corridos hacia adelante,
     # corridos al siguiente hábil si caen fin de semana.
     proximo_seguimiento: date | None = None
+    # Dónde queda el canje. Opcional en la API para no romper a quien llame sin
+    # ella --se cae al `etapa_resultante` del tipo, como antes--, pero la pantalla
+    # la pide siempre: el tipo dice qué se hizo y la etapa dónde quedó.
+    etapa: CanjeEtapa | None = None
 
 
 def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
@@ -272,6 +276,7 @@ def crear_movimiento(
             payload.comentario,
             payload.fecha,
             payload.proximo_seguimiento,
+            payload.etapa,
         )
     except MovimientoError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

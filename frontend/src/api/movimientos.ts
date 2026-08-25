@@ -65,6 +65,9 @@ export function crearMovimientoCanje(
     /** Cuándo volver a mirar el canje. Sin él, el servidor agenda dos días
      *  corridos hacia adelante, corridos al lunes si caen fin de semana. */
     proximo_seguimiento?: string
+    /** Dónde queda el canje. Es un dato aparte del tipo: el tipo dice qué se
+     *  hizo y la etapa dónde quedó. */
+    etapa?: string
   },
 ): Promise<Movimiento> {
   return fetch(`/api/canjes/${canjeId}/movimientos`, {

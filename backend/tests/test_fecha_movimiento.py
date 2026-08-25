@@ -42,7 +42,7 @@ def canje(db):
         id=500,
         fecha_solicitud=SOLICITUD,
         estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.SIN_ETAPA,
+        etapa=CanjeEtapa.RECEPCION,
         comuna="Santiago",
     ))
     db.commit()
@@ -160,7 +160,7 @@ def test_nada_se_guarda_cuando_la_fecha_se_rechaza(canje):
     assert canje.query(Movimiento).count() == 0
     c = canje.get(Canje, 500)
     assert c.gestionado_en_app is False
-    assert c.etapa == CanjeEtapa.SIN_ETAPA
+    assert c.etapa == CanjeEtapa.RECEPCION
 
 
 # ------------------------------------------------------------------ negocios
@@ -338,11 +338,16 @@ def test_la_cancelacion_no_se_revierte_con_gestion_posterior(canje):
 # ---------------------------------------------------- borrar un movimiento
 
 
-def test_borrar_el_unico_movimiento_devuelve_la_etapa_a_sin_etapa(canje):
-    """El caso real: un canje con una sola gestion, registrada por error.
+def test_borrar_el_unico_movimiento_no_borra_la_etapa(canje):
+    """La etapa **no** se resetea, y eso se corrigio despues de romperlo.
 
-    La etapa la puso ese movimiento. Al borrarlo no queda nada que la sostenga,
-    asi que el canje vuelve a como llego de Dataprop.
+    La primera version la devolvia a `RECEPCION` razonando que la habia puesto el
+    movimiento borrado. Es cierto para un canje creado en la app y falso para los
+    297 que vinieron de Dataprop: su etapa la trajo el export y ninguno de sus
+    movimientos migrados declara una. Medido: borrar cualquier movimiento del canje
+    360 lo mandaba de «En oferta» a «Recepcion».
+
+    Quedarse con una etapa vieja es preferible a borrar una que era correcta.
     """
     from app.models.movimiento import Movimiento
     from app.services.movimientos import eliminar_movimiento_canje
@@ -354,7 +359,7 @@ def test_borrar_el_unico_movimiento_devuelve_la_etapa_a_sin_etapa(canje):
     eliminar_movimiento_canje(canje, 500, m.id)
 
     c = canje.get(Canje, 500)
-    assert c.etapa == CanjeEtapa.SIN_ETAPA
+    assert c.etapa == CanjeEtapa.EN_REVISION, "la etapa sobrevive al borrado"
     assert canje.get(Movimiento, m.id) is None
     # Y el canje sigue marcado como gestionado en la app: esa marca tambien la
     # pone editarlo a mano, asi que revertirla dejaria que la importacion
@@ -445,7 +450,7 @@ def test_no_se_puede_borrar_un_movimiento_de_otro_canje(canje):
 
     canje.add(Canje(
         id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.SIN_ETAPA, comuna="Santiago",
+        etapa=CanjeEtapa.RECEPCION, comuna="Santiago",
     ))
     canje.commit()
     m = crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None)
@@ -466,7 +471,8 @@ def test_el_endpoint_borra_y_devuelve_204(cliente, canje):
 
     assert r.status_code == 204, r.text
     assert cliente.get("/api/canjes/500/movimientos").json() == []
-    assert cliente.get("/api/canjes/500").json()["etapa"] == "SIN_ETAPA"
+    # La etapa no se resetea: ver `test_borrar_el_unico_movimiento_no_borra_la_etapa`.
+    assert cliente.get("/api/canjes/500").json()["etapa"] == "EN_REVISION"
 
 
 def test_el_endpoint_rechaza_un_movimiento_de_otro_canje(cliente, canje):
@@ -474,7 +480,7 @@ def test_el_endpoint_rechaza_un_movimiento_de_otro_canje(cliente, canje):
     porque el canje no exista --que es otro error y otro camino."""
     canje.add(Canje(
         id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.SIN_ETAPA, comuna="Santiago",
+        etapa=CanjeEtapa.RECEPCION, comuna="Santiago",
     ))
     canje.commit()
     creado = cliente.post(

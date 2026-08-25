@@ -1,5 +1,5 @@
 export type CanjeEstado = 'ACTIVO' | 'CANCELADO'
-export type CanjeEtapa = 'SIN_ETAPA' | 'EN_REVISION' | 'PROCESO_DE_ACUERDO' | 'EN_OFERTA' | 'EN_NEGOCIO' | 'CERRADO'
+export type CanjeEtapa = 'RECEPCION' | 'EN_REVISION' | 'PROCESO_DE_ACUERDO' | 'EN_OFERTA' | 'EN_NEGOCIO' | 'CERRADO'
 export type OperacionTipo = 'VENTA' | 'ARRIENDO' | 'OTRO'
 export type MonedaTipo = 'CLP' | 'UF' | 'OTRA'
 

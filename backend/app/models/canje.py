@@ -14,7 +14,10 @@ class CanjeEstado(str, enum.Enum):
 
 
 class CanjeEtapa(str, enum.Enum):
-    SIN_ETAPA = "SIN_ETAPA"
+    # Un canje que entró y no avanzó. Se llamaba `SIN_ETAPA` --que describía la
+    # ausencia de dato en el export de Dataprop, no un estado del negocio-- y la
+    # migración `b8f3a71c904e` lo renombró.
+    RECEPCION = "RECEPCION"
     EN_REVISION = "EN_REVISION"
     PROCESO_DE_ACUERDO = "PROCESO_DE_ACUERDO"
     EN_OFERTA = "EN_OFERTA"
@@ -56,7 +59,7 @@ class Canje(Base):
     fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     estado: Mapped[CanjeEstado] = mapped_column(Enum(CanjeEstado, name="canje_estado"), nullable=False, default=CanjeEstado.ACTIVO)
-    etapa: Mapped[CanjeEtapa] = mapped_column(Enum(CanjeEtapa, name="canje_etapa"), nullable=False, default=CanjeEtapa.SIN_ETAPA)
+    etapa: Mapped[CanjeEtapa] = mapped_column(Enum(CanjeEtapa, name="canje_etapa"), nullable=False, default=CanjeEtapa.RECEPCION)
 
     corredor_solicitante_nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     corredor_solicitante_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

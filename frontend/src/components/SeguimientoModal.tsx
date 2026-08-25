@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
@@ -47,13 +47,23 @@ function ahoraLocal(): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
 }
 
+/** El orden de avance, que es el de lectura del selector. */
+const ETAPAS = [
+  'RECEPCION',
+  'EN_REVISION',
+  'PROCESO_DE_ACUERDO',
+  'EN_OFERTA',
+  'EN_NEGOCIO',
+  'CERRADO',
+] as const
+
 const ETAPA_LABELS: Record<string, string> = {
-  SIN_ETAPA: 'Sin etapa',
+  RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
   PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
   EN_OFERTA: 'En oferta',
   EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cerrado',
+  CERRADO: 'Cierre',
 }
 
 export default function SeguimientoModal({
@@ -62,11 +72,14 @@ export default function SeguimientoModal({
   onClose,
   puedeEditar,
   gestionadoEnApp,
+  etapaActual,
 }: {
   canjeId: number | null
   opened: boolean
   onClose: () => void
   puedeEditar: boolean
+  /** La etapa en la que está el canje, para precargar el selector. */
+  etapaActual?: string
   /** Si el canje quedó marcado como gestionado en la app. Opcional porque no
    *  todos los lugares que abren este modal tienen el canje completo a mano. */
   gestionadoEnApp?: boolean
@@ -86,6 +99,10 @@ export default function SeguimientoModal({
   // fin de semana. Se deja vacío por defecto para que el caso habitual --seguir
   // en un par de días-- no pida escribir nada.
   const [seguimiento, setSeguimiento] = useState('')
+  // La etapa donde queda el canje. Arranca en la que tiene: lo habitual es que
+  // una gestión no lo mueva, y pedir la decisión en cada llamada sería fricción
+  // por un dato que casi siempre es el mismo.
+  const [etapa, setEtapa] = useState<string | null>(etapaActual ?? null)
 
   const { data: movimientos, isLoading } = useQuery({
     queryKey: ['movimientos', canjeId],
@@ -120,6 +137,7 @@ export default function SeguimientoModal({
         // instante. Mandarlo con hora lo haría depender del huso para saber si
         // "el jueves" es jueves.
         proximo_seguimiento: seguimiento || undefined,
+        etapa: etapa ?? undefined,
       }),
     onSuccess: () => {
       // La bandeja también: su semáforo se mide desde el último movimiento, y
@@ -144,6 +162,12 @@ export default function SeguimientoModal({
     setConfirmando(null)
     onClose()
   }
+
+  // Se repuebla cuando cambia el canje: si no, abrir el seguimiento de otro
+  // mostraría la etapa del anterior.
+  useEffect(() => {
+    setEtapa(etapaActual ?? null)
+  }, [canjeId, etapaActual])
 
   return (
     <Modal opened={opened} onClose={cerrar} title={`Seguimiento — Canje #${canjeId}`} size="md">
@@ -243,13 +267,32 @@ export default function SeguimientoModal({
                 opcional al final, y es justamente lo que hay que corregir
                 cuando se anota gestión de días pasados. */}
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
+              {/* Los dos van juntos y en este orden porque son dos preguntas
+                  sobre la misma gestión: qué se hizo, y dónde quedó el canje.
+                  Antes la segunda salía implícita de la primera, lo que hacía
+                  imposible avanzar un canje con una llamada de seguimiento. */}
               <Select
                 label="Tipo de movimiento"
                 placeholder="Selecciona un tipo"
+                description="Qué se hizo"
                 data={tipos?.map((t) => ({ value: t.codigo, label: t.nombre })) ?? []}
                 value={tipoSeleccionado}
                 onChange={setTipoSeleccionado}
               />
+              <Select
+                label="Etapa"
+                placeholder="Selecciona una etapa"
+                description="Dónde queda el canje"
+                data={ETAPAS.map((e) => ({ value: e, label: ETAPA_LABELS[e] }))}
+                value={etapa}
+                onChange={setEtapa}
+              />
+            </SimpleGrid>
+
+            {/* Las dos fechas juntas: cuándo pasó y cuándo se sigue. Los dos
+                selectores de arriba describen la gestión; estas dos la ubican en
+                el tiempo. */}
+            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
               <TextInput
                 label="Fecha y hora"
                 type="datetime-local"
@@ -258,20 +301,24 @@ export default function SeguimientoModal({
                 value={fecha}
                 onChange={(e) => setFecha(e.currentTarget.value)}
               />
+
+              <TextInput
+                label="Próximo seguimiento"
+                type="date"
+                description={`Vacío = en ${DIAS_SEGUIMIENTO} días`}
+                min={hoyLocal()}
+                value={seguimiento}
+                onChange={(e) => setSeguimiento(e.currentTarget.value)}
+              />
             </SimpleGrid>
 
-            {/* El próximo seguimiento va en su propia fila y no junto a los
-                otros dos: los de arriba describen la gestión que ya pasó, este
-                compromete la que viene. Es lo que después ordena «Qué me toca
-                hoy», así que conviene que no se lea como un detalle más. */}
-            <TextInput
-              label="Próximo seguimiento"
-              type="date"
-              description={`Vacío = en ${DIAS_SEGUIMIENTO} días, corrido al lunes si cae fin de semana. Los feriados no se saltan todavía.`}
-              min={hoyLocal()}
-              value={seguimiento}
-              onChange={(e) => setSeguimiento(e.currentTarget.value)}
-            />
+            {/* La regla completa va acá y no en la descripción del campo: ahí no
+                cabía sin partirse en tres líneas y empujar el resto del
+                formulario. */}
+            <Text size="xs" c="dimmed">
+              Sin fecha de seguimiento se agenda en {DIAS_SEGUIMIENTO} días, corridos al lunes
+              si caen fin de semana. Los feriados todavía no se saltan.
+            </Text>
             <Textarea
               label="Comentario"
               placeholder="Opcional"

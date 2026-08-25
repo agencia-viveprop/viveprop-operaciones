@@ -36,12 +36,12 @@ import SeguimientoModal from '../components/SeguimientoModal'
 import PageHeader from '../components/PageHeader'
 
 const ETAPA_LABELS: Record<CanjeEtapa, string> = {
-  SIN_ETAPA: 'Sin etapa',
+  RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
   PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
   EN_OFERTA: 'En oferta',
   EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cerrado',
+  CERRADO: 'Cierre',
 }
 
 const ESTADOS: CanjeEstado[] = ['ACTIVO', 'CANCELADO']
@@ -70,7 +70,7 @@ function vacio() {
     comision_dbrokers_moneda: '',
     notas: '',
     estado: 'ACTIVO' as CanjeEstado,
-    etapa: 'SIN_ETAPA' as CanjeEtapa,
+    etapa: 'RECEPCION' as CanjeEtapa,
   }
 }
 
@@ -451,6 +451,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         onClose={() => setSeguimientoId(null)}
         puedeEditar={puedeEditar}
         gestionadoEnApp={canjes?.find((c) => c.id === seguimientoId)?.gestionado_en_app}
+        etapaActual={canjes?.find((c) => c.id === seguimientoId)?.etapa}
       />
     </Stack>
   )

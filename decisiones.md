@@ -1198,3 +1198,29 @@ Los niveles pasan a ser seis: `vencido` y `para_hoy` salen de un compromiso regi
 ### El error que corrigió mirarlo renderizado
 
 **El contador de «Requieren atención» no incluía los niveles nuevos.** Seguía sumando los tres del semáforo, así que el chip decía «Requieren atención (2)» sobre una tabla de seis filas. Un contador que no cuadra con su propia lista no se vuelve a creer. Y el subtítulo contaba como abiertos solo los listados, dejando afuera a los agendados —que están abiertos, solo que su día no es hoy—: decía «2 de 6» donde eran 6 de 12.
+
+---
+
+## D-060 · Etapa y tipo de movimiento son dos datos, no uno
+
+**Contexto.** Registrar una gestión de canje pedía un solo dato —el tipo— y la etapa salía implícita de él: `ACUERDO_FIRMADO` movía el canje a «Proceso de acuerdo», `CLIENTE_CALIFICADO` no lo movía a ninguna parte. Eso ataba dos cosas que no son la misma: **qué se hizo** y **dónde quedó el canje**. Con una llamada de seguimiento no había forma de decir que el canje avanzó, ni de avanzarlo sin inventar un tipo de movimiento que lo hiciera.
+
+**Decisión: dos selectores que conviven en el mismo registro**, y la etapa elegida gana sobre la del tipo.
+
+**La etapa viene precargada con la del canje.** Lo habitual es que una gestión no lo mueva, y pedir la decisión en cada llamada sería fricción por un dato que casi siempre es el mismo. Registrar la misma etapa dos veces no es ruido: la línea de tiempo queda diciendo "el 10 de julio seguía en revisión", que es un dato.
+
+**El cambio es aditivo.** Sin etapa indicada se cae al `etapa_resultante` del tipo, que es lo que hacía antes. Eso mantiene funcionando a la migración de cancelación masiva y a cualquier llamador que no pase el parámetro, y deja el pipeline de negocios —que sí usa `etapa_resultante`— intacto.
+
+**Los 13 tipos que salen del selector no se borran: pasan a `activo = false`.** 605 movimientos los referencian y son la línea de tiempo de los 297 canjes. Inactivo quiere decir "no se ofrece más", no "no existió", y la ficha de un canje sigue mostrando «Validación solicitante» como siempre. `CANCELACION` se queda activa aunque no esté en la lista nueva: es la única forma de dejar registrado **cuándo y por qué** se canceló un canje —editar el estado a mano lo cambia sin dejar rastro—.
+
+**`SIN_ETAPA` pasa a llamarse `RECEPCION`.** No es cosmético: el valor significaba "Dataprop no mandó etapa", y la etapa de un canje que entró y no avanzó es «Recepción». Se hizo con `ALTER TYPE ... RENAME VALUE`, que es atómico y no toca ninguna fila; la migración verifica antes que ningún `etapa_resultante` guarde ese texto, para no dejar strings colgando.
+
+**`CERRADO` no se renombró a `CIERRE`**, y también es deliberado: ahí el cambio sería puramente de rótulo —es la misma etapa— y ese valor sí está guardado como texto en `movimientos.etapa_resultante`. Renombrarlo obligaría a actualizar esas filas para ganar nada. Se muestra «Cierre» y se guarda `CERRADO`.
+
+### El defecto que apareció probándolo, y que yo mismo provoqué
+
+**Borrar un movimiento reseteaba la etapa a `RECEPCION`.** `D-053` lo justificaba así: "la etapa la puso el movimiento que se acaba de borrar y no hay nada más que la sostenga". Eso es cierto para un canje creado en la app y **falso para los 297 que vinieron de Dataprop**: su etapa la trajo el export, y ninguno de sus movimientos migrados declara una.
+
+Lo medí encima: verificando esto borré un movimiento del canje 360 y lo mandé de «En oferta» a «Recepción», perdiendo un dato que el borrado no había puesto. Tuve que restaurarlo comparando contra la salida de una verificación anterior de esta misma sesión.
+
+Ahora la etapa **solo se mueve si queda algún movimiento que declare una**. Si ninguno lo hace, no se toca: quedarse con una etapa vieja es preferible a borrar una que era correcta.

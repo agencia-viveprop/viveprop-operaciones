@@ -135,8 +135,19 @@ def crear_movimiento_canje(
     comentario: str | None = None,
     fecha: datetime | None = None,
     proximo_seguimiento: date | None = None,
+    etapa: CanjeEtapa | None = None,
 ) -> Movimiento:
     """Registra la gestión y agenda cuándo hay que volver a mirar el canje.
+
+    **`etapa` y `tipo_codigo` son dos datos distintos y conviven.** El tipo dice
+    qué se hizo --una llamada, un WhatsApp-- y la etapa dónde quedó el canje. Antes
+    la etapa salía implícita del tipo, lo que ataba las dos cosas: con una llamada
+    de seguimiento no había forma de decir que el canje avanzó, ni de avanzarlo sin
+    inventar un tipo que lo hiciera.
+
+    Si no se indica etapa se cae al `etapa_resultante` del tipo, que es lo que
+    hacía antes. Eso mantiene funcionando a quien llame sin el parámetro --la
+    migración de cancelación masiva, por ejemplo-- y deja el cambio aditivo.
 
     `proximo_seguimiento` es opcional: si no viene, se agenda para dos días
     corridos después, corrido al siguiente hábil si cae fin de semana. **Nunca
@@ -153,6 +164,11 @@ def crear_movimiento_canje(
 
     _validar_fecha(fecha, canje.fecha_solicitud, "la fecha de solicitud del canje")
 
+    # La etapa elegida gana sobre la del tipo. Se guarda como texto en el
+    # movimiento --igual que antes-- para que la línea de tiempo diga a dónde
+    # movió cada gestión.
+    etapa_del_registro = etapa.value if etapa is not None else tipo.etapa_resultante
+
     hoy = datetime.now(timezone.utc).date()
     fecha_base = (fecha or datetime.now(timezone.utc)).date()
 
@@ -160,7 +176,7 @@ def crear_movimiento_canje(
         entity_type=EntityType.canje,
         entity_id=canje_id,
         tipo_movimiento=tipo.codigo,
-        etapa_resultante=tipo.etapa_resultante,
+        etapa_resultante=etapa_del_registro,
         autor_id=autor_id,
         comentario=comentario,
         proximo_seguimiento=(
@@ -208,9 +224,16 @@ def eliminar_movimiento_canje(db: Session, canje_id: int, movimiento_id: int) ->
 
     **Lo que arrastra se recalcula, no se adivina.**
 
-    - La etapa se vuelve a derivar de los movimientos que quedan. Si no queda
-      ninguno, vuelve a `SIN_ETAPA`: la etapa la puso el movimiento que se acaba
-      de borrar y no hay nada más que la sostenga.
+    - La etapa se vuelve a derivar de los movimientos que quedan **cuando alguno
+      declara una**. Si ninguno lo hace, la etapa del canje **no se toca**.
+
+      La primera versión la devolvía a `RECEPCION` en ese caso, razonando que la
+      etapa la había puesto el movimiento borrado. Eso es cierto para un canje
+      creado en la app y **falso para los 297 que vinieron de Dataprop**: su
+      etapa la trajo el export, y ninguno de sus movimientos migrados declara
+      una. Medido: borrar cualquier movimiento del canje 360 lo mandaba de «En
+      oferta» a «Recepción», perdiendo un dato que el borrado no había puesto.
+      Quedarse con una etapa vieja es preferible a borrar una que era correcta.
     - Si el borrado era la cancelación y no queda otra, el canje vuelve a
       `ACTIVO`. Registrarla fue el error, así que el canje no estaba cancelado.
     - **`gestionado_en_app` no se toca.** Es tentador devolverlo a `False` cuando
@@ -238,8 +261,11 @@ def eliminar_movimiento_canje(db: Session, canje_id: int, movimiento_id: int) ->
     # de abajo y el recalculo daria lo mismo que antes.
     db.flush()
 
+    # Solo se mueve si queda quien sostenga una etapa. Ver el docstring: resetear
+    # cuando no queda ninguna borraba la etapa que vino del import.
     vigente = _etapa_vigente(db, EntityType.canje, canje_id)
-    canje.etapa = CanjeEtapa(vigente) if vigente is not None else CanjeEtapa.SIN_ETAPA
+    if vigente is not None:
+        canje.etapa = CanjeEtapa(vigente)
 
     if era_cancelacion:
         queda_otra = db.scalar(

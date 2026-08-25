@@ -106,7 +106,7 @@ def test_etapa_vacia_cae_en_sin_etapa(db, fila, construir_xlsx):
 
     importar_canjes(db, construir_xlsx([f]))
 
-    assert db.get(Canje, 701).etapa == CanjeEtapa.SIN_ETAPA
+    assert db.get(Canje, 701).etapa == CanjeEtapa.RECEPCION
 
 
 def test_una_consulta_y_un_commit_para_todo_el_archivo(db, fila, construir_xlsx, monkeypatch):

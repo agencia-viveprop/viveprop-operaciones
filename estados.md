@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Etapa y tipo de movimiento, dos campos que conviven
+
+Pedido tuyo: además del tipo de movimiento, que exista Etapa; que las dos coexistan y se relacionen para el historial y para reportes consolidados de línea de tiempo; y que las dos funcionen como funciona hoy el tipo.
+
+Hecho. Antes la etapa salía implícita del tipo --`ACUERDO_FIRMADO` movía el canje a «Proceso de acuerdo»-- lo que ataba **qué se hizo** con **dónde quedó**: con una llamada de seguimiento no había forma de decir que el canje avanzó. Ahora son dos selectores, y la etapa viene precargada con la que tiene el canje, porque lo habitual es que una gestión no lo mueva.
+
+**Los catálogos, con tus listas.** Etapa: Recepción · En revisión · Proceso de acuerdo · En oferta · En negocio · Cierre. Tipo: Gestión Inicial · Seguimiento - Llamado · Seguimiento - Whatsapp · Respuesta Corredor, más **Cancelación**, que dejaste aparte porque es la única forma de dejar registrado en la línea de tiempo cuándo y por qué se canceló.
+
+Los 15 tipos que salen del selector pasaron a `activo = false`: **no se borran**, porque 605 movimientos los referencian y son la línea de tiempo de los 297 canjes. La ficha sigue mostrando «Validación solicitante» como siempre.
+
+`SIN_ETAPA` se renombró a `RECEPCION` --el valor significaba "Dataprop no mandó etapa", y la etapa de un canje que entró y no avanzó es Recepción--. `CERRADO` se muestra como «Cierre» pero se guarda igual: ese valor está escrito como texto en `movimientos.etapa_resultante` y renombrarlo pediría actualizar filas para ganar nada. Ver `D-060`.
+
+**Un defecto que apareció probándolo, y que provoqué yo.** Borrar un movimiento reseteaba la etapa a Recepción. `D-053` lo justificaba diciendo que la etapa la había puesto el movimiento borrado --cierto para un canje creado en la app, **falso para los 297 que vinieron de Dataprop**, cuya etapa trajo el export--. Borré un movimiento del canje 360 y lo mandé de «En oferta» a «Recepción»; tuve que restaurarlo. Ahora la etapa solo se mueve si queda algún movimiento que declare una.
+
+**Verificado en vivo contra `dev`:** la API ofrece los 5 tipos y ninguno impone etapa; registrar `SEG_LLAMADO` con etapa `EN_NEGOCIO` movió el canje, y borrar el movimiento lo devolvió a `EN_OFERTA`. Los datos quedaron como estaban: 75 en Recepción y el 360 en En oferta.
+
+**Verificado:** 606 tests, `alembic check` limpio, build y lint sin hallazgos, el modal revisado en captura.
+
 ### 2026-08-25 · Fecha de próximo seguimiento, y «Qué me toca hoy» la usa
 
 Pedido tuyo: al registrar un movimiento de canje, poder agendar el próximo seguimiento --opcional--, que eso ordene «Qué me toca hoy», y que si no se indica nada se agende para dos días hacia adelante, corridos al día hábil siguiente si caen sábado, domingo o feriado.

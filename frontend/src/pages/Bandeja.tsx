@@ -87,12 +87,12 @@ function atraso(dias: number | null): string {
 }
 
 const ETAPA_LABELS: Record<string, string> = {
-  SIN_ETAPA: 'Sin etapa',
+  RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
   PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
   EN_OFERTA: 'En oferta',
   EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cerrado',
+  CERRADO: 'Cierre',
 }
 
 function espera(f: FilaBandeja): string {
@@ -356,6 +356,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         opened={seguimientoId !== null}
         onClose={() => setSeguimientoId(null)}
         puedeEditar={puedeEditar}
+        etapaActual={filas.find((f) => f.canje_id === seguimientoId)?.etapa}
       />
     </Stack>
   )

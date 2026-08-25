@@ -30,12 +30,12 @@ import { clp, fecha } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 
 const ETAPA_LABELS: Record<string, string> = {
-  SIN_ETAPA: 'Sin etapa',
+  RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
   PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
   EN_OFERTA: 'En oferta',
   EN_NEGOCIO: 'En negocio',
-  CERRADO: 'Cerrado',
+  CERRADO: 'Cierre',
 }
 
 const etapaTexto = (e: string | null) => (e ? (ETAPA_LABELS[e] ?? e) : '—')
