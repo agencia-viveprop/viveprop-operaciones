@@ -178,7 +178,60 @@ def test_el_listado_suma_los_hitos_sin_duplicar(cliente, base_negocios):
 
     assert fila["cantidad_hitos"] == 1
     assert fila["direccion"] == "Mario Kreutzberger 1520"
-    assert D(fila["comision_total"]) == D("858289.61")
+    # El hito de VVP-4 está PERDIDO, así que su plata va a "no concretada" y no
+    # se cuela en las otras dos columnas.
+    assert D(fila["comision_no_concretada"]) == D("308984.26")
+    assert D(fila["comision_ganada"]) == D("0")
+    assert D(fila["comision_pipeline"]) == D("0")
+
+
+def test_el_listado_no_mezcla_lo_ganado_con_lo_potencial(cliente, base_negocios):
+    """La promesa ganada y la escritura abierta, en el mismo negocio.
+
+    Es el caso que rompía la versión anterior: había un solo par de columnas que
+    sumaba todas las liquidaciones del negocio, así que este negocio mostraba
+    plata efectiva y plata potencial en la misma cifra. No se notaba con los
+    datos de hoy --los negocios abiertos no tienen cerradas encima-- y es el
+    caso normal en cuanto uno cierre una promesa.
+    """
+    cuerpo = _payload_vvp4()
+    promesa = dict(cuerpo["hitos"][0], nombre="PROMESA", estado="CERRADO",
+                   fecha_cierre="2026-02-01")
+    escritura = dict(cuerpo["hitos"][0], nombre="ESCRITURA", estado="ACTIVO")
+    cuerpo["hitos"] = [promesa, escritura]
+    assert cliente.post("/api/negocios", json=cuerpo).status_code == 201
+
+    fila = cliente.get("/api/negocios").json()[0]
+    assert fila["cantidad_hitos"] == 2
+    # Mismos datos en las dos, y aun así el monto es más alto que el del test de
+    # arriba: ahí la liquidación estaba PERDIDA y una perdida no genera rebate
+    # del concentrador. Sirve de comprobación cruzada de que cada columna está
+    # leyendo el hito de su propio estado y no repartiendo un total.
+    assert D(fila["comision_ganada"]) == D("411979.01")
+    assert D(fila["comision_pipeline"]) == D("411979.01")
+    assert D(fila["comision_no_concretada"]) == D("0")
+
+
+def test_el_filtro_por_estado_no_cambia_los_montos(cliente, base_negocios):
+    """Filtrar decide qué negocios se ven, no qué plata se suma.
+
+    Antes las dos cosas estaban enredadas: el filtro elegía los negocios y las
+    columnas sumaban todo, así que el total al pie de la tabla cambiaba de
+    significado según el filtro puesto. Ahora cada columna dice lo mismo con
+    cualquier filtro, y el que suma es quien lee.
+    """
+    cuerpo = _payload_vvp4()
+    promesa = dict(cuerpo["hitos"][0], nombre="PROMESA", estado="CERRADO",
+                   fecha_cierre="2026-02-01")
+    escritura = dict(cuerpo["hitos"][0], nombre="ESCRITURA", estado="ACTIVO")
+    cuerpo["hitos"] = [promesa, escritura]
+    cliente.post("/api/negocios", json=cuerpo)
+
+    completo = cliente.get("/api/negocios").json()[0]
+    filtrado = cliente.get("/api/negocios?estado=ACTIVO").json()[0]
+
+    for campo in ("comision_ganada", "comision_pipeline", "comision_no_concretada"):
+        assert filtrado[campo] == completo[campo]
 
 
 def test_la_propiedad_se_reusa_en_el_reintento(cliente, base_negocios):

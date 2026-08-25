@@ -1280,3 +1280,43 @@ La primera corrida de esta verificación dio un resultado **falso**: dijo que la
 **Va como `String(20)` y no como tipo enumerado de Postgres**, igual que `etapa_resultante` en la misma tabla y por el mismo motivo: `movimientos` es polimórfica —sirve a canjes y a negocios— y un valor que solo tiene sentido en un dominio no debería imponerle un tipo a la columna que comparten. La validación la hace Pydantic en la API, que es donde el dominio se conoce; se verificó que un valor inventado devuelve 422.
 
 **Los 605 migrados quedan en nulo.** El Excel no traía el dato. Nulo dice la verdad —"no se sabe"— y rellenar la columna adivinando un corredor habría sido inventar historial.
+
+---
+
+## D-063 · Cantidades junto a los montos, y el potencial separado de lo efectivo
+
+**Contexto.** El tablero de negocios abría con tres montos y las cantidades vivían en la letra chica del pie de cada uno: *"7 liquidaciones en 6 negocios"*. La pregunta "cuántos negocios tengo en el ciclo" se contestaba leyendo un renglón de 11 píxeles, mientras la de canjes abre con Total, Activos, Cancelados y Tasa en número grande.
+
+**Y había algo peor que una omisión.** El listado de Negocios tenía un solo par de columnas de plata que sumaba **todas** las liquidaciones de cada negocio: ganadas, no concretadas y abiertas en la misma cifra. El filtro por estado no lo arreglaba, porque decide **qué negocios aparecen**, no **qué plata se suma** — filtrar «Activo» y leer el total daba un número que mezclaba plata efectiva con plata potencial. Con los datos de hoy no se notaba, porque los 2 negocios abiertos no tienen ninguna liquidación cerrada encima; se rompía el día que un negocio tuviera la promesa ganada y la escritura abierta, que es el caso normal.
+
+### Decisión 1: en el listado, tres columnas de plata en vez de una
+
+**Ganado · En pipeline · No concretado**, las tres en comisión real ViveProp. Cada fila dice cuánto de ese negocio ya entró, cuánto podría entrar y cuánto no entró, y el pie da los tres totales por separado.
+
+Así el número es correcto **con cualquier filtro puesto**, en vez de depender de que el filtro y la columna coincidan por casualidad. Un test lo fija: el mismo negocio, con y sin filtro, devuelve las mismas tres cifras.
+
+**Se fue la columna de comisión total bruta.** Era la que mezclaba estados, y conservarla "de referencia" habría dejado la trampa intacta al lado del arreglo. El bruto por liquidación sigue en la ficha, que es donde se lo mira para trabajar.
+
+**El cero se muestra como guion.** Casi todos los negocios tienen plata en una sola de las tres columnas: dos `$0` escritos en cada fila tapan el único número que esa fila tiene para decir.
+
+**El helper reusa `BUCKETS` de la reportería** en vez de repetir la lista de estados. Si algún día `DESISTIDO` deja de contar como no concretado, el listado y el tablero se mueven juntos o van a decir cosas distintas de la misma plata.
+
+### Decisión 2: en el tablero, una fila de cantidades antes de los montos
+
+Negocios · Ganados · En pipeline · No concretados. **El número grande es de negocios y el chico de liquidaciones**, y las dos unidades van juntas porque ninguna reemplaza a la otra: 7 liquidaciones pueden ser 6 negocios, y ahí "6" y "7" contestan preguntas distintas.
+
+Los tiles de plata dejaron de repetir esos conteos: dichos dos veces, el ojo los lee como dos datos distintos.
+
+**La tasa de cierre deja las abiertas afuera del denominador** — es ganadas sobre resueltas, 41,2% hoy. Si las abiertas entraran, abrir un negocio nuevo haría **bajar** la tasa de cierre sin que se haya perdido nada, que es lo contrario de lo que el número debe decir.
+
+**Los conteos de negocios pueden sumar más que el total, y se mide en vez de suponerse.** Un negocio con liquidaciones en dos estados está en dos recuadros. La pantalla calcula la diferencia y solo cuando existe escribe cuántos son, para que la resta no quede como un descuadre sin explicación. Hoy da 0. En liquidaciones nunca puede pasar: cada una tiene un estado y uno solo, y un test fija que los tres buckets suman exacto el total.
+
+**`total_negocios` y `total_hitos` no violan `D-006`.** Ese principio prohíbe totalizar los tres **montos**, porque sumar plata que entró con plata que no entró da un número sin significado. Estos dos son conteos del universo y salen de contar filas, sin pasar por los buckets. El test que cuidaba la regla se volvió más preciso en vez de aflojarse: ahora nombra los dos campos permitidos y verifica lo que de verdad importa.
+
+### Lo que sigue sin estar, a propósito
+
+El potencial es el **monto completo, no un valor esperado**: no hay probabilidad por etapa, así que un negocio en E2 y uno en E6 aportan lo mismo al pipeline. Y sigue expresado en la **UF del día en que arrancó** cada negocio, no la de hoy, así que lo abierto vale más de lo que dice. Las dos son decisiones pendientes del usuario, no cosas que se resuelvan de paso.
+
+### Nota de método
+
+Al levantar el servidor local para verificar había **un uvicorn viejo escuchando en el 8000**, de una sesión anterior. Es la misma trampa de la nota de `D-061`: se mató antes de medir. La verificación cruzada que da confianza es otra: los tres totales del pie del listado coinciden **al peso** con los tres tiles del tablero --8.087.861,69 / 1.824.272,06 / 4.751.490,69-- y son dos caminos de código distintos sobre la misma base. Antes no podían coincidir, porque uno de los dos sumaba estados mezclados.

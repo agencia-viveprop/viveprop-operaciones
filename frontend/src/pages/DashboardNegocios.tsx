@@ -105,6 +105,11 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
   const colorSerie = SERIE[esquema]
   const serieMes = aSerie(r.ganado_por_mes)
 
+  // Cuántos negocios están en más de un bucket. Sale de la diferencia y no de
+  // una consulta aparte: los buckets ya vienen contados sin duplicar cada uno.
+  const repartidos =
+    r.ganado.negocios + r.pipeline.negocios + r.potencial_perdido.negocios - r.total_negocios
+
   const conRebate = (monto: number) =>
     monto > 0 ? `incluye ${clp(monto)} de rebate` : undefined
 
@@ -119,6 +124,58 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
 
       <AvisoUF />
 
+      {/* Primero cuántos, después cuánto. Son dos preguntas y hasta ahora la
+          primera solo se respondía en la letra chica del pie de cada monto.
+
+          El número grande es de **negocios** y el chico de **liquidaciones**,
+          porque en negocios se piensa el ciclo. Las dos unidades van juntas
+          porque ninguna reemplaza a la otra: 7 liquidaciones pueden ser 6
+          negocios, y ahí "6" y "7" responden cosas distintas. */}
+      <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
+        <StatCard
+          label="Negocios"
+          value={r.total_negocios}
+          color="gray"
+          caption={`${r.total_hitos} ${r.total_hitos === 1 ? 'liquidación' : 'liquidaciones'} en total`}
+        />
+        <StatCard
+          label="Ganados"
+          value={r.ganado.negocios}
+          color="good"
+          caption={
+            [
+              `${r.ganado.hitos} ${r.ganado.hitos === 1 ? 'liquidación' : 'liquidaciones'}`,
+              `${r.tasa_cierre_pct.toFixed(1).replace('.', ',')}% de cierre`,
+            ].join(' · ')
+          }
+        />
+        <StatCard
+          label="En pipeline"
+          value={r.pipeline.negocios}
+          color="brand"
+          caption={`${r.pipeline.hitos} ${r.pipeline.hitos === 1 ? 'liquidación abierta' : 'liquidaciones abiertas'}`}
+        />
+        <StatCard
+          label="No concretados"
+          value={r.potencial_perdido.negocios}
+          color="critical"
+          caption={`${r.potencial_perdido.hitos} ${r.potencial_perdido.hitos === 1 ? 'liquidación' : 'liquidaciones'}`}
+        />
+      </SimpleGrid>
+
+      {/* Los tres conteos de negocios pueden sumar más que el total, y no es un
+          error: un negocio con la promesa ganada y la escritura abierta está en
+          dos buckets a la vez. Se mide en vez de suponerse, y se dice solo
+          cuando pasa, para que la resta no quede como un descuadre sin
+          explicación. En liquidaciones nunca pasa: cada una tiene un estado. */}
+      {repartidos > 0 && (
+        <Text size="xs" c="dimmed">
+          {repartidos === 1
+            ? `1 negocio tiene liquidaciones en estados distintos, así que aparece en más de un recuadro: por eso los tres suman más que ${r.total_negocios}.`
+            : `${repartidos} negocios tienen liquidaciones en estados distintos, así que aparecen en más de un recuadro: por eso los tres suman más que ${r.total_negocios}.`}
+        </Text>
+      )}
+
       {/* Los tres buckets. Cada tile lleva su etiqueta y su número, así que la
           identidad nunca depende solo del color. */}
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
@@ -126,33 +183,19 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
           label="Ganado"
           value={clp(r.ganado.comision_real_vp)}
           color="good"
-          caption={
-            [
-              `${r.ganado.hitos} liquidaciones en ${r.ganado.negocios} negocios`,
-              conRebate(r.ganado.rebate_concentrador),
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          }
+          caption={conRebate(r.ganado.rebate_concentrador)}
         />
         <StatCard
           label="En pipeline"
           value={clp(r.pipeline.comision_real_vp)}
           color="brand"
-          caption={
-            [
-              `${r.pipeline.hitos} liquidaciones abiertas`,
-              conRebate(r.pipeline.rebate_concentrador),
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          }
+          caption={conRebate(r.pipeline.rebate_concentrador)}
         />
         <StatCard
           label="Potencial no concretado"
           value={clp(r.potencial_perdido.comision_real_vp)}
           color="critical"
-          caption={`${r.potencial_perdido.hitos} liquidaciones perdidas o desistidas`}
+          caption="Liquidaciones perdidas o desistidas"
         />
       </SimpleGrid>
 
@@ -231,7 +274,7 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
             items={r.ganado_por_alianza.map((c) => ({
               etiqueta: c.etiqueta,
               monto: Number(c.comision_real_vp),
-              detalle: `${c.hitos} liq.`,
+              detalle: `${c.negocios} ${c.negocios === 1 ? 'negocio' : 'negocios'} · ${c.hitos} liq.`,
             }))}
           />
         </Panel>
@@ -242,7 +285,7 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
             items={r.ganado_por_modelo.map((c) => ({
               etiqueta: MODELO_CORTO[c.etiqueta as keyof typeof MODELO_CORTO] ?? c.etiqueta,
               monto: Number(c.comision_real_vp),
-              detalle: `${c.hitos} liq.`,
+              detalle: `${c.negocios} ${c.negocios === 1 ? 'negocio' : 'negocios'} · ${c.hitos} liq.`,
             }))}
           />
         </Panel>
@@ -250,14 +293,16 @@ export default function DashboardNegocios({ embebido = false }: { embebido?: boo
 
       <Panel
         titulo="Pipeline por etapa"
-        ayuda="Dónde está detenido cada negocio abierto, y cuánta comisión hay ahí."
+        ayuda="Cuántos negocios abiertos hay en cada etapa y cuánta comisión potencial está detenida ahí."
       >
         <BarrasMontos
           color={colorSerie}
           items={r.pipeline_por_etapa.map((c) => ({
             etiqueta: c.etiqueta,
             monto: Number(c.comision_real_vp),
-            detalle: `${c.hitos} liq.`,
+            // La cantidad va primero: la pregunta de esta pantalla es dónde se
+            // atasca el ciclo, y para eso "3 negocios" dice más que el monto.
+            detalle: `${c.negocios} ${c.negocios === 1 ? 'negocio' : 'negocios'} · ${c.hitos} liq.`,
           }))}
         />
       </Panel>

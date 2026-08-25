@@ -52,6 +52,10 @@ class Corte(BaseModel):
 
     etiqueta: str
     hitos: int
+    # Los negocios se cuentan aparte de las liquidaciones porque son dos
+    # unidades distintas y ninguna reemplaza a la otra: un negocio puede tener
+    # la promesa y la escritura, así que 7 liquidaciones pueden ser 6 negocios.
+    negocios: int
     comision_total: Decimal
     comision_real_vp: Decimal
 
@@ -93,6 +97,18 @@ class ResumenNegocios(BaseModel):
     # Hitos sin valorizar: ni ganados ni perdidos en términos de plata, porque
     # todavía no tienen base. Se cuentan aparte para que no desaparezcan.
     hitos_sin_valorizar: int
+    # El universo completo, para que la pantalla pueda decir "2 de 18" sin
+    # sumar los tres buckets. Sumarlos **no** da el total de negocios: un
+    # negocio con la promesa ganada y la escritura abierta está en dos, así que
+    # la suma lo cuenta dos veces. En liquidaciones sí cierra exacto, porque
+    # cada una tiene un estado y uno solo.
+    total_negocios: int
+    total_hitos: int
+    # Ganadas sobre resueltas --ganadas más no concretadas--. Deja afuera las
+    # abiertas a propósito: todavía no se sabe en qué van a terminar, y meterlas
+    # en el denominador haría que la tasa baje sola cuando entra un negocio
+    # nuevo, que es exactamente lo contrario de lo que uno quiere leer.
+    tasa_cierre_pct: float
 
 
 def _con_estados(consulta: Select, estados: tuple[EstadoNegocio, ...]) -> Select:
@@ -135,16 +151,18 @@ def _cortes(db: Session, consulta: Select) -> list[Corte]:
         Corte(
             etiqueta=_etiqueta(etiqueta),
             hitos=hitos,
+            negocios=negocios,
             comision_total=total,
             comision_real_vp=real,
         )
-        for etiqueta, hitos, total, real in db.execute(consulta).all()
+        for etiqueta, hitos, negocios, total, real in db.execute(consulta).all()
     ]
 
 
 def _montos():
     return (
         func.count(NegocioHito.id),
+        func.count(func.distinct(NegocioHito.negocio_id)),
         func.coalesce(func.sum(NegocioHito.comision_total), 0),
         func.coalesce(func.sum(NegocioHito.comision_real_vp), 0),
     )
@@ -162,6 +180,7 @@ def _por_mes(db: Session, estados: tuple[EstadoNegocio, ...]) -> list[Corte]:
         _con_estados(
             select(
                 NegocioHito.fecha_cierre,
+                NegocioHito.negocio_id,
                 NegocioHito.comision_total,
                 NegocioHito.comision_real_vp,
             ),
@@ -169,17 +188,20 @@ def _por_mes(db: Session, estados: tuple[EstadoNegocio, ...]) -> list[Corte]:
         )
     ).all()
 
+    # Los negocios del mes van en un conjunto: dos liquidaciones del mismo
+    # negocio cerradas el mismo mes son un negocio, no dos.
     acumulado: dict[str, list] = {}
-    for cierre, total, real in filas:
+    for cierre, negocio_id, total, real in filas:
         clave = cierre.strftime("%Y-%m") if cierre is not None else "Sin fecha"
-        fila = acumulado.setdefault(clave, [0, CERO, CERO])
+        fila = acumulado.setdefault(clave, [0, set(), CERO, CERO])
         fila[0] += 1
-        fila[1] += total or CERO
-        fila[2] += real or CERO
+        fila[1].add(negocio_id)
+        fila[2] += total or CERO
+        fila[3] += real or CERO
 
     return [
-        Corte(etiqueta=mes, hitos=n, comision_total=t, comision_real_vp=r)
-        for mes, (n, t, r) in sorted(acumulado.items())
+        Corte(etiqueta=mes, hitos=n, negocios=len(ids), comision_total=t, comision_real_vp=r)
+        for mes, (n, ids, t, r) in sorted(acumulado.items())
     ]
 
 
@@ -220,6 +242,16 @@ def obtener_resumen_negocios(db: Session) -> ResumenNegocios:
         )
     )
 
+    ganadas = db.scalar(
+        select(func.count(NegocioHito.id)).where(NegocioHito.estado.in_(ganado))
+    ) or 0
+    no_concretadas = db.scalar(
+        select(func.count(NegocioHito.id)).where(
+            NegocioHito.estado.in_(BUCKETS["potencial_perdido"])
+        )
+    ) or 0
+    resueltas = ganadas + no_concretadas
+
     return ResumenNegocios(
         ganado=_bucket(db, ganado),
         pipeline=_bucket(db, BUCKETS["pipeline"]),
@@ -229,6 +261,9 @@ def obtener_resumen_negocios(db: Session) -> ResumenNegocios:
         ganado_por_modelo=_cortes(db, por_modelo),
         pipeline_por_etapa=_cortes(db, por_etapa),
         hitos_sin_valorizar=sin_valorizar or 0,
+        total_negocios=db.scalar(select(func.count(Negocio.id))) or 0,
+        total_hitos=db.scalar(select(func.count(NegocioHito.id))) or 0,
+        tasa_cierre_pct=round(ganadas * 100 / resueltas, 1) if resueltas else 0.0,
     )
 
 

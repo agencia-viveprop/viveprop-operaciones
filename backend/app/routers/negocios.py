@@ -31,6 +31,7 @@ from app.services.importar_negocios import (
 from app.services.estructura_archivo import EstructuraArchivo
 from app.services.plantilla_negocios import estructura_plantilla, generar_plantilla
 from app.services.reportes_negocios import (
+    BUCKETS,
     NegociosPorMes,
     ResumenNegocios,
     negocios_por_mes,
@@ -262,8 +263,22 @@ class NegocioResumen(BaseModel):
     alianza_id: int | None
     cantidad_hitos: int
     estados: list[EstadoNegocio]
-    comision_total: Decimal
-    comision_real_vp: Decimal
+    # La comisión real ViveProp partida por bucket, no en un total único.
+    #
+    # Antes había un solo par de columnas que sumaba **todas** las
+    # liquidaciones del negocio, ganadas, no concretadas y abiertas juntas. El
+    # filtro por estado decidía qué negocios aparecían, no qué plata se sumaba,
+    # así que filtrar "Activo" y mirar el total daba un número mezclado: plata
+    # efectiva y plata potencial en la misma cifra. Con los datos de hoy no se
+    # notaba, porque los negocios abiertos no tienen cerradas encima; se rompía
+    # el día que un negocio tuviera la promesa ganada y la escritura abierta,
+    # que es el caso normal.
+    #
+    # Partido así, cada número dice qué es con cualquier filtro puesto, y no
+    # hay ninguno que dependa de que el filtro y la columna coincidan.
+    comision_ganada: Decimal
+    comision_pipeline: Decimal
+    comision_no_concretada: Decimal
     # Las duraciones van en el listado para que la tabla pueda mostrar antigüedad
     # y última gestión: antes no tenía ninguna columna de fecha, así que no se
     # podía saber si un negocio llevaba una semana o siete meses.
@@ -296,6 +311,20 @@ class TipoMovimientoOut(BaseModel):
 
 
 # ------------------------------------------------------------------- helpers
+
+
+def _por_estado(negocio: Negocio, estados: tuple[EstadoNegocio, ...]) -> Decimal:
+    """La comisión real ViveProp de las liquidaciones que están en esos estados.
+
+    Se reusan los `BUCKETS` de la reportería en vez de repetir la lista acá: si
+    algún día `DESISTIDO` deja de contar como no concretado, el listado y el
+    dashboard tienen que moverse juntos o van a decir cosas distintas de la
+    misma plata.
+    """
+    return sum(
+        (h.comision_real_vp or Decimal("0") for h in negocio.hitos if h.estado in estados),
+        Decimal("0"),
+    )
 
 
 def _cargar(db: Session, negocio_id: int) -> Negocio:
@@ -545,7 +574,6 @@ def listar(
     if estado is not None:
         negocios = [n for n in negocios if any(h.estado == estado for h in n.hitos)]
 
-    cero = Decimal("0")
     hoy = _hoy_utc()
     ultimo_mov, ultimo_etapa = _ultimos_movimientos_negocio(db)
     return [
@@ -560,9 +588,11 @@ def listar(
             alianza_id=n.alianza_id,
             cantidad_hitos=len(n.hitos),
             estados=[h.estado for h in n.hitos],
-            # Sumar los hitos es la unica forma correcta de totalizar (D-020).
-            comision_total=sum((h.comision_total or cero for h in n.hitos), cero),
-            comision_real_vp=sum((h.comision_real_vp or cero for h in n.hitos), cero),
+            # Sumar los hitos es la unica forma correcta de totalizar (D-020),
+            # y cada hito aporta al bucket de su propio estado.
+            comision_ganada=_por_estado(n, BUCKETS["ganado"]),
+            comision_pipeline=_por_estado(n, BUCKETS["pipeline"]),
+            comision_no_concretada=_por_estado(n, BUCKETS["potencial_perdido"]),
             fecha_inicio=_inicio_de(n),
             duraciones=duraciones_de(
                 _inicio_de(n),

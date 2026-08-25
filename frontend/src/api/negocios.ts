@@ -113,8 +113,14 @@ export type NegocioResumen = {
   alianza_id: number | null
   cantidad_hitos: number
   estados: EstadoNegocio[]
-  comision_total: number
-  comision_real_vp: number
+  /** La comisión real ViveProp partida por bucket. Nunca se suman entre sí: la
+   *  primera es plata que entró, la segunda es plata que podría entrar y la
+   *  tercera es plata que no entró. Antes venían en un solo total que las
+   *  mezclaba, y el filtro por estado no lo arreglaba porque decide qué
+   *  negocios se ven, no qué plata se suma. */
+  comision_ganada: number
+  comision_pipeline: number
+  comision_no_concretada: number
   fecha_inicio: string | null
   duraciones: Duraciones
 }
@@ -272,6 +278,9 @@ export type Bucket = {
 export type Corte = {
   etiqueta: string
   hitos: number
+  /** Liquidaciones y negocios son dos unidades distintas: 7 liquidaciones
+   *  pueden ser 6 negocios si uno tiene la promesa y la escritura. */
+  negocios: number
   comision_total: number
   comision_real_vp: number
 }
@@ -289,6 +298,15 @@ export type ResumenNegocios = {
   ganado_por_modelo: Corte[]
   pipeline_por_etapa: Corte[]
   hitos_sin_valorizar: number
+  /** El universo. **No** salen de sumar los tres buckets: un negocio con la
+   *  promesa ganada y la escritura abierta está en dos, así que la suma lo
+   *  contaría dos veces. En liquidaciones sí cierra exacto, porque cada una
+   *  tiene un estado y uno solo. */
+  total_negocios: number
+  total_hitos: number
+  /** Ganadas sobre resueltas. Las abiertas quedan afuera del denominador: si
+   *  entraran, abrir un negocio nuevo bajaría la tasa sin que se pierda nada. */
+  tasa_cierre_pct: number
 }
 
 export function obtenerResumenNegocios(): Promise<ResumenNegocios> {

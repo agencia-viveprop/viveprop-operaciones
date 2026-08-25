@@ -27,6 +27,20 @@ import CargaMasivaModal from '../components/CargaMasivaModal'
 import { COLOR_ESTADO, clp, duracion, fecha, MODELO_CORTO } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 
+/**
+ * Una celda de plata. El cero se muestra como guion y no como "$0": la mayoría
+ * de los negocios tiene plata en una sola de las tres columnas, y una fila con
+ * dos ceros escritos tapa el único número que importa de esa fila.
+ */
+function Plata({ monto, destacada = false }: { monto: number; destacada?: boolean }) {
+  const cero = Number(monto) === 0
+  return (
+    <Table.Td ta="right" ff="monospace" fw={destacada && !cero ? 600 : undefined} c={cero ? 'dimmed' : undefined}>
+      {cero ? '—' : clp(monto)}
+    </Table.Td>
+  )
+}
+
 /** Un negocio con hitos en estados distintos no tiene "un" estado. */
 function estadosResumidos(estados: EstadoNegocio[]) {
   return [...new Set(estados)]
@@ -49,12 +63,16 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   const nombreAlianza = (id: number | null) =>
     alianzas.find((a) => a.id === id)?.nombre ?? '—'
 
+  // Tres totales y ninguno que los sume: son plata que entró, plata que podría
+  // entrar y plata que no entró (D-006). El total de una columna sí tiene
+  // sentido, porque adentro de cada una todas las liquidaciones son lo mismo.
   const totales = (negocios ?? []).reduce(
     (acc, n) => ({
-      total: acc.total + Number(n.comision_total),
-      realVp: acc.realVp + Number(n.comision_real_vp),
+      ganada: acc.ganada + Number(n.comision_ganada),
+      pipeline: acc.pipeline + Number(n.comision_pipeline),
+      noConcretada: acc.noConcretada + Number(n.comision_no_concretada),
     }),
-    { total: 0, realVp: 0 },
+    { ganada: 0, pipeline: 0, noConcretada: 0 },
   )
 
   return (
@@ -63,7 +81,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
         title="Negocios"
         subtitle={
           negocios
-            ? `${negocios.length} negocios · comisión real VP ${clp(totales.realVp)}`
+            ? `${negocios.length} negocios · ${clp(totales.ganada)} ganados · ${clp(totales.pipeline)} en pipeline`
             : undefined
         }
         action={
@@ -123,7 +141,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
       {!negocios && <EstadoConsulta de={consulta} alto={160} vacio="No hay negocios que coincidan." />}
 
       {negocios && (
-        <Table.ScrollContainer minWidth={1000}>
+        <Table.ScrollContainer minWidth={1320}>
           <Table striped withTableBorder highlightOnHover>
             <Table.Thead>
               <Table.Tr>
@@ -135,8 +153,9 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Th>Estado</Table.Th>
                 <Table.Th ta="right">Abierto</Table.Th>
                 <Table.Th ta="right">Última gestión</Table.Th>
-                <Table.Th ta="right">Comisión total</Table.Th>
-                <Table.Th ta="right">Real VP</Table.Th>
+                <Table.Th ta="right">Ganado</Table.Th>
+                <Table.Th ta="right">En pipeline</Table.Th>
+                <Table.Th ta="right">No concretado</Table.Th>
                 <Table.Th />
               </Table.Tr>
             </Table.Thead>
@@ -194,8 +213,9 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                       <Text size="xs">hace {duracion(n.duraciones.dias_sin_gestion)}</Text>
                     )}
                   </Table.Td>
-                  <Table.Td ta="right" ff="monospace">{clp(n.comision_total)}</Table.Td>
-                  <Table.Td ta="right" ff="monospace" fw={600}>{clp(n.comision_real_vp)}</Table.Td>
+                  <Plata monto={n.comision_ganada} destacada />
+                  <Plata monto={n.comision_pipeline} destacada />
+                  <Plata monto={n.comision_no_concretada} />
                   <Table.Td>
                     <ActionIcon variant="subtle" aria-label="Ver ficha">
                       <IconEye size={18} />
@@ -208,8 +228,9 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
               <Table.Tfoot>
                 <Table.Tr>
                   <Table.Th colSpan={8}>Total</Table.Th>
-                  <Table.Th ta="right" ff="monospace">{clp(totales.total)}</Table.Th>
-                  <Table.Th ta="right" ff="monospace">{clp(totales.realVp)}</Table.Th>
+                  <Table.Th ta="right" ff="monospace">{clp(totales.ganada)}</Table.Th>
+                  <Table.Th ta="right" ff="monospace">{clp(totales.pipeline)}</Table.Th>
+                  <Table.Th ta="right" ff="monospace">{clp(totales.noConcretada)}</Table.Th>
                   <Table.Th />
                 </Table.Tr>
               </Table.Tfoot>

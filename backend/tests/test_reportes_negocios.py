@@ -87,10 +87,46 @@ def test_los_tres_buckets_no_se_mezclan(cartera):
 
 
 def test_no_existe_un_campo_que_los_sume(cartera):
-    """Sumar los tres da un número que no significa nada (D-006)."""
+    """Sumar los tres montos da un número que no significa nada (D-006).
+
+    Los dos `total_*` que sí existen son **conteos del universo**, no sumas de
+    los buckets: salen de contar las filas de `negocios` y de `hitos`, sin pasar
+    por los buckets. La regla que importa es que ninguna **plata** se totalice,
+    y esa se sigue cumpliendo.
+    """
     campos = set(ResumenNegocios.model_fields)
     assert "total" not in campos
-    assert not any(c.startswith("total_") for c in campos)
+    assert {c for c in campos if c.startswith("total_")} == {"total_negocios", "total_hitos"}
+
+
+def test_los_totales_no_salen_de_sumar_los_buckets(cartera):
+    """En liquidaciones cierra exacto; en negocios puede no cerrar, y está bien.
+
+    Cada liquidación tiene un estado y uno solo, así que los tres buckets las
+    parten sin dejar ni repetir ninguna. Los negocios no: uno con la promesa
+    ganada y la escritura abierta está en dos buckets, y sumarlos lo contaría
+    dos veces. Por eso el total sale de contar, no de sumar.
+    """
+    r = obtener_resumen_negocios(cartera)
+
+    assert r.total_hitos == 6
+    assert r.ganado.hitos + r.pipeline.hitos + r.potencial_perdido.hitos == r.total_hitos
+
+    # En esta cartera no hay negocios repartidos, así que acá coinciden. Lo que
+    # se fija es la desigualdad: la suma nunca puede quedar **por debajo**.
+    assert r.total_negocios == 5
+    suma = r.ganado.negocios + r.pipeline.negocios + r.potencial_perdido.negocios
+    assert suma >= r.total_negocios
+
+
+def test_la_tasa_de_cierre_deja_afuera_lo_abierto(cartera):
+    """3 ganadas de 5 resueltas. El hito activo no entra al denominador.
+
+    Si entrara, abrir un negocio nuevo haría bajar la tasa de cierre sin que
+    nada se haya perdido, que es lo contrario de lo que el número debe decir.
+    """
+    r = obtener_resumen_negocios(cartera)
+    assert r.tasa_cierre_pct == 60.0
 
 
 def test_los_negocios_se_cuentan_sin_duplicar(cartera):

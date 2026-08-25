@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Cantidades en el tablero, y el potencial separado de lo efectivo
+
+Pedido tuyo: ver cantidades además de montos, y ver el potencial del ciclo separado de la plata efectiva.
+
+**Lo que ya tenías y no se toca:** los tres tiles del tablero nunca mezclaron nada. «En pipeline · $1.824.272» siempre sumó solo las liquidaciones abiertas.
+
+**Lo que estaba mal y se arregló.** El listado de Negocios tenía un solo par de columnas que sumaba **todas** las liquidaciones de cada negocio --ganadas, perdidas y abiertas juntas--. El filtro por estado no lo salvaba: decide qué negocios se ven, no qué plata se suma. Ahora hay tres columnas --**Ganado · En pipeline · No concretado**-- y tres totales al pie. Cada número dice lo mismo con cualquier filtro puesto. Se fue la columna de comisión bruta, que era justamente la que mezclaba; el bruto por liquidación sigue en la ficha.
+
+**Lo que se agregó.** Una fila de cantidades arriba de los montos: 18 negocios, 6 ganados, 2 en pipeline, 10 no concretados, con las liquidaciones en el renglón chico y la tasa de cierre en 41,2%. Y los desgloses --pipeline por etapa, ganado por alianza y por modelo-- ahora dicen cuántos negocios, no solo cuánta plata.
+
+**La verificación que da confianza:** los tres totales del pie del listado coinciden **al peso** con los tres tiles del tablero (8.087.861,69 / 1.824.272,06 / 4.751.490,69), y son dos caminos de código distintos. Antes no podían coincidir.
+
+**Lo que sigue sin estar, a propósito:** el potencial es el monto completo y no un valor esperado por probabilidad de etapa, y sigue expresado en la UF del día en que arrancó cada negocio. Las dos son decisiones tuyas pendientes. Ver `D-063`.
+
+**Verificado:** 621 tests, `alembic check` limpio, build y lint sin hallazgos, y capturas de las dos pantallas contra `dev`.
+
 ### 2026-08-25 · Sobre quién se hizo la gestión
 
 Pedido tuyo: además del tipo y la etapa, poder registrar sobre cuál de los dos corredores se efectúa la gestión.
