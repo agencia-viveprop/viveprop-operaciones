@@ -284,3 +284,35 @@ def test_vvp2_esta_descuadrado_en_el_origen():
     assert abs(e["comision_total"] / caso.tasas["pct_lado_vendedor"] - caso.base_manual) < D("1"), (
         "la comision total si uso la base ajustada"
     )
+
+
+@pytest.mark.parametrize("caso", HISTORICOS, ids=[c.codigo for c in HISTORICOS])
+def test_el_reparto_cierra_contra_la_comision_total(caso):
+    """La identidad que sostiene el grafico apilado del reparto.
+
+        comision_total + rebate = broker + tercero + equipo + real_vp
+
+    Dicho en palabras: toda la plata que la operacion genera se reparte entre el
+    corredor que gestiona, el tercero, el equipo y lo que queda para ViveProp. El
+    rebate va del lado izquierdo y no del derecho porque **no es una tajada de la
+    comision**: es plata que entra desde afuera, la que el concentrador comparte
+    de lo que le cobro al vendedor (`D-018`).
+
+    Este test es la premisa del panel de reparto de `D-064`. Si algun dia deja de
+    cerrar, el grafico apilado empieza a mentir: los segmentos ya no suman el alto
+    de la barra. Por eso se verifica sobre los 19 historicos y no sobre un caso
+    armado, y por eso `VVP-2` va aparte en el test de mas arriba: ahi el descuadre
+    es del origen y esta documentado, no del motor.
+    """
+    if caso.codigo == "VVP-2":
+        pytest.skip("descuadrado en el origen; ver test_vvp2_esta_descuadrado_en_el_origen")
+
+    r = calcular(modelo=caso.modelo, estado=caso.estado, base=caso.base_comision, **caso.tasas)
+
+    izquierda = r.comision_total + r.rebate_concentrador
+    derecha = r.comision_broker + r.comision_tercero + r.comision_equipo + r.comision_real_vp
+
+    # Sin redondear: el motor devuelve precision completa a proposito, asi que
+    # aca la identidad tiene que cerrar exacta. Los centavos de diferencia que se
+    # ven en la base salen de guardar los siete montos cuantizados por separado.
+    assert izquierda == derecha, f"el reparto no cierra: {izquierda} != {derecha}"

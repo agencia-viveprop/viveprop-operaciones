@@ -25,6 +25,7 @@ import {
 import PageHeader from '../components/PageHeader'
 import { clp, fecha, MODELO_CORTO } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
+import PlataDeNegocios from '../components/PlataDeNegocios'
 import EvolucionMensual, { Veredicto } from '../components/EvolucionMensual'
 
 function Tile({
@@ -283,6 +284,7 @@ export default function VistaDirectorio() {
         tendencia={data.tendencias.comision_real_vp}
         esPlata
       />
+      <PlataDeNegocios serie={serie} promedio={data.promedio} tendencias={data.tendencias} />
       <EvolucionMensual
         titulo="Liquidaciones y negocios por mes"
         subtitulo="Cuántos cerraron y cuántos entraron."

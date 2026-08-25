@@ -17,7 +17,7 @@ from decimal import Decimal as D
 import pytest
 
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa
-from app.models.catalogo import EstadoNegocio, Etapa, ModeloNegocio
+from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
 from app.models.negocio import Negocio, NegocioHito, Propiedad
 from app.services.reporte_mensual import (
     VENTANA_HISTORICO,
@@ -508,11 +508,15 @@ def test_las_metricas_se_declaran_separadas_por_dominio():
         METRICAS_NEGOCIOS,
     )
 
-    campos_neg = {c for c, _ in METRICAS_NEGOCIOS}
-    campos_can = {c for c, _ in METRICAS_CANJES}
+    campos_neg = {c for c, _, _ in METRICAS_NEGOCIOS}
+    campos_can = {c for c, _, _ in METRICAS_CANJES}
 
     assert campos_neg == {
-        "comision_real_vp", "comision_total", "hitos_cerrados", "negocios_iniciados",
+        # El valor de los negocios --partido por operacion, que no se suman-- y
+        # el reparto completo de la comision.
+        "valor_venta", "valor_arriendo", "comision_total", "comision_broker", "comision_equipo",
+        "comision_tercero", "rebate_concentrador", "comision_real_vp",
+        "hitos_cerrados", "negocios_iniciados",
     }
     assert campos_can == {
         "canjes_solicitados", "canjes_activos", "canjes_cerrados", "canjes_cancelados",
@@ -528,7 +532,7 @@ def test_las_variaciones_cubren_las_metricas_de_los_dos_dominios(db):
 
     r = obtener_reporte_mensual(db, 2026, 8, ventana=3)
 
-    assert [v.metrica for v in r.movil.variaciones] == [n for _, n in METRICAS]
+    assert [v.metrica for v in r.movil.variaciones] == [n for _, n, _ in METRICAS]
 
 
 # ------------------------------------------------------- los canjes activos
@@ -593,9 +597,9 @@ def test_los_activos_se_cuentan_por_mes_de_solicitud(db):
 def test_los_activos_estan_en_las_metricas_de_canjes():
     from app.services.reporte_mensual import METRICAS_CANJES, METRICAS_NEGOCIOS
 
-    campos = {c for c, _ in METRICAS_CANJES}
+    campos = {c for c, _, _ in METRICAS_CANJES}
     assert "canjes_activos" in campos
-    assert "canjes_activos" not in {c for c, _ in METRICAS_NEGOCIOS}
+    assert "canjes_activos" not in {c for c, _, _ in METRICAS_NEGOCIOS}
 
 
 # ----------------------------------------------------------- la tendencia
@@ -667,7 +671,7 @@ def test_hay_una_tendencia_por_cada_metrica(db):
 
     r = obtener_reporte_mensual(db, 2026, 8, ventana=6)
 
-    assert set(r.tendencias) == {campo for campo, _ in METRICAS}
+    assert set(r.tendencias) == {campo for campo, _, _ in METRICAS}
     # Cada una sabe de que dominio es y sobre cuantos meses se trazo.
     assert all(te.puntos == 6 for te in r.tendencias.values())
     assert r.tendencias["comision_real_vp"].dominio == "negocios"
@@ -857,3 +861,70 @@ def test_el_endpoint_acepta_la_ventana_historica(cliente):
 def test_el_endpoint_sigue_rechazando_una_ventana_invalida(cliente):
     assert cliente.get("/api/reportes/mensual?ventana=5").status_code == 422
     assert cliente.get("/api/reportes/mensual?ventana=-1").status_code == 422
+
+
+def test_la_venta_y_el_arriendo_no_se_suman(db):
+    """Dos negocios cerrados el mismo mes, uno de venta y uno de arriendo.
+
+    En una venta la base es el precio de la propiedad; en un arriendo es **un mes
+    de renta**. Son dos ordenes de magnitud de diferencia --en el historico, 1.556
+    millones contra 2,3-- asi que sumarlos da el mismo numero sin sentido que hizo
+    descartar `valor_prop` en canjes (`D-054`), y en un grafico juntos el arriendo
+    es invisible.
+
+    Este test es lo que evita que vuelvan a un solo campo.
+    """
+    venta = Catalogo(tipo="tipo_operacion", codigo="VENTA", nombre="Venta", orden=1)
+    arriendo = Catalogo(tipo="tipo_operacion", codigo="ARRIENDO", nombre="Arriendo", orden=2)
+    db.add_all([venta, arriendo])
+    db.flush()
+
+    def negocio(codigo, operacion_id, base):
+        prop = Propiedad(direccion=f"Calle {codigo}", comuna="Santiago")
+        db.add(prop)
+        n = Negocio(
+            codigo=codigo, modelo=ModeloNegocio.MERCADO_PRIMARIO, propiedad=prop,
+            etapa="E5", tipo_operacion_id=operacion_id,
+        )
+        n.hitos = [
+            NegocioHito(
+                fecha_inicio=date(2026, 7, 1), fecha_cierre=date(2026, 8, 5),
+                estado=EstadoNegocio.CERRADO, valor_clp_calculado=base,
+                comision_total=D("1"), comision_real_vp=D("1"),
+            )
+        ]
+        db.add(n)
+
+    negocio("V-1", venta.id, D("240000000"))
+    negocio("A-1", arriendo.id, D("1200000"))
+    db.commit()
+
+    agosto = _reporte(db).serie[-1]
+
+    assert agosto.etiqueta == "2026-08"
+    assert agosto.valor_venta == D("240000000")
+    assert agosto.valor_arriendo == D("1200000")
+
+
+def test_un_negocio_sin_operacion_cae_en_venta(db):
+    """Es el caso dominante --17 de 19-- y hoy no hay ninguno asi.
+
+    Lo que se fija es que **no desaparezca**: si cayera afuera de los dos campos,
+    su plata se perderia del reporte sin que nada lo dijera.
+    """
+    prop = Propiedad(direccion="Calle S-1", comuna="Santiago")
+    db.add(prop)
+    n = Negocio(codigo="S-1", modelo=ModeloNegocio.MERCADO_PRIMARIO, propiedad=prop, etapa="E5")
+    n.hitos = [
+        NegocioHito(
+            fecha_inicio=date(2026, 7, 1), fecha_cierre=date(2026, 8, 5),
+            estado=EstadoNegocio.CERRADO, valor_clp_calculado=D("99000000"),
+            comision_total=D("1"), comision_real_vp=D("1"),
+        )
+    ]
+    db.add(n)
+    db.commit()
+
+    agosto = _reporte(db).serie[-1]
+    assert agosto.valor_venta == D("99000000")
+    assert agosto.valor_arriendo == D("0")

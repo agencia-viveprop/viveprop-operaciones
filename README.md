@@ -85,6 +85,8 @@ Variables de entorno en Render:
 
 **Canjes por etapa, con filtro.** En *Inicio*, el bloque «Canjes por etapa» tiene un selector **Todos · Activos · Cancelados**. Filtra al instante, sin volver a consultar: los doce números —seis etapas por dos estados— vienen en la misma respuesta, de una sola consulta agrupada. Al lado va el total de la vista. Cuando hay canjes en estado ACTIVO con la etapa en Cerrado, la pantalla lo dice: el recuadro «Activos» de arriba los excluye, así que sin ese aviso el desglose sumaría más que el recuadro sin explicación (`D-051`).
 
+**El reparto de la comisión.** Reporte mensual y vista directorio muestran, apilado, quién se queda con cada peso: Real ViveProp, Corredores y Equipo. El alto de la barra es la plata que se reparte, y los chips de arriba eligen qué segmentos ver sin que la cifra del mes cambie. Los montos de los negocios van en paneles aparte --y **la venta separada del arriendo**, porque un precio de venta y un mes de renta no se suman-- (`D-064`).
+
 **El potencial no se mezcla con lo efectivo.** El listado de Negocios tiene tres columnas de plata --**Ganado**, **En pipeline**, **No concretado**-- y tres totales al pie, en vez de un total que sumaba los tres estados juntos. El tablero abre con las cantidades --negocios arriba, liquidaciones en el renglón chico-- y la tasa de cierre deja las abiertas afuera del denominador (`D-063`).
 
 **Sobre quién se hizo la gestión.** Tercer campo de la bitácora, junto al tipo y la etapa: a cuál de los dos corredores --solicitante o propietario--. El selector muestra los nombres, no las etiquetas. **Es optativo**: hay movimientos que no son sobre un corredor, y forzarlo pondría un dato falso. Los 605 migrados quedan en nulo, porque el Excel no lo traía (`D-062`).

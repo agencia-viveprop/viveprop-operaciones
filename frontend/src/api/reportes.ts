@@ -127,8 +127,27 @@ export function aISO(d: Date): string {
 export type MetricasMes = {
   etiqueta: string
   hitos_cerrados: number
-  comision_real_vp: string
+  /** El valor de los negocios cerrados, **partido por operación**. No se suman:
+   *  en una venta la base es el precio de la propiedad y en un arriendo es un mes
+   *  de renta --1.556 millones contra 2,3 en el histórico--. Y la venta va además
+   *  45 veces por encima de su propia comisión, así que tampoco comparte eje con
+   *  ninguna de las de abajo. Cada uno en su panel. */
+  valor_venta: string
+  valor_arriendo: string
   comision_total: string
+  /** El reparto de esa comisión, verificado contra el motor:
+   *
+   *      comision_total + rebate = broker + tercero + equipo + real_vp
+   *
+   *  Son las **partes** de una misma plata, no series paralelas: por eso se
+   *  dibujan apiladas y no superpuestas. El rebate va del lado izquierdo porque
+   *  no es una tajada: es plata que entra desde afuera, la que comparte el
+   *  concentrador de lo que le cobró al vendedor (`D-018`). */
+  comision_broker: string
+  comision_equipo: string
+  comision_tercero: string
+  rebate_concentrador: string
+  comision_real_vp: string
   negocios_iniciados: number
   canjes_solicitados: number
   canjes_cerrados: number
@@ -146,6 +165,11 @@ export type Variacion = {
   /** A qué reporte pertenece. Viene del backend en vez de deducirse del nombre:
    *  filtrar por el texto visible se rompería al renombrar una métrica. */
   dominio: Dominio
+  /** Si se muestra en pesos o como conteo. Viene del backend por el mismo motivo
+   *  que `dominio`: la pantalla lo resolvía con un conjunto de nombres visibles,
+   *  así que renombrar una métrica la dejaba mostrando el monto sin signo de
+   *  peso y sin que nada fallara. */
+  es_plata: boolean
   actual: string
   referencia: string
   absoluta: string
@@ -176,8 +200,14 @@ export type Tendencia = {
 export type PromedioMes = {
   etiqueta: string
   hitos_cerrados: string
-  comision_real_vp: string
+  valor_venta: string
+  valor_arriendo: string
   comision_total: string
+  comision_broker: string
+  comision_equipo: string
+  comision_tercero: string
+  rebate_concentrador: string
+  comision_real_vp: string
   negocios_iniciados: string
   canjes_solicitados: string
   canjes_cerrados: string

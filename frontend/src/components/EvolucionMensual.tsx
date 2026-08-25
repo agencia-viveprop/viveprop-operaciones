@@ -47,12 +47,29 @@ import type { MetricasMes, Tendencia } from '../api/reportes'
  * El orden importa: el validador mide pares **adyacentes**, así que con tres
  * series verde y rojo juntos caían a ΔE 7.9. Se resolvió dejando dos series por
  * gráfico, que además saca del medio una serie que hoy es cero en todos los meses.
+ *
+ * **La tercera serie llegó con el reparto de la comisión, y no fue gratis.** Ese
+ * gráfico necesita tres segmentos --lo que queda, lo del corredor, lo del equipo
+ * y terceros-- y el teal de `info` fue el único tercer tono que pasó las seis
+ * comprobaciones en los dos modos. Pero solo en un orden: en oscuro, el teal
+ * contra `brand.4` cae a ΔE 4.3 en deuteranopía, o sea indistinguibles. Se
+ * resolvió poniéndolos **no adyacentes** en la pila --marca, acento, teal--, que
+ * es lo que el validador mide. Con ese orden los dos modos dan ALL CHECKS PASS,
+ * y el peor par adyacente queda en ΔE 13.1.
+ *
+ * Por eso el orden de los segmentos de ese gráfico no es negociable por estética:
+ * cambiarlo vuelve a juntar el par que colisiona.
+ *
+ * El teal es además el color de la tendencia. En el gráfico del reparto no se
+ * dibuja tendencia --una sola recta sobre una composición de tres partes no dice
+ * de cuál es-- así que no compiten en la misma tarjeta.
  */
 const PALETA = {
   light: {
     principal: '#3D3EA8',
     secundaria: '#F4545A',
     negativa: '#DC2626',
+    terciaria: '#0891B2',
     // La tendencia es una lectura, no una categoría: va en el teal de `info`,
     // que no está asignado a ninguna serie y así no se confunde con una.
     tendencia: '#0891B2',
@@ -61,6 +78,10 @@ const PALETA = {
     principal: '#7c7dcf',
     secundaria: '#F4545A',
     negativa: '#e35252',
+    // En oscuro el teal de la tendencia (#0ab9e3) queda fuera de la banda de
+    // luminosidad como **relleno**: pasa como línea y no como área. El paso más
+    // oscuro sí pasa, así que el relleno usa `info.6` en los dos modos.
+    terciaria: '#0891B2',
     tendencia: '#0ab9e3',
   },
 } as const
@@ -174,7 +195,7 @@ export type SerieDef = {
   nombre: string
   /** El rol en la paleta validada. `tendencia` no entra: es la recta, no una
    *  serie de datos. */
-  tono: 'principal' | 'secundaria' | 'negativa'
+  tono: 'principal' | 'secundaria' | 'negativa' | 'terciaria'
 }
 
 
@@ -195,11 +216,13 @@ export default function EvolucionMensual({
   apilado = false,
   etiquetaTotal = 'Total',
   tendencia,
+  totalDe,
 }: {
   titulo: string
   subtitulo?: string
   serie: MetricasMes[]
-  /** Una o dos. Con más de dos, el validador de color no da el margen. */
+  /** Una, dos o tres. La tercera es el tope: el validador de color no da margen
+   *  para una cuarta, y con `apilado` el orden importa (ver `PALETA`). */
   series: SerieDef[]
   /** El valor de la línea de referencia. Solo se dibuja con una sola serie: con
    *  dos, una línea sola no dice a cuál pertenece. */
@@ -221,6 +244,18 @@ export default function EvolucionMensual({
   /** La recta de tendencia sobre la ventana, tal como la calcula el backend.
    *  Sus montos llegan como texto --son `Decimal`-- y se convierten acá. */
   tendencia?: Tendencia
+  /**
+   * De dónde sale el total de la pila, cuando no es la suma de los segmentos.
+   *
+   * Hace falta para poder **esconder segmentos sin mentir**. Si el total se
+   * calcula sumando lo que se ve, apagar un segmento baja el número y la barra,
+   * y eso se lee como que la plata bajó. No bajó: la escondiste. Con esto, el
+   * alto visible cambia pero la cifra rotulada sigue siendo la del mes completo.
+   *
+   * Solo se usa con `apilado`. Sin esto, el total es la suma de los segmentos,
+   * que es lo correcto cuando siempre se muestran todos.
+   */
+  totalDe?: (m: MetricasMes) => number
 }) {
   const modo = useComputedColorScheme('light')
   const paleta = PALETA[modo]
@@ -232,7 +267,10 @@ export default function EvolucionMensual({
     // El total de la pila, precalculado. El alto de la barra ya lo dice, pero el
     // número no estaba en ninguna parte: el globo listaba los dos segmentos y
     // había que sumarlos de cabeza para tener la cifra del mes.
-    [CAMPO_TOTAL]: series.reduce((a, s) => a + Number(m[s.campo]), 0),
+    //
+    // Con `totalDe` sale del mes completo y no de los segmentos visibles: ver la
+    // explicación en la prop.
+    [CAMPO_TOTAL]: totalDe ? totalDe(m) : series.reduce((a, s) => a + Number(m[s.campo]), 0),
   }))
 
   const ultimo = datos.length - 1
@@ -243,10 +281,13 @@ export default function EvolucionMensual({
     datos.length > 0
       ? {
           rotulo: datos[ultimo].mes,
-          valor: (unaSola || apilado ? series : series.slice(0, 1)).reduce(
-            (a, s) => a + Number(datos[ultimo][s.campo]),
-            0,
-          ),
+          valor:
+            apilado && totalDe
+              ? Number(datos[ultimo][CAMPO_TOTAL])
+              : (unaSola || apilado ? series : series.slice(0, 1)).reduce(
+                  (a, s) => a + Number(datos[ultimo][s.campo]),
+                  0,
+                ),
         }
       : null
   const conTotal = unaSola || apilado
@@ -400,6 +441,11 @@ export default function EvolucionMensual({
                   position="top"
                   fontSize={11}
                   fill={estructura.textoSuave}
+                  /* Con el mismo formato que el resto del gráfico. Sin esto el
+                     total salía crudo --"2386289.21"-- porque hasta ahora el
+                     apilado solo se había usado con conteos, donde el número
+                     pelado se lee bien. Con pesos, no. */
+                  formatter={(v) => (v === undefined || Number(v) === 0 ? '' : formato(Number(v)))}
                 />
               )}
             </Bar>

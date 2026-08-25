@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · El reparto de la comisión en reporte mensual y directorio
+
+Pedido tuyo: ver los montos de los negocios, la comisión de los corredores, la de los concentradores y la del equipo, sin distorsionar los gráficos. Propusiste un multiselect y pediste mi sugerencia.
+
+**Lo que quedó.** Un panel **«Cómo se reparte la comisión»**, apilado: Real ViveProp, Corredores y Equipo ViveProp. El alto de la barra es la plata que se reparte y cada segmento dice quién se la llevó. Contesta algo que ninguna pantalla decía: **el 57% de cada peso de comisión se lo lleva el corredor que gestiona.**
+
+Y dos paneles de montos aparte: **ventas** y **arriendos**.
+
+**Tu multiselect quedó, pero acotado a los segmentos del reparto.** Libre no funcionaba: el monto de un negocio es **45 veces** su comisión, así que dejarte elegir "monto del negocio" junto a "comisión del equipo" produce un gráfico que no dice nada, y no tenés por qué saber de antemano qué se puede mezclar. Los segmentos del reparto siempre comparten escala, porque son partes de la misma plata. Además, apagar uno no baja la cifra rotulada: sigue siendo la del mes completo, porque esconder plata no es que la plata baje.
+
+**Encontré algo que no estaba en tu pedido**, y solo se vio mirando la pantalla: el panel de montos dibujaba **dos barras sobre seis meses**. Estaba sumando precios de venta con arriendos mensuales --1.556 millones contra 2,3-- así que los arriendos quedaban por debajo de un píxel. Es el mismo defecto que hizo descartar `valor_prop` en canjes. Ahora van separados.
+
+**El descuadre de VVP-2 se muestra en vez de taparse.** En las ventanas que lo contienen, los segmentos suman $903.803 más que la comisión total registrada, y la pantalla lo dice con el monto y el motivo. El reparto de las otras 18 cierra exacto, y hay un test del motor que lo fija.
+
+**El tercer color costó.** Se probaron ocho combinaciones con el validador de la guía de visualización, nunca a ojo. Solo una terna pasa en los dos modos, y solo en un orden: en oscuro el teal contra el azul de marca es indistinguible en deuteranopía, así que van no adyacentes en la pila. Cambiar el orden de los segmentos por estética vuelve a juntar el par que colisiona.
+
+**Verificado:** 641 tests, `alembic check` limpio, build y lint sin hallazgos, y capturas de las dos pantallas contra `dev` --incluyendo el multiselect con un solo segmento y la ventana histórica con el aviso del descuadre--. Ver `D-064`.
+
 ### 2026-08-25 · Cantidades en el tablero, y el potencial separado de lo efectivo
 
 Pedido tuyo: ver cantidades además de montos, y ver el potencial del ciclo separado de la plata efectiva.

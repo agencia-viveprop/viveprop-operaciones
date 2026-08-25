@@ -26,6 +26,7 @@ import {
 import PageHeader from '../components/PageHeader'
 import { clp } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
+import PlataDeNegocios from '../components/PlataDeNegocios'
 import EvolucionMensual, { Veredicto } from '../components/EvolucionMensual'
 
 const MESES = [
@@ -34,8 +35,6 @@ const MESES = [
 ]
 
 /** Las métricas que son plata se muestran como plata; el resto, como cuenta. */
-const EN_PESOS = new Set(['Comisión real ViveProp', 'Comisión total'])
-
 function rotulo(etiqueta: string): string {
   // Las ventanas vienen como '2026-03 a 2026-08'; un mes suelto, como '2026-08'.
   if (etiqueta.includes(' a ')) {
@@ -50,7 +49,7 @@ function rotulo(etiqueta: string): string {
 
 function valor(v: Variacion, campo: 'actual' | 'referencia'): string {
   const n = Number(v[campo])
-  return EN_PESOS.has(v.metrica) ? clp(n) : String(n)
+  return v.es_plata ? clp(n) : String(n)
 }
 
 /**
@@ -76,7 +75,7 @@ function Delta({ v }: { v: Variacion }) {
 
   const color = abs > 0 ? 'good' : 'critical'
   const signo = abs > 0 ? '+' : ''
-  const diferencia = EN_PESOS.has(v.metrica) ? clp(Math.abs(abs)) : String(Math.abs(abs))
+  const diferencia = v.es_plata ? clp(Math.abs(abs)) : String(Math.abs(abs))
 
   return (
     <Group gap={6} justify="flex-end" wrap="nowrap">
@@ -350,6 +349,11 @@ export default function ReporteMensual() {
                 promedio={Number(data.promedio.comision_real_vp)}
                 tendencia={data.tendencias.comision_real_vp}
                 esPlata
+              />
+              <PlataDeNegocios
+                serie={serie}
+                promedio={data.promedio}
+                tendencias={data.tendencias}
               />
               <EvolucionMensual
                 titulo="Liquidaciones y negocios por mes"

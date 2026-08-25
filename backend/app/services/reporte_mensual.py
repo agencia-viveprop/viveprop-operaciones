@@ -44,11 +44,11 @@ from datetime import date, datetime, time, timezone
 from decimal import Decimal
 
 from pydantic import BaseModel
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa
-from app.models.catalogo import EstadoNegocio
+from app.models.catalogo import Catalogo, EstadoNegocio
 from app.models.negocio import Negocio, NegocioHito
 
 CERO = Decimal("0")
@@ -63,8 +63,44 @@ class MetricasMes(BaseModel):
 
     # Negocios
     hitos_cerrados: int
-    comision_real_vp: Decimal
+    # El valor de los negocios cerrados en el mes, **partido por operación**.
+    #
+    # Van separados porque no son la misma unidad. En una venta la base es el
+    # precio de la propiedad --cientos de millones--; en un arriendo es **un mes
+    # de renta**, del orden del millón. Tanto que en los dos arriendos del
+    # histórico la base coincide exactamente con la comisión total, porque en
+    # arriendo la comisión es 50% + 50% de un mes: o sea, un mes.
+    #
+    # Sumarlos daría el mismo número sin sentido que hizo descartar `valor_prop`
+    # en canjes (`D-054`): un total que mezcla precio de venta con renta mensual.
+    # Y en un gráfico juntos el arriendo es invisible, porque son dos órdenes de
+    # magnitud de diferencia.
+    #
+    # La venta va además **45 veces** por encima de su propia comisión, así que
+    # tampoco comparte eje con las de abajo: se sirve para dibujarla aparte.
+    #
+    # Un negocio sin tipo de operación cae en venta, que es el caso dominante
+    # --17 de 19-- y hoy no hay ninguno así. Es la única forma de que las dos
+    # sumas den el total sin descartar filas en silencio.
+    valor_venta: Decimal
+    valor_arriendo: Decimal
     comision_total: Decimal
+    # El reparto de esa comisión. Verificado liquidación por liquidación:
+    #
+    #     comision_total + rebate = broker + tercero + equipo + real_vp
+    #
+    # Cierra en 18 de las 19 del histórico. Seis se van por un centavo, porque
+    # los siete montos se redondean cada uno por su lado. Y `VVP-2` se va por
+    # 903.802,94, que es el descuadre conocido y todavía sin resolver.
+    #
+    # El rebate no es una tajada de la comisión: es plata que **entra** desde
+    # afuera --la paga el concentrador por lo que le cobró al vendedor-- y por
+    # eso está del lado izquierdo de la identidad y no del derecho (`D-018`).
+    comision_broker: Decimal
+    comision_equipo: Decimal
+    comision_tercero: Decimal
+    rebate_concentrador: Decimal
+    comision_real_vp: Decimal
     negocios_iniciados: int
 
     # Canjes
@@ -94,8 +130,14 @@ class PromedioMes(BaseModel):
 
     etiqueta: str
     hitos_cerrados: Decimal
-    comision_real_vp: Decimal
+    valor_venta: Decimal
+    valor_arriendo: Decimal
     comision_total: Decimal
+    comision_broker: Decimal
+    comision_equipo: Decimal
+    comision_tercero: Decimal
+    rebate_concentrador: Decimal
+    comision_real_vp: Decimal
     negocios_iniciados: Decimal
     canjes_solicitados: Decimal
     canjes_cerrados: Decimal
@@ -115,6 +157,12 @@ class Variacion(BaseModel):
     # pantalla se separó en dos: filtrar por el texto visible se rompería al
     # renombrar una métrica, y sin fallar.
     dominio: str
+    # Si se muestra en pesos o como conteo. Por el mismo motivo que `dominio`:
+    # la pantalla lo resolvía con un conjunto de **nombres visibles**, así que
+    # renombrar "Comisión total" la dejaba mostrando 34842291.97 sin signo de
+    # peso y sin fallar en ninguna parte. El catálogo de métricas es el único
+    # lugar donde esto se sabe, así que sale de ahí.
+    es_plata: bool
     actual: Decimal
     referencia: Decimal
     absoluta: Decimal
@@ -206,11 +254,17 @@ class ReporteMensual(BaseModel):
 # Se declaran por dominio y no en una lista sola porque la pantalla se separó en
 # dos. Mezclarlas obligaría al frontend a filtrar por nombre, que es la clase de
 # acoplamiento que se rompe en silencio al renombrar una métrica.
-METRICAS_NEGOCIOS: tuple[tuple[str, str], ...] = (
-    ("comision_real_vp", "Comisión real ViveProp"),
-    ("comision_total", "Comisión total"),
-    ("hitos_cerrados", "Liquidaciones cerradas"),
-    ("negocios_iniciados", "Negocios iniciados"),
+METRICAS_NEGOCIOS: tuple[tuple[str, str, bool], ...] = (
+    ("valor_venta", "Monto de las ventas", True),
+    ("valor_arriendo", "Monto de los arriendos", True),
+    ("comision_total", "Comisión total", True),
+    ("comision_broker", "Comisión de los corredores", True),
+    ("comision_equipo", "Comisión del equipo ViveProp", True),
+    ("comision_tercero", "Comisión de terceros", True),
+    ("rebate_concentrador", "Rebate de los concentradores", True),
+    ("comision_real_vp", "Comisión real ViveProp", True),
+    ("hitos_cerrados", "Liquidaciones cerradas", False),
+    ("negocios_iniciados", "Negocios iniciados", False),
 )
 
 # Canjes no tiene eje de plata, y no es un olvido. Sí genera comisión --la de
@@ -220,14 +274,49 @@ METRICAS_NEGOCIOS: tuple[tuple[str, str], ...] = (
 # se puede sumar: la moneda está equivocada en ~138 de las 297 filas --pesos
 # etiquetados UF y UF etiquetados CLP-- y el campo mezcla precio de venta con
 # arriendo mensual. Ver `D-054`.
-METRICAS_CANJES: tuple[tuple[str, str], ...] = (
-    ("canjes_solicitados", "Canjes solicitados"),
-    ("canjes_activos", "Canjes activos"),
-    ("canjes_cerrados", "Canjes cerrados"),
-    ("canjes_cancelados", "Canjes cancelados"),
+METRICAS_CANJES: tuple[tuple[str, str, bool], ...] = (
+    ("canjes_solicitados", "Canjes solicitados", False),
+    ("canjes_activos", "Canjes activos", False),
+    ("canjes_cerrados", "Canjes cerrados", False),
+    ("canjes_cancelados", "Canjes cancelados", False),
 )
 
-METRICAS: tuple[tuple[str, str], ...] = METRICAS_NEGOCIOS + METRICAS_CANJES
+METRICAS: tuple[tuple[str, str, bool], ...] = METRICAS_NEGOCIOS + METRICAS_CANJES
+
+# Las columnas de plata de una liquidación, con el nombre del campo de
+# `MetricasMes` que alimentan. `valor_base` es híbrida: el manual manda cuando
+# existe, si no la conversión por UF (`D-017`), y es la misma regla que usa el
+# motor de comisiones para calcular sobre ella.
+PLATA_DEL_HITO: tuple[str, ...] = (
+    "valor_venta",
+    "valor_arriendo",
+    "comision_total",
+    "comision_broker",
+    "comision_equipo",
+    "comision_tercero",
+    "rebate_concentrador",
+    "comision_real_vp",
+)
+
+
+def _columnas_de_plata():
+    """Las ocho columnas de plata, en el orden de `PLATA_DEL_HITO`.
+
+    Las consultas que las usan tienen que traer `Negocio` y su catálogo de
+    operación: las dos primeras dependen de si el negocio es venta o arriendo.
+    """
+    base = func.coalesce(NegocioHito.valor_clp_manual, NegocioHito.valor_clp_calculado, 0)
+    es_arriendo = Catalogo.codigo == "ARRIENDO"
+    return (
+        case((es_arriendo, 0), else_=base),
+        case((es_arriendo, base), else_=0),
+        func.coalesce(NegocioHito.comision_total, 0),
+        func.coalesce(NegocioHito.comision_broker, 0),
+        func.coalesce(NegocioHito.comision_equipo, 0),
+        func.coalesce(NegocioHito.comision_tercero, 0),
+        func.coalesce(NegocioHito.rebate_concentrador, 0),
+        func.coalesce(NegocioHito.comision_real_vp, 0),
+    )
 
 
 def limites(anio: int, mes: int) -> tuple[date, date]:
@@ -337,9 +426,11 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
     cerrados = db.execute(
         select(
             func.count(NegocioHito.id),
-            func.coalesce(func.sum(NegocioHito.comision_real_vp), 0),
-            func.coalesce(func.sum(NegocioHito.comision_total), 0),
-        ).where(
+            *(func.coalesce(func.sum(c), 0) for c in _columnas_de_plata()),
+        )
+        .join(Negocio, Negocio.id == NegocioHito.negocio_id)
+        .outerjoin(Catalogo, Catalogo.id == Negocio.tipo_operacion_id)
+        .where(
             NegocioHito.estado == EstadoNegocio.CERRADO,
             NegocioHito.fecha_cierre >= desde,
             NegocioHito.fecha_cierre <= hasta,
@@ -398,8 +489,7 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
     return MetricasMes(
         etiqueta=etiqueta,
         hitos_cerrados=cerrados[0],
-        comision_real_vp=cerrados[1],
-        comision_total=cerrados[2],
+        **{campo: cerrados[i + 1] for i, campo in enumerate(PLATA_DEL_HITO)},
         negocios_iniciados=iniciados or 0,
         canjes_solicitados=solicitados or 0,
         canjes_cerrados=canjes_cerrados or 0,
@@ -439,21 +529,26 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
         ai, mi = correr_meses(a_ini, m_ini, i)
         claves.append(f"{ai:04d}-{mi:02d}")
 
-    cerrados: dict[str, tuple[int, Decimal, Decimal]] = {}
-    for fecha, real, total in db.execute(
-        select(
-            NegocioHito.fecha_cierre,
-            func.coalesce(NegocioHito.comision_real_vp, 0),
-            func.coalesce(NegocioHito.comision_total, 0),
-        ).where(
+    # Por mes: cuántas liquidaciones cerraron y las siete sumas de plata. Van
+    # todas en el mismo recorrido porque salen de las mismas filas; separarlas
+    # serían siete consultas para leer dos veces lo mismo.
+    cerrados: dict[str, tuple[int, dict[str, Decimal]]] = {}
+    for fila in db.execute(
+        select(NegocioHito.fecha_cierre, *_columnas_de_plata())
+        .join(Negocio, Negocio.id == NegocioHito.negocio_id)
+        .outerjoin(Catalogo, Catalogo.id == Negocio.tipo_operacion_id)
+        .where(
             NegocioHito.estado == EstadoNegocio.CERRADO,
             NegocioHito.fecha_cierre >= desde,
             NegocioHito.fecha_cierre <= hasta,
         )
     ).all():
-        k = _clave(fecha)
-        n, r, tt = cerrados.get(k, (0, CERO, CERO))
-        cerrados[k] = (n + 1, r + Decimal(real), tt + Decimal(total))
+        k = _clave(fila[0])
+        n, plata = cerrados.get(k, (0, {campo: CERO for campo in PLATA_DEL_HITO}))
+        cerrados[k] = (
+            n + 1,
+            {campo: plata[campo] + Decimal(fila[i + 1]) for i, campo in enumerate(PLATA_DEL_HITO)},
+        )
 
     # Un negocio se cuenta una vez, en el mes de su hito mas antiguo.
     primeros = (
@@ -503,13 +598,12 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
 
     serie = []
     for k in claves:
-        n, real, total = cerrados.get(k, (0, CERO, CERO))
+        n, plata = cerrados.get(k, (0, {campo: CERO for campo in PLATA_DEL_HITO}))
         serie.append(
             MetricasMes(
                 etiqueta=k,
                 hitos_cerrados=n,
-                comision_real_vp=real,
-                comision_total=total,
+                **plata,
                 negocios_iniciados=iniciados.get(k, 0),
                 canjes_solicitados=solicitados.get(k, 0),
                 canjes_cerrados=canjes_cerrados.get(k, 0),
@@ -566,23 +660,20 @@ def _promedio(
 
     return PromedioMes(
         etiqueta=f"promedio de {len(serie)} meses",
-        hitos_cerrados=prom("hitos_cerrados"),
-        comision_real_vp=prom("comision_real_vp"),
-        comision_total=prom("comision_total"),
-        negocios_iniciados=prom("negocios_iniciados"),
-        canjes_solicitados=prom("canjes_solicitados"),
-        canjes_cerrados=prom("canjes_cerrados"),
-        canjes_cancelados=prom("canjes_cancelados"),
-        canjes_activos=prom("canjes_activos"),
+        **{campo: prom(campo) for campo, _, _ in METRICAS},
     )
 
 
 # A qué reporte pertenece cada métrica. Se deriva de las dos listas por dominio
 # en vez de escribirse de nuevo: una tercera copia de la misma partición es una
 # tercera cosa que se puede desincronizar.
-DOMINIOS = {campo: "negocios" for campo, _ in METRICAS_NEGOCIOS} | {
-    campo: "canjes" for campo, _ in METRICAS_CANJES
+DOMINIOS = {campo: "negocios" for campo, _, _ in METRICAS_NEGOCIOS} | {
+    campo: "canjes" for campo, _, _ in METRICAS_CANJES
 }
+
+# Si cada métrica se muestra en pesos. Sale del catálogo por el mismo motivo
+# que `DOMINIOS`: es el único lugar donde el dato se conoce de verdad.
+ES_PLATA = {campo: plata for campo, _, plata in METRICAS}
 
 
 # Debajo de este porcentaje mensual la serie se declara plana. Con volúmenes de
@@ -653,13 +744,14 @@ def _tendencia(
 
 def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
     variaciones = []
-    for campo, nombre in METRICAS:
+    for campo, nombre, _ in METRICAS:
         a = Decimal(getattr(actual, campo))
         r = Decimal(getattr(referencia, campo))
         variaciones.append(
             Variacion(
                 metrica=nombre,
                 dominio=DOMINIOS[campo],
+                es_plata=ES_PLATA[campo],
                 actual=a,
                 referencia=r,
                 absoluta=a - r,
@@ -739,6 +831,6 @@ def obtener_reporte_mensual(
         promedio=_promedio(serie, inicios),
         tendencias={
             campo: _tendencia(serie, campo, nombre, inicios.get(DOMINIOS[campo]))
-            for campo, nombre in METRICAS
+            for campo, nombre, _ in METRICAS
         },
     )

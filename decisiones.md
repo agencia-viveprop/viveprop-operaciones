@@ -1320,3 +1320,69 @@ El potencial es el **monto completo, no un valor esperado**: no hay probabilidad
 ### Nota de método
 
 Al levantar el servidor local para verificar había **un uvicorn viejo escuchando en el 8000**, de una sesión anterior. Es la misma trampa de la nota de `D-061`: se mató antes de medir. La verificación cruzada que da confianza es otra: los tres totales del pie del listado coinciden **al peso** con los tres tiles del tablero --8.087.861,69 / 1.824.272,06 / 4.751.490,69-- y son dos caminos de código distintos sobre la misma base. Antes no podían coincidir, porque uno de los dos sumaba estados mezclados.
+
+---
+
+## D-064 · El reparto de la comisión, y por qué no es un multiselect libre
+
+**Pedido.** Ver en reporte mensual y vista directorio los montos de los negocios, la comisión de los corredores que gestionan, la que aportan los concentradores y la del equipo ViveProp. La idea propuesta fue un filtro de selección múltiple sobre las métricas.
+
+**Antes de diseñar se midieron los datos**, y de ahí salió todo lo demás.
+
+### Hallazgo 1: el valor de los negocios no puede compartir eje con ninguna comisión
+
+1.556 millones contra 34,8 en toda la historia: **45 veces**. En el mismo eje, las cuatro comisiones quedan aplastadas contra el cero. Y no se arregla con doble eje, que es la peor práctica número uno en visualización: ahí la relación entre las series la termina decidiendo la escala elegida, no el dato.
+
+Por eso el monto va en su propio panel. **Y esto es lo que hace que el multiselect libre sea una mala idea:** dejar elegir "monto del negocio" junto a "comisión del equipo" produce un gráfico que no dice nada, y el usuario no tiene por qué saber de antemano cuáles se pueden mezclar. El selector quedó acotado a elegir **segmentos del reparto**, que siempre comparten escala porque son partes de la misma plata.
+
+### Hallazgo 2: la venta y el arriendo tampoco son la misma unidad
+
+Esto no estaba en el pedido y apareció al mirar la pantalla renderizada: el panel de montos dibujaba **dos barras sobre seis meses**. La causa: en una venta la base es el precio de la propiedad --cientos de millones-- y en un arriendo es **un mes de renta**, del orden del millón. 1.556 millones contra 2,3. Los arriendos quedaban por debajo de un píxel.
+
+Es el mismo defecto que hizo descartar `valor_prop` en canjes (`D-054`): un campo que mezcla precio de venta con renta mensual. Se partió en `valor_venta` y `valor_arriendo`, cada uno con su panel, y hay dos tests que lo fijan --uno de la separación y otro de que un negocio sin tipo de operación caiga en venta en vez de desaparecer--.
+
+Detalle que confirma la lectura: en los dos arriendos del histórico la base **coincide exactamente** con la comisión total, porque en arriendo la comisión es 50% + 50% de un mes. O sea, un mes.
+
+### Hallazgo 3: los tres montos de comisión no son series paralelas, son un reparto
+
+Verificado contra el motor, liquidación por liquidación:
+
+```
+comisión total + rebate = corredores + terceros + equipo + real ViveProp
+```
+
+El rebate va del lado izquierdo y no del derecho porque **no es una tajada**: es plata que entra desde afuera, la que el concentrador comparte de lo que le cobró al vendedor (`D-018`).
+
+Por eso el panel es **apilado y no líneas superpuestas**: el alto de la barra es la plata que se reparte y cada segmento dice quién se quedó con qué. Superpuestas se pisan y, peor, invitan a leerlas como si compitieran entre sí. Y contesta algo que ninguna pantalla decía: **el 57% de cada peso de comisión se lo lleva el corredor que gestiona**.
+
+Un test nuevo fija la identidad sobre los 18 casos que cierran. Es la premisa del gráfico: si deja de cerrar, los segmentos ya no suman el alto de la barra y el apilado empieza a mentir.
+
+### El descuadre se muestra, no se tapa
+
+La identidad **no** cierra en `VVP-2`: 903.802,94 de diferencia, el descuadre de origen ya documentado --la planilla bajó la comisión total sin recalcular el reparto--. En las ventanas que lo contienen, los segmentos suman más que la comisión total registrada.
+
+La pantalla **mide la diferencia y la dice**, con el monto y el motivo, en vez de que el que mira la barra se quede sin explicación de por qué el alto no coincide. El umbral es de un peso y no de cero porque los siete montos se guardan cuantizados por separado, y sobre decenas de filas eso deja centavos de arrastre que no son un descuadre de nada.
+
+### Esconder un segmento no puede leerse como que la plata bajó
+
+Si el total se calculara sumando lo visible, apagar un segmento bajaría la cifra rotulada. Eso se lee como una caída, y no hubo caída: se escondió. `EvolucionMensual` recibió una prop para que el total salga del mes completo y no de los segmentos mostrados.
+
+### El tercer color costó, y el orden de la pila no es negociable
+
+El archivo ya advertía que con tres series el validador no daba margen. Se probaron ocho combinaciones con el script de la guía de visualización --nunca a ojo--. Resultado:
+
+- La única terna que pasa las seis comprobaciones en los dos modos es marca, acento y el teal de `info`.
+- Pero **solo en un orden**: en oscuro, el teal contra `brand.4` cae a ΔE 4.3 en deuteranopía, o sea indistinguibles. Se resolvió dejándolos **no adyacentes** en la pila, que es lo que el validador mide. Con marca abajo, acento al medio y teal arriba: ALL CHECKS PASS en claro y en oscuro, peor par adyacente ΔE 13.1.
+- El teal de relleno es `info.6` en los dos modos: el paso claro que se usa para la línea de tendencia queda fuera de la banda de luminosidad como área.
+
+Cambiar el orden de los segmentos por estética vuelve a juntar el par que colisiona. Está anotado en el código.
+
+**No hay cuarto segmento.** Terceros y rebate son 2 y 3 liquidaciones en toda la historia: dentro de la barra serían un pelo invisible, y además no habría color que pase. Van como cifras al costado, con la aclaración de que el rebate ya está dentro de «Real ViveProp» y no se suma otra vez.
+
+### De paso: la pantalla dejaba de saber qué era plata
+
+`Variacion` ganó `es_plata`. La tabla de comparaciones decidía si formatear en pesos con **un conjunto de nombres visibles** --`new Set(['Comisión real ViveProp', 'Comisión total'])`--, exactamente el acoplamiento contra el que advierte el comentario de `dominio` dos campos más arriba. Con siete métricas de plata nuevas eso era insostenible, y renombrar una métrica dejaba el monto sin signo de peso sin que nada fallara. Ahora sale del catálogo, que es el único lugar donde el dato se conoce.
+
+### Nota de método
+
+Otra vez el servidor local viejo: la primera captura mostró `$NaN` en el panel de montos porque el uvicorn seguía sirviendo `valor_base` después de partirlo en dos. Es la tercera aparición de la misma trampa (`D-061`, `D-063`). Y el hallazgo 2 --el que no estaba en el pedido-- salió **solo de mirar la pantalla renderizada**: dos barras sobre seis meses no se detectan leyendo código ni corriendo tests.

@@ -464,7 +464,7 @@ def obtener_vista_directorio(
         promedio=_promedio(serie, inicios),
         tendencias={
             campo: _tendencia(serie, campo, nombre, inicios.get(DOMINIOS[campo]))
-            for campo, nombre in METRICAS
+            for campo, nombre, _ in METRICAS
         },
         canjes=_canjes(db, desde_v, hasta_v),
     )
