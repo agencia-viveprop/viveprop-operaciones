@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-25 · Sobre quién se hizo la gestión
+
+Pedido tuyo: además del tipo y la etapa, poder registrar sobre cuál de los dos corredores se efectúa la gestión.
+
+Hecho. Un tercer campo, **Sobre quién**, con el solicitante y el propietario. El selector muestra los **nombres** y no las etiquetas --«Solicitante · LUCÍA ELENA BAEZ CASTILLO»-- porque «Corredor solicitante» a secas obliga a recordar quién es; por eso va en su propia fila a ancho completo, que en media columna los nombres se cortan. Verificado con el desplegable abierto en captura.
+
+**Es optativo**, como lo pediste: hay movimientos que no son sobre un corredor --una cancelación, un comentario general, el registro automático de un cambio de etapa-- y forzar la elección obligaría a poner un dato falso. Tampoco se precarga: a diferencia de la etapa, acá no hay respuesta habitual.
+
+Los 605 movimientos migrados quedan en nulo: el Excel no traía el dato, y rellenarlo adivinando habría sido inventar historial. Ver `D-062`.
+
+**Verificado en vivo contra `dev`:** registrar con corredor `PROPIETARIO` lo guarda, un valor inventado devuelve 422, y el canje 344 quedó restaurado.
+
+**Verificado:** 619 tests, `alembic check` limpio, build y lint sin hallazgos.
+
 ### 2026-08-25 · Cambiar la etapa en la ficha deja rastro en la bitácora
 
 Salió de una pregunta tuya: si cambio la etapa en la bitácora, ¿se actualiza en el canje? ¿Y al revés?

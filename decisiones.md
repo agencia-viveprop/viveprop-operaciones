@@ -1262,3 +1262,21 @@ Ahora la bandeja toma el último compromiso **que exista**, no el del último mo
 ### Nota de método
 
 La primera corrida de esta verificación dio un resultado **falso**: dijo que la edición de la ficha se perdía al borrar un movimiento. El servidor local estaba corriendo código anterior al arreglo de `D-060`. Se detectó porque el resultado contradecía un arreglo que sí estaba en el código, se reinició y se volvió a medir. Vale anotarlo: un servidor de desarrollo que no se reinició es una fuente de conclusiones equivocadas que parecen mediciones.
+
+---
+
+## D-062 · Sobre quién se hizo la gestión
+
+**Contexto.** La bitácora decía **qué se hizo** (el tipo), **dónde quedó el canje** (la etapa) y **cuándo** (la fecha), pero no sobre quién. Un canje tiene dos corredores —el solicitante y el propietario— y una llamada o un WhatsApp se le hace a uno de los dos. Sin ese dato, *"Seguimiento - Llamado · 3 veces"* no dice si se insistió tres veces al mismo o una vez a cada uno, y un reporte de gestión no puede separar quién no contesta.
+
+**Decisión: un tercer campo, `corredor`, con dos valores: solicitante o propietario.**
+
+**Es optativo, y eso sale del pedido.** Fue *"la opción de registrar"*, y hay movimientos que no son sobre un corredor: una cancelación, un comentario general, el registro automático de un cambio de etapa. Forzar la elección obligaría a poner un dato falso en esos casos, que es peor que dejarlo vacío.
+
+**No se precarga.** A diferencia de la etapa —donde lo habitual es que no cambie, así que precargarla ahorra una decisión— acá no hay respuesta habitual: depende de a quién se llamó. Adivinar dejaría el dato mal en la mitad de los casos.
+
+**El selector muestra los nombres, no las etiquetas.** «Corredor solicitante» a secas obliga a recordar quién es de los dos; «Solicitante · LUCÍA ELENA BAEZ CASTILLO» se elige de un golpe. Por eso el campo va en su propia fila a ancho completo: en media columna los nombres se cortan justo donde importa. Se verificó con el desplegable abierto en captura.
+
+**Va como `String(20)` y no como tipo enumerado de Postgres**, igual que `etapa_resultante` en la misma tabla y por el mismo motivo: `movimientos` es polimórfica —sirve a canjes y a negocios— y un valor que solo tiene sentido en un dominio no debería imponerle un tipo a la columna que comparten. La validación la hace Pydantic en la API, que es donde el dominio se conoce; se verificó que un valor inventado devuelve 422.
+
+**Los 605 migrados quedan en nulo.** El Excel no traía el dato. Nulo dice la verdad —"no se sabe"— y rellenar la columna adivinando un corredor habría sido inventar historial.

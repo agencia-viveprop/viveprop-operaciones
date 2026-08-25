@@ -338,3 +338,89 @@ def test_las_dos_vias_quedan_en_la_misma_linea_de_tiempo(cliente, base):
     assert [m["etapa_resultante"] for m in movs] == ["EN_NEGOCIO", "EN_REVISION"]
     # Y la ficha coincide con lo último de la bitácora, que es lo que antes no pasaba.
     assert cliente.get("/api/canjes/1").json()["etapa"] == movs[0]["etapa_resultante"]
+
+
+# ------------------------------- sobre quien se hizo la gestion
+
+
+def test_se_registra_sobre_cual_corredor(base):
+    """El tercer dato de la gestion: que se hizo, donde quedo, y a quien.
+
+    Sin esto, "Seguimiento - Llamado, 3 veces" no dice si se insistio tres veces
+    al mismo corredor o una vez a cada uno, y un reporte de gestion no puede
+    separar quien no contesta.
+    """
+    from app.models.canje import CorredorCanje
+
+    m = crear_movimiento_canje(base, 1, "SEG_LLAMADO", autor_id=None,
+                               corredor=CorredorCanje.PROPIETARIO)
+
+    assert m.corredor == "PROPIETARIO"
+
+
+def test_el_corredor_es_optativo(base):
+    """Hay gestiones que no son sobre ninguno de los dos.
+
+    Una cancelacion o un comentario general no se le hacen a un corredor.
+    Forzar la eleccion obligaria a poner un dato falso.
+    """
+    m = crear_movimiento_canje(base, 1, "CANCELACION", autor_id=None)
+
+    assert m.corredor is None
+
+
+def test_los_tres_datos_conviven_en_el_mismo_registro(base):
+    """Tipo, etapa y corredor son independientes entre si."""
+    from app.models.canje import CorredorCanje
+
+    m = crear_movimiento_canje(base, 1, "SEG_WHATSAPP", autor_id=None,
+                               etapa=CanjeEtapa.EN_OFERTA,
+                               corredor=CorredorCanje.SOLICITANTE)
+
+    assert (m.tipo_movimiento, m.etapa_resultante, m.corredor) == (
+        "SEG_WHATSAPP", "EN_OFERTA", "SOLICITANTE",
+    )
+
+
+def test_el_rastro_de_cambio_de_etapa_no_lleva_corredor(cliente, base):
+    """Editar la etapa en la ficha no es una gestion sobre un corredor."""
+    cliente.patch("/api/canjes/1", json={"etapa": "EN_OFERTA"})
+
+    movs = cliente.get("/api/canjes/1/movimientos").json()
+    assert movs[0]["tipo_movimiento"] == "CAMBIO_ETAPA"
+    assert movs[0]["corredor"] is None
+
+
+def test_el_endpoint_acepta_los_tres(cliente, base):
+    r = cliente.post("/api/canjes/1/movimientos", json={
+        "tipo_movimiento": "SEG_LLAMADO",
+        "etapa": "EN_NEGOCIO",
+        "corredor": "PROPIETARIO",
+    })
+
+    assert r.status_code == 201, r.text
+    cuerpo = r.json()
+    assert (cuerpo["tipo_movimiento"], cuerpo["etapa_resultante"], cuerpo["corredor"]) == (
+        "SEG_LLAMADO", "EN_NEGOCIO", "PROPIETARIO",
+    )
+
+
+def test_el_endpoint_rechaza_un_corredor_que_no_existe(cliente, base):
+    r = cliente.post("/api/canjes/1/movimientos", json={
+        "tipo_movimiento": "SEG_LLAMADO", "corredor": "AMBOS",
+    })
+
+    assert r.status_code == 422
+
+
+def test_los_migrados_quedan_sin_corredor(base):
+    """El Excel no traia el dato: nulo dice la verdad, y adivinarlo habria sido
+    inventar historial."""
+    base.add(Movimiento(
+        entity_type=EntityType.canje, entity_id=1, tipo_movimiento="ACUERDO_FIRMADO",
+        fecha=datetime(2026, 7, 1, tzinfo=timezone.utc), comentario="Migrado del Excel",
+    ))
+    base.commit()
+
+    m = base.query(Movimiento).filter_by(comentario="Migrado del Excel").one()
+    assert m.corredor is None

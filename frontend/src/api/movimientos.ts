@@ -14,6 +14,9 @@ export type Movimiento = {
   autor_nombre: string | null
   comentario: string | null
   proximo_seguimiento: string | null
+  /** Sobre cuál de los dos corredores se hizo la gestión. Nulo en los
+   *  migrados del Excel, que no traía el dato. */
+  corredor: 'SOLICITANTE' | 'PROPIETARIO' | null
 }
 
 async function parseOrThrow(res: Response) {
@@ -68,6 +71,9 @@ export function crearMovimientoCanje(
     /** Dónde queda el canje. Es un dato aparte del tipo: el tipo dice qué se
      *  hizo y la etapa dónde quedó. */
     etapa?: string
+    /** Sobre cuál de los dos corredores. Optativo: hay gestiones que no son
+     *  sobre ninguno. */
+    corredor?: string
   },
 ): Promise<Movimiento> {
   return fetch(`/api/canjes/${canjeId}/movimientos`, {

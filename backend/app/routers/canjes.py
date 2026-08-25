@@ -7,7 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, require_role
 from app.db import get_db
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+from app.models.canje import (
+    Canje,
+    CanjeEstado,
+    CanjeEtapa,
+    CorredorCanje,
+    MonedaTipo,
+    OperacionTipo,
+)
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.bandeja_canjes import Bandeja, obtener_bandeja
@@ -229,6 +236,8 @@ class MovimientoOut(BaseModel):
     # Cuándo se prometió volver a mirar el canje. El del movimiento más reciente
     # es el que manda en «Qué me toca hoy».
     proximo_seguimiento: date | None
+    # Sobre cuál de los dos corredores se hizo la gestión. Nulo en los migrados.
+    corredor: str | None
 
 
 class MovimientoCreate(BaseModel):
@@ -242,6 +251,10 @@ class MovimientoCreate(BaseModel):
     # ella --se cae al `etapa_resultante` del tipo, como antes--, pero la pantalla
     # la pide siempre: el tipo dice qué se hizo y la etapa dónde quedó.
     etapa: CanjeEtapa | None = None
+    # Sobre cuál de los dos corredores se hizo la gestión. Optativo a propósito:
+    # hay movimientos que no son sobre ninguno --una cancelación, un comentario
+    # general-- y forzarlo obligaría a poner un dato falso en esos casos.
+    corredor: CorredorCanje | None = None
 
 
 def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
@@ -256,6 +269,7 @@ def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
         autor_nombre=autor.nombre if autor else None,
         comentario=m.comentario,
         proximo_seguimiento=m.proximo_seguimiento,
+        corredor=m.corredor,
     )
 
 
@@ -288,6 +302,7 @@ def crear_movimiento(
             payload.fecha,
             payload.proximo_seguimiento,
             payload.etapa,
+            payload.corredor,
         )
     except MovimientoError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

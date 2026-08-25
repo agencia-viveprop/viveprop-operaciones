@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa
+from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa, CorredorCanje
 from app.models.catalogo import EstadoNegocio
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio
@@ -141,8 +141,13 @@ def crear_movimiento_canje(
     fecha: datetime | None = None,
     proximo_seguimiento: date | None = None,
     etapa: CanjeEtapa | None = None,
+    corredor: CorredorCanje | None = None,
 ) -> Movimiento:
     """Registra la gestión y agenda cuándo hay que volver a mirar el canje.
+
+    **`corredor` es optativo a propósito.** Dice sobre cuál de los dos se hizo la
+    gestión, y hay movimientos que no son sobre ninguno --una cancelación, un
+    comentario general--. Forzarlo obligaría a poner un dato falso en esos casos.
 
     **`etapa` y `tipo_codigo` son dos datos distintos y conviven.** El tipo dice
     qué se hizo --una llamada, un WhatsApp-- y la etapa dónde quedó el canje. Antes
@@ -182,6 +187,7 @@ def crear_movimiento_canje(
         entity_id=canje_id,
         tipo_movimiento=tipo.codigo,
         etapa_resultante=etapa_del_registro,
+        corredor=corredor.value if corredor is not None else None,
         autor_id=autor_id,
         comentario=comentario,
         proximo_seguimiento=(

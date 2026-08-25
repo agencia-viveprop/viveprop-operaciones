@@ -57,6 +57,11 @@ const ETAPAS = [
   'CERRADO',
 ] as const
 
+const CORREDOR_LABELS: Record<string, string> = {
+  SOLICITANTE: 'Corredor solicitante',
+  PROPIETARIO: 'Corredor propietario',
+}
+
 const ETAPA_LABELS: Record<string, string> = {
   RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
@@ -73,6 +78,8 @@ export default function SeguimientoModal({
   puedeEditar,
   gestionadoEnApp,
   etapaActual,
+  solicitante,
+  propietario,
 }: {
   canjeId: number | null
   opened: boolean
@@ -80,6 +87,10 @@ export default function SeguimientoModal({
   puedeEditar: boolean
   /** La etapa en la que está el canje, para precargar el selector. */
   etapaActual?: string
+  /** Los nombres de los dos corredores. Van al selector: «Corredor solicitante»
+   *  a secas obliga a recordar quién es; con el nombre se elige de un golpe. */
+  solicitante?: string | null
+  propietario?: string | null
   /** Si el canje quedó marcado como gestionado en la app. Opcional porque no
    *  todos los lugares que abren este modal tienen el canje completo a mano. */
   gestionadoEnApp?: boolean
@@ -103,6 +114,10 @@ export default function SeguimientoModal({
   // una gestión no lo mueva, y pedir la decisión en cada llamada sería fricción
   // por un dato que casi siempre es el mismo.
   const [etapa, setEtapa] = useState<string | null>(etapaActual ?? null)
+  // Sobre cuál de los dos corredores. Sin precargar a propósito: no hay una
+  // respuesta habitual --depende de a quién se llamó-- y adivinar dejaría el dato
+  // mal en la mitad de los casos, que es peor que dejarlo vacío.
+  const [corredor, setCorredor] = useState<string | null>(null)
 
   const { data: movimientos, isLoading } = useQuery({
     queryKey: ['movimientos', canjeId],
@@ -138,6 +153,7 @@ export default function SeguimientoModal({
         // "el jueves" es jueves.
         proximo_seguimiento: seguimiento || undefined,
         etapa: etapa ?? undefined,
+        corredor: corredor ?? undefined,
       }),
     onSuccess: () => {
       // La bandeja también: su semáforo se mide desde el último movimiento, y
@@ -147,6 +163,7 @@ export default function SeguimientoModal({
       setComentario('')
       setFecha('')
       setSeguimiento('')
+      setCorredor(null)
     },
   })
 
@@ -223,6 +240,7 @@ export default function SeguimientoModal({
                 <Text size="xs" c="dimmed">
                   {new Date(m.fecha).toLocaleString('es-CL')} · {m.autor_nombre ?? 'Sistema'}
                   {m.etapa_resultante && ` · nueva etapa: ${ETAPA_LABELS[m.etapa_resultante] ?? m.etapa_resultante}`}
+                  {m.corredor && ` · sobre el ${CORREDOR_LABELS[m.corredor].toLowerCase()}`}
                 </Text>
                 {/* Lo que se prometió en ese movimiento. Solo el del más reciente
                     manda, pero verlos todos deja seguir cómo se fue corriendo. */}
@@ -288,6 +306,33 @@ export default function SeguimientoModal({
                 onChange={setEtapa}
               />
             </SimpleGrid>
+
+            {/* La tercera pregunta sobre la gestión: sobre quién se hizo. Va en
+                su propia fila porque los nombres son largos y en media columna
+                quedan cortados justo donde importa. Optativo: una cancelación o
+                un comentario general no son sobre un corredor. */}
+            <Select
+              label="Sobre quién"
+              placeholder="Opcional"
+              description="A cuál de los dos corredores"
+              clearable
+              data={[
+                {
+                  value: 'SOLICITANTE',
+                  label: solicitante
+                    ? `Solicitante · ${solicitante}`
+                    : 'Corredor solicitante',
+                },
+                {
+                  value: 'PROPIETARIO',
+                  label: propietario
+                    ? `Propietario · ${propietario}`
+                    : 'Corredor propietario',
+                },
+              ]}
+              value={corredor}
+              onChange={setCorredor}
+            />
 
             {/* Las dos fechas juntas: cuándo pasó y cuándo se sigue. Los dos
                 selectores de arriba describen la gestión; estas dos la ubican en

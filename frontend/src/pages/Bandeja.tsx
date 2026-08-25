@@ -187,6 +187,8 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         ? filas.filter((f) => f.nivel !== 'al_dia')
         : filas.filter((f) => f.nivel === filtro)
 
+  const filaSeguida = filas.find((f) => f.canje_id === seguimientoId)
+
   return (
     <Stack gap="md">
       <PageHeader
@@ -356,7 +358,9 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         opened={seguimientoId !== null}
         onClose={() => setSeguimientoId(null)}
         puedeEditar={puedeEditar}
-        etapaActual={filas.find((f) => f.canje_id === seguimientoId)?.etapa}
+        etapaActual={filaSeguida?.etapa}
+        solicitante={filaSeguida?.corredor_solicitante_nombre}
+        propietario={filaSeguida?.corredor_propietario_nombre}
       />
     </Stack>
   )

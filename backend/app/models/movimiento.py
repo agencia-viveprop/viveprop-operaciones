@@ -59,4 +59,10 @@ class Movimiento(Base):
     # ficha del canje: puesto allá se sobreescribiría sin dejar rastro de quién lo
     # movió. El vigente es el del movimiento más reciente, igual que la etapa.
     proximo_seguimiento: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Sobre cuál de los dos corredores se hizo la gestión. Solo aplica a canjes
+    # --un negocio no tiene solicitante ni propietario-- y por eso va como texto
+    # y no como tipo enumerado, igual que `etapa_resultante`: la tabla es
+    # polimórfica y un valor de un dominio no debería imponerle un tipo a la
+    # columna que comparten. Nulo en los 605 migrados: el Excel no lo traía.
+    corredor: Mapped[str | None] = mapped_column(String(20), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

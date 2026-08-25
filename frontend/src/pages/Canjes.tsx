@@ -177,6 +177,9 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
     setModalAbierto(true)
   }
 
+  // Se busca una vez y no tres veces en el JSX.
+  const canjeSeguido = canjes?.find((c) => c.id === seguimientoId)
+
   return (
     <Stack gap="md">
       <PageHeader
@@ -450,8 +453,10 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
         opened={seguimientoId !== null}
         onClose={() => setSeguimientoId(null)}
         puedeEditar={puedeEditar}
-        gestionadoEnApp={canjes?.find((c) => c.id === seguimientoId)?.gestionado_en_app}
-        etapaActual={canjes?.find((c) => c.id === seguimientoId)?.etapa}
+        gestionadoEnApp={canjeSeguido?.gestionado_en_app}
+        etapaActual={canjeSeguido?.etapa}
+        solicitante={canjeSeguido?.corredor_solicitante_nombre}
+        propietario={canjeSeguido?.corredor_propietario_nombre}
       />
     </Stack>
   )

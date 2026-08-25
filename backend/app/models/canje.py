@@ -37,6 +37,24 @@ class MonedaTipo(str, enum.Enum):
     OTRA = "OTRA"
 
 
+class CorredorCanje(str, enum.Enum):
+    """Cuál de los dos corredores de un canje.
+
+    Un canje siempre tiene dos: el que pide el intercambio y el que tiene la
+    propiedad. Una gestión --una llamada, un WhatsApp-- se le hace a uno de los
+    dos, y saber a cuál es lo que permite después separar quién no contesta.
+    """
+
+    SOLICITANTE = "SOLICITANTE"
+    PROPIETARIO = "PROPIETARIO"
+
+
+CORREDOR_LABELS = {
+    CorredorCanje.SOLICITANTE: "Corredor solicitante",
+    CorredorCanje.PROPIETARIO: "Corredor propietario",
+}
+
+
 # Los rótulos que se muestran. `CERRADO` se rotula «Cierre» --es el nombre de la
 # etapa-- y se guarda como `CERRADO`: ese valor está escrito como texto en
 # `movimientos.etapa_resultante`, así que renombrarlo pediría actualizar filas
