@@ -1473,3 +1473,61 @@ Y el "de N negocios" del subtítulo pasó a contar los listados **más** los age
 ### Nota de método
 
 La verificación en vivo registró dos avances en `dev` y eso **movió la etapa de los dos negocios a E1**, porque el tipo elegido traía `etapa_resultante`. Se restauraron las etapas originales --E5 y E4-- y se borraron los dos movimientos, dejando la bandeja igual que antes. No hay endpoint para borrar movimientos de negocio, así que la limpieza fue por SQL. Vale anotarlo: verificar contra una base con datos reales deja rastro, y el rastro hay que planificarlo antes de escribir el POST.
+
+---
+
+## D-067 · Carga del historial de etapas, y la fecha de término de canjes
+
+Dos temas que salieron de la misma pregunta: *"con lo que se fue incorporando, hay cómo resolver los avisos del recuadro rojo de la vista directorio"*. Se midió antes de responder, y la respuesta fue **no** para los dos avisos. Pero uno de los dos se puede desbloquear cargando datos, y el otro dejó al descubierto algo peor.
+
+### Los dos avisos seguían siendo verdad
+
+**Plazos de negocios:** cero movimientos de negocio registrados, y **las 7 liquidaciones cerradas tienen la misma fecha de inicio y de cierre**. Las 7. No había ni una duración real en toda la base.
+
+**Comisión de canjes:** `comision_dbrokers` en 0 de 297, `valor_negocio` en 0 de 297. `valor_prop` está en 296 pero es el campo descartado en `D-054`.
+
+### Lo que sí cambió: la fecha del avance es editable
+
+Desde `D-066` se puede registrar un movimiento con fecha pasada, así que la historia se puede cargar **hacia atrás** en vez de esperar a que se acumule. Eso convierte *"en unos meses la proyección pasa de estimarse a calcularse"* en *"cuando alguien cargue lo que ya sabe"*. De ahí sale la carga masiva de este sprint.
+
+### La plantilla sale pre-llenada, y no es un lujo
+
+**71 filas** para los 18 negocios: una por cada etapa desde `E1` hasta donde está hoy cada uno, con el código y la etapa puestos. Solo hay que escribir fechas. Un archivo en blanco pediría escribir 213 celdas sin equivocarse en ninguna; así son 71 fechas y nada más.
+
+Dos hojas, porque son **dos granos distintos**: el historial es una fila por etapa, y la corrección de fechas de inicio es una fila por liquidación --`VVP-3` tiene dos--. Mezclarlas obligaría a repetir el mismo dato en varias filas y a decidir cuál gana si no coinciden.
+
+**El supuesto de secuencia se declara.** Que un negocio en `E5` pasó por `E1` a `E4` es lo normal, no una certeza: las filas que no correspondan se borran, y las que queden sin fecha se ignoran.
+
+### Cuatro reglas de la carga, cada una evitando un daño concreto
+
+**No agenda próxima acción.** Si lo hiciera, cargar la historia de 18 negocios metería 18 compromisos vencidos de meses en «Qué me toca hoy» y la pantalla quedaría en rojo por una tarea administrativa. Una carga histórica no es una gestión: nadie prometió volver el jueves.
+
+**No hace retroceder la etapa vigente.** Registrar un movimiento mueve la etapa del negocio al del movimiento cronológicamente más nuevo (`D-060`). Cargar `E1` y `E2` de un negocio en `E7` lo bajaría a `E2`: reemplazaría el dato bueno por uno viejo. La carga escribe historia y no toca el presente; se verificó en vivo que `VVP-15` siguió en `E5` después de cargarle desde `E1`.
+
+**Recargar no duplica.** La clave es negocio + etapa. Es lo que permite iterar --cargar lo que se sabe, mirar el resultado, corregir-- sin ensuciar la bitácora.
+
+**No corrige una fecha de inicio si eso mueve plata, y lo comprueba en vez de suponerlo.** Cuando una liquidación no tiene `fecha_valorizacion`, su UF sale de `fecha_inicio`: cambiarla movería el monto y la comisión. La carga se niega y lo informa. Se midió antes de escribirla: de las 7 liquidaciones a corregir, cinco tienen `fecha_valorizacion` y dos tienen valor manual, que manda sobre la conversión (`D-017`), así que hoy **ninguna** está en riesgo. La guarda es mecánica igual, para que siga siendo verdad si los datos cambian.
+
+Y una relajación deliberada: **la validación de fecha mínima se levanta para esta carga.** El sistema rechaza un movimiento anterior al inicio de la primera liquidación, que es correcto para el uso normal; pero en 7 liquidaciones ese inicio **está mal**, así que la validación bloquearía justamente las fechas reales. Se permiten y se listan aparte, que es la lista de las que conviene corregir.
+
+### Verificación de punta a punta
+
+Se bajó la plantilla, se llenó como la llenaría una persona --las cinco etapas de `VVP-15` y la corrección de `VVP-1`-- y se cargó contra `dev`. Resultado: 5 movimientos creados, 66 filas sin fecha ignoradas, 1 fecha corregida, cero omitidas. Y lo que apareció es el punto de todo esto: **`VVP-1` pasó de duración desconocida a 72 días**, y `VVP-15` mostró **147 días de `E1` a `E5`**. Después se restauró `dev` a su estado anterior.
+
+### Canjes: la fecha de cierre es fecha de término
+
+Buscando si al menos los canjes tenían duración de ciclo apareció esto:
+
+- **47 canjes tienen fecha de cierre**, y están todos **cancelados** en etapas de mitad de proceso. Ninguno llegó a Cierre.
+- **31 tienen la etapa en Cierre**, y ninguno tiene fecha.
+- **Los dos conjuntos no se cruzan: intersección cero.**
+
+O sea que `canjes.fecha_cierre` es la **fecha de cancelación**. Si esa mediana se hubiera publicado como "cuánto tarda un canje en cerrar", se habría publicado el tiempo que tardan en morir.
+
+El usuario propuso como norma que un canje cancelado no tenga fecha de cierre y quede en su etapa real. **Se acordó no vaciar esas 47 fechas**: son el único registro de cuándo murió cada canje, y con ellas se puede saber cuánto sobrevive uno antes de caerse --mediana 8 días, y bajando: mayo 8, junio 15, julio 2, agosto 1--. La columna se lee **junto al estado**: cancelado, es cuándo se canceló; cerrado, cuándo cerró. Cero migración y cero dato destruido.
+
+**Y sobre los 31: el usuario confirmó que se cayeron**, estando en la etapa de Cierre. Así que **nunca se cerró ningún canje**, el 0 de «Canjes cerrados» es correcto y se deja como está. Queda anotado un hueco del modelo para cuando eso cambie: `CanjeEstado` solo tiene `ACTIVO` y `CANCELADO`, así que hoy no hay forma de registrar un cierre exitoso.
+
+### Nota de método
+
+Las dos hipótesis que se probaron antes de usarlas resultaron **falsas**, y las dos se descartaron a tiempo: que los movimientos migrados se distinguieran por no tener autor (`D-065`), y que los canjes con fecha de cierre fueran los cerrados. La segunda habría publicado una métrica equivocada. Verificar antes de construir sigue siendo más rápido que construir y desarmar.

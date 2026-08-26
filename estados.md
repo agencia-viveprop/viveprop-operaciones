@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-26 · Carga del historial de etapas
+
+Preguntaste si con lo incorporado se podían resolver los dos avisos del recuadro rojo de la vista directorio. Medí antes de responder: **los dos seguían siendo verdad**. Cero movimientos de negocio, las 7 liquidaciones cerradas con la misma fecha de inicio y de cierre, y la comisión de canjes en 0 de 297.
+
+Pero uno de los dos se puede desbloquear cargando datos, y eso es lo que quedó hecho.
+
+**En Negocios hay un botón nuevo, «Historial de etapas».** Bajás la plantilla, que sale **pre-llenada** con 71 filas —una por cada etapa desde E1 hasta donde está hoy cada negocio— y solo escribís fechas. Tiene una segunda hoja con las 7 liquidaciones cuya fecha de inicio quedó igual a la de cierre, para corregirlas de paso.
+
+**Probado de punta a punta contra `dev`:** llené las cinco etapas de VVP-15 y la corrección de VVP-1, cargué, y apareció lo que buscábamos — **VVP-1 pasó de duración desconocida a 72 días**, y VVP-15 mostró **147 días de E1 a E5**. Después restauré `dev`.
+
+Cuatro reglas que le puse: no agenda próxima acción (cargar historia no puede llenar la bandeja de vencidos), no hace retroceder la etapa actual, recargar no duplica, y **no corrige una fecha de inicio si eso movería la plata** — eso último lo comprueba, no lo supone. Hoy ninguna de las 7 está en riesgo.
+
+**Sobre canjes:** confirmaste que los 31 en etapa de Cierre se cayeron, así que nunca se cerró ningún canje y el 0 es correcto. Queda como está. Y las 47 fechas de cancelación **no se borran**: se leen junto al estado, como acordamos, porque son el único registro de cuándo murió cada canje.
+
+**Verificado:** 681 tests, `alembic check` limpio, build y lint sin hallazgos. Ver `D-067`.
+
 ### 2026-08-26 · Las dos fechas del avance de negocio
 
 Pedido tuyo: en el pipeline de la ficha, registrar la fecha de la actividad y la de la próxima acción, con 3 días por defecto desde la última fecha registrada.

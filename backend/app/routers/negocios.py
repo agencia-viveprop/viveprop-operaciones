@@ -23,6 +23,13 @@ from app.services.bandeja_negocios import (
     obtener_bandeja_negocios,
     ultimos_movimientos,
 )
+from app.services.importar_historial import (
+    ImportarHistorialError,
+    ResumenHistorial,
+    importar_historial,
+)
+from app.services.plantilla_historial import estructura_importacion as estructura_historial
+from app.services.plantilla_historial import generar_plantilla as generar_plantilla_historial
 from app.services.importar_negocios import (
     ArchivoInvalido,
     ResumenCargaNegocios,
@@ -479,6 +486,49 @@ def estructura_de_la_plantilla(
     puede quedar describiendo columnas que el Excel ya no trae.
     """
     return estructura_plantilla(db)
+
+
+@router.get("/plantilla-historial")
+def descargar_plantilla_historial(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """La plantilla del historial de etapas, **pre-llenada** con lo que ya se sabe.
+
+    Trae una fila por cada etapa desde E1 hasta donde está hoy cada negocio, así
+    que solo hay que escribir fechas. Ver `plantilla_historial`.
+    """
+    return Response(
+        content=generar_plantilla_historial(db),
+        media_type=XLSX,
+        headers={"Content-Disposition": 'attachment; filename="historial-de-etapas.xlsx"'},
+    )
+
+
+@router.get("/plantilla-historial/estructura", response_model=EstructuraArchivo)
+def estructura_del_historial(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    return estructura_historial(db)
+
+
+@router.post("/importar-historial", response_model=ResumenHistorial)
+async def importar_historial_de_etapas(
+    archivo: UploadFile,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Carga el historial de etapas y corrige las fechas de inicio del Excel.
+
+    Las filas con problemas no abortan la carga: se omiten y se informan, porque
+    un archivo de 71 filas con tres errores tiene 68 filas buenas.
+    """
+    try:
+        return importar_historial(db, await archivo.read(), usuario.id)
+    except ImportarHistorialError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
 
 
 @router.post("/importar", response_model=ResumenCargaNegocios)

@@ -401,3 +401,52 @@ export function obtenerNegociosPorMes(
     credentials: 'include',
   }).then(parseOrThrow)
 }
+
+// ----------------------------------------- carga del historial de etapas
+
+/**
+ * El resultado de cargar el historial de etapas.
+ *
+ * Las tres listas del final no son errores todas: `anteriores_al_inicio` es
+ * información esperada --la fecha real cae antes del inicio mal registrado, que es
+ * justamente lo que la hoja de liquidaciones viene a corregir-- y
+ * `no_corregidas_por_plata` es la carga negándose a alterar algo que ya funciona.
+ */
+export type ResumenHistorial = {
+  movimientos_creados: number
+  movimientos_actualizados: number
+  /** Filas que quedaron sin fecha. Es lo normal: de un negocio se saben dos
+   *  fechas y no las siete. */
+  filas_sin_fecha: number
+  fechas_corregidas: number
+  /** Filas que no se pudieron aplicar, con el motivo de cada una. */
+  omitidas: string[]
+  /** Movimientos cuya fecha quedó antes del inicio registrado de su liquidación.
+   *  No es un error: es la lista de las que conviene corregir. */
+  anteriores_al_inicio: string[]
+  /** Liquidaciones que la carga se negó a corregir porque su valorización depende
+   *  de la fecha de inicio, así que cambiarla movería el monto. */
+  no_corregidas_por_plata: string[]
+}
+
+export async function descargarPlantillaHistorial(): Promise<void> {
+  const res = await fetch('/api/negocios/plantilla-historial', { credentials: 'include' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'historial-de-etapas.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export function importarHistorial(archivo: File): Promise<ResumenHistorial> {
+  const formData = new FormData()
+  formData.append('archivo', archivo)
+  return fetch('/api/negocios/importar-historial', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  }).then(parseOrThrow)
+}

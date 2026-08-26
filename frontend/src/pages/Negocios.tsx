@@ -11,7 +11,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { IconEye, IconPlus, IconTableImport } from '@tabler/icons-react'
+import { IconEye, IconPlus, IconHistory, IconTableImport } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import {
   listarNegocios,
@@ -24,6 +24,7 @@ import PageHeader from '../components/PageHeader'
 import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
 import CargaMasivaModal from '../components/CargaMasivaModal'
+import HistorialEtapasModal from '../components/HistorialEtapasModal'
 import { COLOR_ESTADO, clp, duracion, fecha, MODELO_CORTO } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 
@@ -51,6 +52,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   const [fichaId, setFichaId] = useState<number | null>(null)
   const [formAbierto, setFormAbierto] = useState(false)
   const [cargaAbierta, setCargaAbierta] = useState(false)
+  const [historialAbierto, setHistorialAbierto] = useState(false)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
   const consulta = useQuery({
@@ -93,6 +95,15 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                 onClick={() => setCargaAbierta(true)}
               >
                 Carga masiva
+              </Button>
+              {/* Aparte de la carga masiva porque hace otra cosa: esa crea
+                  negocios, esta escribe la historia de los que ya existen. */}
+              <Button
+                variant="light"
+                leftSection={<IconHistory size={16} />}
+                onClick={() => setHistorialAbierto(true)}
+              >
+                Historial de etapas
               </Button>
               <Button color="accent" leftSection={<IconPlus size={16} />} onClick={() => setFormAbierto(true)}>
                 Nuevo negocio
@@ -247,6 +258,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
         puedeEditar={puedeEditar}
       />
       <CargaMasivaModal abierto={cargaAbierta} onCerrar={() => setCargaAbierta(false)} />
+      <HistorialEtapasModal abierto={historialAbierto} onCerrar={() => setHistorialAbierto(false)} />
 
       <NegocioFormModal
         abierto={formAbierto}
