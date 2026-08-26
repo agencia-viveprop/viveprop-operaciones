@@ -35,7 +35,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.catalogo import Etapa
-from app.models.negocio import Negocio, NegocioHito
+from app.models.negocio import Negocio, NegocioHito, clave_de_orden
 from app.services.estructura_archivo import (
     ColumnaArchivo,
     EstructuraArchivo,
@@ -121,7 +121,10 @@ def filas_del_historial(db: Session) -> list[tuple[str, str, str, str, str, str]
     orden_de = {e.codigo: e.orden or 0 for e in etapas}
 
     filas = []
-    for negocio in db.scalars(select(Negocio).order_by(Negocio.codigo)).all():
+    # Por número: si no, el archivo sale VVP-1, VVP-10, VVP-11 ... VVP-2.
+    for negocio in sorted(
+        db.scalars(select(Negocio)).all(), key=lambda n: clave_de_orden(n.codigo)
+    ):
         # Las fechas de referencia son las del negocio completo: la del hito más
         # antiguo y la del último cierre. Es lo que sirve para orientarse.
         inicios = [h.fecha_inicio for h in negocio.hitos if h.fecha_inicio]
@@ -152,16 +155,17 @@ def filas_de_liquidaciones(db: Session) -> list[tuple[str, str, str, str, str]]:
     desconocida y no se puede calcular nada con ellas. Solo esas: pedir la fecha
     de inicio de las demás sería invitar a cambiar datos que están bien.
     """
-    filas = []
-    for hito, codigo in db.execute(
+    crudas = db.execute(
         select(NegocioHito, Negocio.codigo)
         .join(Negocio, Negocio.id == NegocioHito.negocio_id)
         .where(
             NegocioHito.fecha_cierre.is_not(None),
             NegocioHito.fecha_inicio == NegocioHito.fecha_cierre,
         )
-        .order_by(Negocio.codigo, NegocioHito.id)
-    ).all():
+    ).all()
+
+    filas = []
+    for hito, codigo in sorted(crudas, key=lambda f: (clave_de_orden(f[1]), f[0].id)):
         filas.append((
             codigo,
             hito.nombre or "ÚNICA",

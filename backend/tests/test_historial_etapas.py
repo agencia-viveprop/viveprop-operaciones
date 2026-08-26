@@ -463,3 +463,18 @@ def test_la_validacion_mira_tambien_lo_ya_cargado(db):
 
     assert resumen.movimientos_creados == 0
     assert len(resumen.secuencia_incoherente) == 1
+
+
+def test_la_plantilla_sale_ordenada_por_numero(db):
+    """El archivo tambien: si no, sale VVP-1, VVP-10, VVP-11 ... VVP-2.
+
+    Importa mas de lo que parece: la persona llena 71 filas leyendo de arriba a
+    abajo, y un orden que salta de VVP-1 a VVP-10 y vuelve a VVP-2 cincuenta filas
+    despues es una invitacion a poner la fecha en la fila del negocio equivocado.
+    """
+    for codigo in ("VVP-2", "VVP-11", "VVP-1", "VVP-10"):
+        _negocio(db, codigo, etapa="E1")
+
+    filas = filas_del_historial(db)
+
+    assert [f[0] for f in filas] == ["VVP-1", "VVP-2", "VVP-10", "VVP-11"]

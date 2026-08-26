@@ -11,7 +11,7 @@ from app.db import get_db
 from app.models.canje import MonedaTipo
 from app.models.catalogo import EstadoNegocio, ModeloNegocio, TipoCatalogo
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
-from app.models.negocio import Negocio, NegocioHito, Propiedad
+from app.models.negocio import Negocio, NegocioHito, clave_de_orden, Propiedad
 from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
 from app.services.movimientos import MovimientoError, crear_movimiento_negocio
@@ -627,7 +627,8 @@ def listar(
     if codigo:
         consulta = consulta.where(Negocio.codigo.ilike(f"%{codigo}%"))
 
-    negocios = db.scalars(consulta.order_by(Negocio.codigo)).all()
+    # Por número y no como texto: alfabéticamente `VVP-10` va antes de `VVP-2`.
+    negocios = sorted(db.scalars(consulta).all(), key=lambda n: clave_de_orden(n.codigo))
     if estado is not None:
         negocios = [n for n in negocios if any(h.estado == estado for h in n.hitos)]
 

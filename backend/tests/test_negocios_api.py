@@ -640,3 +640,18 @@ def test_la_guarda_mira_los_siete_montos_no_solo_la_comision_real(
 
     db.expire_all()
     assert db.get(NegocioHito, hito["id"]).comision_real_vp == D(real_antes)
+
+
+def test_el_listado_ordena_por_numero_y_no_alfabeticamente(cliente, base_negocios):
+    """`VVP-10` no puede ir antes de `VVP-2`.
+
+    Ordenar el codigo como texto compara caracter por caracter, asi que el "1" de
+    VVP-10 gana al "2" de VVP-2 y la lista sale VVP-1, VVP-10, VVP-11 ... VVP-2.
+    Con 18 negocios eso es exactamente lo que se vio en pantalla.
+    """
+    for codigo in ("VVP-2", "VVP-11", "VVP-1", "VVP-10", "VVP-3"):
+        assert cliente.post("/api/negocios", json=_payload_vvp4(codigo=codigo)).status_code == 201
+
+    codigos = [n["codigo"] for n in cliente.get("/api/negocios").json()]
+
+    assert codigos == ["VVP-1", "VVP-2", "VVP-3", "VVP-10", "VVP-11"]

@@ -126,6 +126,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-26 · Los códigos se ordenan por número
+
+El listado salía VVP-1, VVP-10, VVP-11 … VVP-19, VVP-2, VVP-3: orden alfabético de texto, donde el `1` de VVP-10 le gana al `2` de VVP-2. Ahora va por número, y lo mismo en las dos hojas de la plantilla del historial.
+
+En la plantilla eso importaba más de lo que parece: se llenan 71 filas leyendo de arriba abajo, y un orden que salta de VVP-1 a VVP-10 y vuelve a VVP-2 cincuenta filas después es una invitación a poner la fecha en la fila del negocio equivocado. Justo después de arreglar dos negocios con el año mal, no era el momento de dejar esa trampa.
+
+**Verificado:** 688 tests, `alembic check` limpio, y el orden real contra `dev`: VVP-1 → VVP-2 → VVP-3 → VVP-4 → VVP-6 → … → VVP-19. Ver `D-069`.
+
 ### 2026-08-26 · La secuencia se valida, y el pipeline se lee cronológico
 
 Encontraste que VVP-1 y VVP-2 quedaron con el historial descolocado. Tenías razón en las dos cosas, y eran dos problemas distintos.

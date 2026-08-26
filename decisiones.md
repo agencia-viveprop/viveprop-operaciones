@@ -1567,3 +1567,17 @@ La bitácora de canjes **no** cambia: ahí el orden descendente es correcto, por
 ### Nota de método
 
 Los dos defectos se encontraron **abriendo una ficha**, después de que la carga reportara éxito sin una sola omisión. Es la tercera vez en esta serie de cambios que el problema real aparece mirando la pantalla renderizada y no en los tests: antes fueron las dos barras sobre seis meses de `D-064` y los 35 avisos repetidos de `D-065`. Un resumen que dice "cargado, cero errores" no es evidencia de que el dato quedó bien; es evidencia de que ninguna regla lo contradijo. Y la regla que faltaba era justamente la que importaba.
+
+---
+
+## D-069 · Los códigos se ordenan por número, no como texto
+
+El listado de Negocios salía `VVP-1, VVP-10, VVP-11, VVP-12 … VVP-19, VVP-2, VVP-3`. Ordenar `codigo` como texto compara caracter por caracter, así que el `1` de `VVP-10` le gana al `2` de `VVP-2`. Con 18 negocios el efecto es que la mitad de la lista está en el lugar equivocado.
+
+**Se resuelve en Python y no en SQL.** Extraer el número necesitaría `substring(... from '[0-9]+$')::int`, que es exclusivo de Postgres, y dejaría el orden sin poder probarse contra la base en memoria. Es el mismo criterio que ya se aplicó al agrupamiento por mes del reporte mensual, y por el mismo motivo: tener el orden verificado vale más que ahorrar una vuelta sobre 18 filas.
+
+La clave vive al lado del modelo, en `clave_de_orden`, porque es una propiedad del formato del código y no de una pantalla. Se aplica en los tres lugares que lo mostraban: el listado, y las dos hojas de la plantilla del historial.
+
+**En la plantilla importa más de lo que parece.** La persona llena 71 filas leyendo de arriba abajo, y un orden que salta de `VVP-1` a `VVP-10` y vuelve a `VVP-2` cincuenta filas después es una invitación a escribir la fecha en la fila del negocio equivocado. Justo después de haber arreglado dos negocios con el año mal, no era el momento de dejar una trampa de transcripción.
+
+Un código sin número al final va antes que los numerados de su prefijo. No es un caso que exista hoy, pero `-1` es determinista y no colisiona con ningún número real, así que el orden no depende de lo que devuelva el motor.

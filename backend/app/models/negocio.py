@@ -1,4 +1,5 @@
 import enum
+import re
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -67,6 +68,30 @@ class Propiedad(Base):
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     negocios: Mapped[list["Negocio"]] = relationship(back_populates="propiedad")
+
+
+def clave_de_orden(codigo: str | None) -> tuple[str, int]:
+    """Cómo se ordena un código de negocio: por su prefijo y por su **número**.
+
+    Ordenar `codigo` como texto pone `VVP-10` antes de `VVP-2`, porque compara
+    caracter por caracter y el "1" es menor que el "2". En una lista de 18 negocios
+    eso deja el orden alfabético que nadie espera: VVP-1, VVP-10, VVP-11 ... VVP-2.
+
+    Se resuelve en Python y no en SQL a propósito. Extraer el número necesitaría
+    `substring(... from '[0-9]+$')::int`, que es de Postgres, y dejaría el orden sin
+    poder probarse contra la base en memoria -- el mismo motivo por el que el
+    agrupamiento por mes del reporte mensual también se hace acá.
+
+    Un código sin número al final va **antes** que los numerados de su prefijo, y no
+    en un lugar arbitrario: `-1` es determinista y no colisiona con ningún número
+    real.
+    """
+    if not codigo:
+        return ("", -1)
+    match = re.match(r"^(.*?)(\d+)$", codigo.strip())
+    if match is None:
+        return (codigo.strip().upper(), -1)
+    return (match.group(1).upper(), int(match.group(2)))
 
 
 class Negocio(Base):
