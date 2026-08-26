@@ -76,6 +76,10 @@ class ResumenHistorial(BaseModel):
     # Liquidaciones que la carga se negó a corregir porque su plata depende de la
     # fecha de inicio.
     no_corregidas_por_plata: list[str] = []
+    # Negocios cuyas fechas contradicen el orden de las etapas. **No se cargan**:
+    # una historia internamente contradictoria produce duraciones negativas, y
+    # cargar la mitad es peor que no cargar nada.
+    secuencia_incoherente: list[str] = []
 
     @property
     def total_movimientos(self) -> int:
@@ -151,7 +155,56 @@ def _contexto(db: Session) -> _Contexto:
     return ctx
 
 
-def _cargar_historial(db: Session, hoja, ctx: _Contexto, resumen: ResumenHistorial, autor_id: int | None) -> None:
+def _validar_secuencia(
+    fechas: dict[str, date], orden_de: dict[str, int]
+) -> tuple[str, str] | None:
+    """El primer par de etapas cuyo orden contradice sus fechas.
+
+    Un negocio no puede llegar a `E1` despues de haber pasado por `E3`: el
+    pipeline es secuencial, asi que las fechas tienen que subir junto con la
+    etapa. Devuelve el par en conflicto, o `None` si la historia cierra.
+
+    **Esto existe porque faltaba.** La primera version validaba que la fecha no
+    fuera futura y nada mas, y dejo pasar dos negocios con `E1` y `E2` fechados un
+    ano despues de su propio cierre --Excel completa el ano actual cuando alguien
+    escribe "12-08" en una celda de fecha--. Nadie lo habria notado hasta que la
+    proyeccion de plazos empezara a devolver duraciones negativas.
+    """
+    conocidas = sorted(
+        ((orden_de.get(e, 0), e, f) for e, f in fechas.items()),
+        key=lambda x: x[0],
+    )
+    for (_, etapa_previa, fecha_previa), (_, etapa, fecha) in zip(conocidas, conocidas[1:]):
+        if fecha < fecha_previa:
+            # El sospechoso es el de la etapa **anterior**: es el que quedo con
+            # una fecha mas nueva que una etapa que viene despues. En el caso real
+            # era E2 con el ano en 2026, contra un E3 de 2025.
+            return (
+                f"{etapa_previa} el {fecha_previa:%d-%m-%Y}",
+                f"{etapa} el {fecha:%d-%m-%Y}",
+            )
+    return None
+
+
+@dataclass
+class _FilaHistorial:
+    fila: int
+    etapa: str
+    fecha: date
+    comentario: str | None
+    tipo: str
+
+
+def _leer_filas(hoja, ctx: _Contexto, resumen: ResumenHistorial) -> dict[int, list[_FilaHistorial]]:
+    """Las filas validas, agrupadas por negocio. Las malas se informan y se dejan.
+
+    Se lee todo antes de escribir nada porque la validacion de secuencia necesita
+    ver la historia completa de cada negocio: una fila sola no puede saber si
+    contradice a otra que viene diez filas mas abajo.
+    """
+    hoy = datetime.now(timezone.utc).date()
+    por_negocio: dict[int, list[_FilaHistorial]] = {}
+
     for fila in range(FILA_ENCABEZADO + 1, hoja.max_row + 1):
         codigo = hoja.cell(row=fila, column=1).value
         etapa_codigo = hoja.cell(row=fila, column=2).value
@@ -183,56 +236,101 @@ def _cargar_historial(db: Session, hoja, ctx: _Contexto, resumen: ResumenHistori
         tipo = ctx.tipo_de_etapa.get(etapa_codigo)
         if tipo is None:
             resumen.omitidas.append(
-                f"{donde} ({codigo}): ningún tipo de movimiento deja el negocio en '{etapa_codigo}'"
+                f"{donde} ({codigo}): ningun tipo de movimiento deja el negocio en '{etapa_codigo}'"
             )
             continue
 
-        hoy = datetime.now(timezone.utc).date()
         if cuando > hoy:
             resumen.omitidas.append(
-                f"{donde} ({codigo} {etapa_codigo}): la fecha está en el futuro"
+                f"{donde} ({codigo} {etapa_codigo}): la fecha esta en el futuro"
             )
             continue
 
         descripcion = hoja.cell(row=fila, column=4).value
-        comentario = str(descripcion).strip() if descripcion else None
-        momento = datetime.combine(cuando, time.min, tzinfo=timezone.utc)
-
-        # La clave es negocio + etapa: recargar corrige en vez de duplicar.
-        existente = db.scalar(
-            select(Movimiento).where(
-                Movimiento.entity_type == EntityType.negocio,
-                Movimiento.entity_id == negocio.id,
-                Movimiento.etapa_resultante == etapa_codigo,
+        por_negocio.setdefault(negocio.id, []).append(
+            _FilaHistorial(
+                fila=fila,
+                etapa=etapa_codigo,
+                fecha=cuando,
+                comentario=str(descripcion).strip() if descripcion else None,
+                tipo=tipo,
             )
         )
-        if existente is not None:
-            existente.fecha = momento
-            existente.comentario = comentario
-            existente.tipo_movimiento = tipo
-            resumen.movimientos_actualizados += 1
-        else:
-            db.add(
-                Movimiento(
-                    entity_type=EntityType.negocio,
-                    entity_id=negocio.id,
-                    tipo_movimiento=tipo,
-                    etapa_resultante=etapa_codigo,
-                    fecha=momento,
-                    autor_id=autor_id,
-                    comentario=comentario,
-                    # Sin próxima acción: ver el docstring del módulo.
-                    proximo_seguimiento=None,
+    return por_negocio
+
+
+def _cargar_historial(
+    db: Session, hoja, ctx: _Contexto, resumen: ResumenHistorial, autor_id: int | None
+) -> None:
+    por_negocio = _leer_filas(hoja, ctx, resumen)
+    orden_de = {codigo: (e.orden or 0) for codigo, e in ctx.etapas.items()}
+    por_id = {n.id: n for n in ctx.negocios.values()}
+
+    for negocio_id, filas in por_negocio.items():
+        negocio = por_id[negocio_id]
+
+        # Los movimientos que ya estan cargados cuentan para la validacion: cargar
+        # E4 a E7 en un segundo archivo tiene que ser coherente con el E1 a E3 que
+        # se cargo en el primero.
+        guardados = {
+            m.etapa_resultante: m.fecha.date()
+            for m in db.scalars(
+                select(Movimiento).where(
+                    Movimiento.entity_type == EntityType.negocio,
+                    Movimiento.entity_id == negocio_id,
+                    Movimiento.etapa_resultante.is_not(None),
+                )
+            ).all()
+        }
+        fechas = {**guardados, **{f.etapa: f.fecha for f in filas}}
+
+        conflicto = _validar_secuencia(fechas, orden_de)
+        if conflicto is not None:
+            sospechoso, referencia = conflicto
+            resumen.secuencia_incoherente.append(
+                f"{negocio.codigo}: {sospechoso} es posterior a {referencia}, y una etapa "
+                "anterior no puede tener una fecha mas nueva. Ninguna de sus filas se cargo: "
+                "revisa el ano, que Excel suele completarlo con el actual."
+            )
+            continue
+
+        for f in filas:
+            momento = datetime.combine(f.fecha, time.min, tzinfo=timezone.utc)
+            # La clave es negocio + etapa: recargar corrige en vez de duplicar.
+            existente = db.scalar(
+                select(Movimiento).where(
+                    Movimiento.entity_type == EntityType.negocio,
+                    Movimiento.entity_id == negocio_id,
+                    Movimiento.etapa_resultante == f.etapa,
                 )
             )
-            resumen.movimientos_creados += 1
+            if existente is not None:
+                existente.fecha = momento
+                existente.comentario = f.comentario
+                existente.tipo_movimiento = f.tipo
+                resumen.movimientos_actualizados += 1
+            else:
+                db.add(
+                    Movimiento(
+                        entity_type=EntityType.negocio,
+                        entity_id=negocio_id,
+                        tipo_movimiento=f.tipo,
+                        etapa_resultante=f.etapa,
+                        fecha=momento,
+                        autor_id=autor_id,
+                        comentario=f.comentario,
+                        # Sin proxima accion: ver el docstring del modulo.
+                        proximo_seguimiento=None,
+                    )
+                )
+                resumen.movimientos_creados += 1
 
-        inicio = min((h.fecha_inicio for h in negocio.hitos if h.fecha_inicio), default=None)
-        if inicio is not None and cuando < inicio:
-            resumen.anteriores_al_inicio.append(
-                f"{codigo} {etapa_codigo}: {cuando:%d-%m-%Y}, antes del inicio "
-                f"registrado ({inicio:%d-%m-%Y})"
-            )
+            inicio = min((h.fecha_inicio for h in negocio.hitos if h.fecha_inicio), default=None)
+            if inicio is not None and f.fecha < inicio:
+                resumen.anteriores_al_inicio.append(
+                    f"{negocio.codigo} {f.etapa}: {f.fecha:%d-%m-%Y}, antes del inicio "
+                    f"registrado ({inicio:%d-%m-%Y})"
+                )
 
 
 def _corregir_liquidaciones(db: Session, hoja, ctx: _Contexto, resumen: ResumenHistorial) -> None:

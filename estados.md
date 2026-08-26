@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-26 · La secuencia se valida, y el pipeline se lee cronológico
+
+Encontraste que VVP-1 y VVP-2 quedaron con el historial descolocado. Tenías razón en las dos cosas, y eran dos problemas distintos.
+
+**El año.** E1 y E2 quedaron en agosto de **2026**, después de que esos negocios terminaron en enero. No fue tu error: **Excel completa el año actual** cuando escribís `12-08` en una celda de fecha. Mi carga lo aceptó porque solo validaba que la fecha no fuera futura.
+
+**Ahora la carga valida la secuencia** y rechaza el negocio completo cuando las fechas contradicen el orden de las etapas, con el detalle apuntando al sospechoso: *"VVP-2: E2 el 13-08-2026 es posterior a E3 el 02-10-2025"*. Corregí el año en el archivo y volvé a subirlo: la próxima recarga te lista sola todas las que queden mal, sin tener que abrir fichas.
+
+**El orden.** E2 salía arriba de E1 con la misma fecha porque el historial ordenaba solo por fecha, sin desempate. Ahora el pipeline se lee **de E1 hacia adelante** y dos etapas del mismo día salen en el orden en que pasaron. La bitácora de canjes no cambia: ahí el orden inverso es el correcto, porque no es una secuencia.
+
+Sin esto, los plazos que vamos a calcular habrían salido con duraciones negativas.
+
+**Verificado:** 686 tests, `alembic check` limpio, build y lint sin hallazgos. Ver `D-068`.
+
 ### 2026-08-26 · Carga del historial de etapas
 
 Preguntaste si con lo incorporado se podían resolver los dos avisos del recuadro rojo de la vista directorio. Medí antes de responder: **los dos seguían siendo verdad**. Cero movimientos de negocio, las 7 liquidaciones cerradas con la misma fecha de inicio y de cierre, y la comisión de canjes en 0 de 297.

@@ -427,6 +427,10 @@ export type ResumenHistorial = {
   /** Liquidaciones que la carga se negó a corregir porque su valorización depende
    *  de la fecha de inicio, así que cambiarla movería el monto. */
   no_corregidas_por_plata: string[]
+  /** Negocios cuyas fechas contradicen el orden de las etapas: una etapa anterior
+   *  con fecha más nueva que una posterior. **No se cargan** — cargar la mitad de
+   *  una historia contradictoria produce duraciones negativas. */
+  secuencia_incoherente: string[]
 }
 
 export async function descargarPlantillaHistorial(): Promise<void> {

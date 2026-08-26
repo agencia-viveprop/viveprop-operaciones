@@ -103,14 +103,24 @@ def test_el_movimiento_queda_en_el_historial_con_su_autor(cliente, pipeline):
     assert historial[0]["autor_nombre"] == "Test"
 
 
-def test_el_historial_viene_del_mas_reciente_al_mas_viejo(cliente, pipeline):
+def test_el_historial_viene_en_orden_cronologico(cliente, pipeline):
+    """De mas viejo a mas nuevo, y con desempate determinista.
+
+    **Cambio deliberado.** Antes venia descendente, como una bitacora que se mira
+    para ver que paso ultimo. Pero el pipeline es una secuencia y su historia se
+    lee de E1 hacia adelante, igual que el historial del reporte de canjes activos
+    (`D-065`). Y el orden viejo tenia un problema peor: ordenaba solo por `fecha`,
+    asi que dos etapas registradas el mismo dia salian en orden arbitrario --en los
+    datos reales aparecio E2 arriba de E1--. El `id` desempata.
+    """
     negocio = _crear(cliente)
     for tipo in ("NEG_E3_PROMESA", "NEG_E7_TERMINADO"):
         cliente.post(f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": tipo})
 
     historial = cliente.get(f"/api/negocios/{negocio['id']}/movimientos").json()
 
-    assert [m["tipo_movimiento"] for m in historial] == ["NEG_E7_TERMINADO", "NEG_E3_PROMESA"]
+    assert [m["tipo_movimiento"] for m in historial] == ["NEG_E3_PROMESA", "NEG_E7_TERMINADO"]
+    assert [m["fecha"] for m in historial] == sorted(m["fecha"] for m in historial)
 
 
 def test_un_comentario_no_mueve_la_etapa(cliente, pipeline):

@@ -840,13 +840,19 @@ def listar_movimientos(
     usuario: Usuario = Depends(get_current_user),
 ):
     _cargar(db, negocio_id)
+    # **Ascendente, y con desempate.** El pipeline es una secuencia: su historia se
+    # lee de E1 hacia adelante, igual que el historial del reporte de canjes
+    # activos (`D-065`). Descendente se leia al reves y ademas dos etapas cargadas
+    # el mismo dia salian en orden arbitrario --`fecha` sola no alcanza para
+    # ordenarlas--, asi que E2 aparecia arriba de E1. El `id` desempata: la carga
+    # inserta en el orden del archivo, que es el de las etapas.
     movimientos = db.scalars(
         select(Movimiento)
         .where(
             Movimiento.entity_type == EntityType.negocio,
             Movimiento.entity_id == negocio_id,
         )
-        .order_by(Movimiento.fecha.desc())
+        .order_by(Movimiento.fecha, Movimiento.id)
     ).all()
     return [_a_movimiento_out(db, m) for m in movimientos]
 

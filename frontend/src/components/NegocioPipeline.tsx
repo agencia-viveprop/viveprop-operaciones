@@ -194,8 +194,10 @@ export default function NegocioPipeline({
         </Stack>
       )}
 
+      {/* La lista llega de más viejo a más nuevo, así que el paso actual es el
+          último: `active` marca hasta dónde llegó el proceso. */}
       {movimientos && movimientos.length > 0 ? (
-        <Timeline active={0} bulletSize={20} lineWidth={2}>
+        <Timeline active={movimientos.length - 1} bulletSize={20} lineWidth={2}>
           {movimientos.map((m) => (
             <Timeline.Item
               key={m.id}

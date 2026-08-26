@@ -188,6 +188,13 @@ export default function HistorialEtapasModal({
             </Alert>
 
             <Lista
+              titulo="negocios quedaron sin cargar por fechas incoherentes"
+              items={resumen.secuencia_incoherente}
+              color="critical"
+              ayuda="Una etapa anterior no puede tener una fecha más nueva que una posterior. La causa habitual es el año: si escribís «12-08» en una celda de fecha, Excel le pone el año actual. Corregí el año y volvé a subir el archivo."
+            />
+
+            <Lista
               titulo="filas no se pudieron aplicar"
               items={resumen.omitidas}
               color="warning"

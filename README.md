@@ -85,6 +85,8 @@ Variables de entorno en Render:
 
 **Canjes por etapa, con filtro.** En *Inicio*, el bloque «Canjes por etapa» tiene un selector **Todos · Activos · Cancelados**. Filtra al instante, sin volver a consultar: los doce números —seis etapas por dos estados— vienen en la misma respuesta, de una sola consulta agrupada. Al lado va el total de la vista. Cuando hay canjes en estado ACTIVO con la etapa en Cerrado, la pantalla lo dice: el recuadro «Activos» de arriba los excluye, así que sin ese aviso el desglose sumaría más que el recuadro sin explicación (`D-051`).
 
+**La secuencia del pipeline se valida.** Un negocio no puede llegar a E1 después de haber pasado por E3: la carga rechaza el negocio completo cuando las fechas contradicen el orden de las etapas, y señala cuál es la sospechosa. El historial se lee **de E1 hacia adelante**, con desempate por orden de registro para las etapas del mismo día (`D-068`).
+
 **Carga del historial de etapas.** Negocios → «Historial de etapas»: una plantilla **pre-llenada** con una fila por cada etapa desde E1 hasta donde está hoy cada negocio, para cargar hacia atrás cuándo pasó por cada una y desbloquear la proyección de plazos. No agenda seguimientos, no hace retroceder la etapa actual, recargar no duplica, y se niega a corregir una fecha de inicio si eso movería la valorización (`D-067`).
 
 **Las dos fechas del avance de negocio.** El pipeline de la ficha registra cuándo pasó la actividad y cuándo es la próxima acción. La segunda es optativa: vacía se agenda a **3 días** de la fecha de la actividad, corridos al lunes si caen fin de semana. «Qué me toca hoy» lee ese compromiso y le gana al semáforo de días sin gestión; lo agendado a futuro no se lista, se cuenta (`D-066`).

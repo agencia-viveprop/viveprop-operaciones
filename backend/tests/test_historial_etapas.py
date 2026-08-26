@@ -381,3 +381,85 @@ def test_un_encabezado_distinto_se_rechaza_con_el_detalle(db):
 
     with pytest.raises(ImportarHistorialError, match="Negocio"):
         importar_historial(db, buffer.getvalue())
+
+
+# ------------------------------------------------- la coherencia de la secuencia
+
+
+def test_rechaza_el_negocio_cuando_las_fechas_contradicen_las_etapas(db):
+    """El caso real de VVP-1 y VVP-2, que la primera version dejo pasar.
+
+    Excel completa el ano actual cuando alguien escribe "12-08" en una celda de
+    fecha, asi que E1 y E2 quedaron en 2026 --despues del cierre del propio
+    negocio, en enero-- y la carga los acepto. Nadie lo habria notado hasta que la
+    proyeccion devolviera duraciones negativas.
+
+    Se rechaza **el negocio completo** y no la fila: cuando E1 es posterior a E3 no
+    hay forma de saber cual de las dos fechas esta mal, y cargar la mitad de una
+    historia contradictoria es peor que no cargar nada.
+    """
+    _negocio(db, "X-1", etapa="E5")
+
+    resumen = importar_historial(db, _archivo([
+        ("X-1", "E1", "12-08-2026", "el ano quedo mal"),
+        ("X-1", "E2", "12-08-2026", ""),
+        ("X-1", "E3", "01-10-2025", "promesa firmada"),
+        ("X-1", "E5", "08-11-2025", "escritura"),
+    ]))
+
+    assert resumen.movimientos_creados == 0, "no se carga ninguna fila del negocio"
+    assert len(resumen.secuencia_incoherente) == 1
+    detalle = resumen.secuencia_incoherente[0]
+    assert "X-1" in detalle
+    # El sospechoso es E2 --el que quedo en 2026-- contra el E3 de 2025, no al revez.
+    assert "E2 el 12-08-2026 es posterior a E3 el 01-10-2025" in detalle
+    assert "ano" in detalle, "el mensaje tiene que apuntar al ano, que es la causa"
+
+
+def test_una_historia_coherente_pasa(db):
+    """El mismo negocio con el ano corregido carga entero."""
+    _negocio(db, "X-2", etapa="E5")
+
+    resumen = importar_historial(db, _archivo([
+        ("X-2", "E1", "12-08-2025", ""),
+        ("X-2", "E2", "12-08-2025", ""),
+        ("X-2", "E3", "01-10-2025", ""),
+        ("X-2", "E5", "08-11-2025", ""),
+    ]))
+
+    assert resumen.movimientos_creados == 4
+    assert resumen.secuencia_incoherente == []
+
+
+def test_dos_etapas_el_mismo_dia_son_validas(db):
+    """Pasar por dos etapas en un dia es normal, no un error de secuencia.
+
+    La validacion pide que las fechas **no bajen** al avanzar la etapa, no que
+    suban: exigir que suban rechazaria una calificacion y una visita el mismo dia,
+    que es exactamente lo que trajeron los datos reales.
+    """
+    _negocio(db, "X-3", etapa="E2")
+
+    resumen = importar_historial(db, _archivo([
+        ("X-3", "E1", "12-08-2025", ""),
+        ("X-3", "E2", "12-08-2025", ""),
+    ]))
+
+    assert resumen.movimientos_creados == 2
+    assert resumen.secuencia_incoherente == []
+
+
+def test_la_validacion_mira_tambien_lo_ya_cargado(db):
+    """Cargar en dos veces tiene que ser coherente con lo de la primera.
+
+    Sin esto, partir el archivo en dos seria una forma de esquivar la validacion
+    sin darse cuenta.
+    """
+    _negocio(db, "X-4", etapa="E5")
+    importar_historial(db, _archivo([("X-4", "E3", "01-10-2025", "")]))
+
+    # Ahora un E1 posterior al E3 que ya esta guardado.
+    resumen = importar_historial(db, _archivo([("X-4", "E1", "12-08-2026", "")]))
+
+    assert resumen.movimientos_creados == 0
+    assert len(resumen.secuencia_incoherente) == 1

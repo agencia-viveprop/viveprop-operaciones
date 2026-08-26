@@ -1531,3 +1531,39 @@ El usuario propuso como norma que un canje cancelado no tenga fecha de cierre y 
 ### Nota de método
 
 Las dos hipótesis que se probaron antes de usarlas resultaron **falsas**, y las dos se descartaron a tiempo: que los movimientos migrados se distinguieran por no tener autor (`D-065`), y que los canjes con fecha de cierre fueran los cerrados. La segunda habría publicado una métrica equivocada. Verificar antes de construir sigue siendo más rápido que construir y desarmar.
+
+---
+
+## D-068 · La secuencia se valida, y el pipeline se lee cronológicamente
+
+Dos defectos que salieron de mirar las fichas después de la primera carga real, no de leer código ni de correr tests.
+
+### El defecto: la carga aceptó una historia imposible
+
+`VVP-1` y `VVP-2` quedaron con `E1` y `E2` fechados en **agosto de 2026** — después de que esos mismos negocios terminaron, en enero. La causa no es del usuario: **Excel completa el año actual** cuando alguien escribe `12-08` en una celda con formato de fecha, y la columna de referencia decía `12-08-2025`.
+
+La carga lo aceptó porque validaba que la fecha no fuera futura y nada más. Y nadie lo habría notado hasta que la proyección de plazos empezara a devolver **duraciones negativas** — de `E1` a `E2`, menos un año.
+
+**Ahora se valida la secuencia.** El pipeline es ordenado, así que las fechas tienen que subir junto con la etapa. Cuando no lo hacen, el mensaje señala al sospechoso correcto: *"VVP-2: E2 el 13-08-2026 es posterior a E3 el 02-10-2025, y una etapa anterior no puede tener una fecha más nueva"*, y agrega la causa habitual para que no haya que adivinarla.
+
+**Se rechaza el negocio completo, no la fila.** Cuando `E1` es posterior a `E3` no hay forma de saber cuál de las dos fechas está mal: cargar la mitad de una historia contradictoria es peor que no cargar nada. Y la validación mira **también lo que ya está guardado**, así que partir el archivo en dos no es una forma de esquivarla sin darse cuenta.
+
+**Dos etapas el mismo día son válidas.** La regla es que las fechas no bajen, no que suban: exigir que suban rechazaría una calificación y una visita el mismo día, que es exactamente lo que trajeron los datos reales.
+
+Primera versión del mensaje decía la relación **al revés** --"E3 es posterior a E2" cuando era lo contrario-- y lo agarró el test. Vale anotarlo: en un mensaje de error, invertir la relación manda a corregir el dato bueno.
+
+### El otro defecto: el orden de la línea de tiempo
+
+El usuario reportó que el historial se veía "en desorden". La mitad era el año mal, pero había una segunda causa real: **`E2` aparecía arriba de `E1` aunque los dos tenían la misma fecha.** El historial se ordenaba solo por `fecha`, sin desempate, así que dos etapas del mismo día salían en orden arbitrario.
+
+Dos cambios:
+
+**Ascendente, de más viejo a más nuevo.** Antes iba descendente, como una bitácora que se mira para ver qué pasó último. Pero el pipeline es una secuencia y su historia se lee de `E1` hacia adelante — es el mismo criterio que ya se había elegido a propósito para el historial del reporte de canjes activos (`D-065`). La línea de tiempo marca como activo el **último** paso, que ahora es el actual.
+
+**Desempate por `id`.** La carga inserta en el orden del archivo, que es el de las etapas, así que dos etapas del mismo día salen en el orden en que ocurrieron. Deja de depender de lo que devuelva el motor de base de datos.
+
+La bitácora de canjes **no** cambia: ahí el orden descendente es correcto, porque no es una secuencia sino una lista de gestiones y lo que importa es la última.
+
+### Nota de método
+
+Los dos defectos se encontraron **abriendo una ficha**, después de que la carga reportara éxito sin una sola omisión. Es la tercera vez en esta serie de cambios que el problema real aparece mirando la pantalla renderizada y no en los tests: antes fueron las dos barras sobre seis meses de `D-064` y los 35 avisos repetidos de `D-065`. Un resumen que dice "cargado, cero errores" no es evidencia de que el dato quedó bien; es evidencia de que ninguna regla lo contradijo. Y la regla que faltaba era justamente la que importaba.
