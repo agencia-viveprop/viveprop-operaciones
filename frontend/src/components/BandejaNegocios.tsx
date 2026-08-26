@@ -26,6 +26,8 @@ import EstadoConsulta from './EstadoConsulta'
  * distinguirían nada.
  */
 const NIVELES: Record<NivelNegocio, { texto: string; color: string }> = {
+  vencido: { texto: 'Vencido', color: 'critical' },
+  para_hoy: { texto: 'Para hoy', color: 'warning' },
   sin_gestion: { texto: 'Sin gestión', color: 'gray' },
   critico: { texto: 'Crítico', color: 'critical' },
   advertencia: { texto: 'Advertencia', color: 'warning' },
@@ -44,6 +46,10 @@ const NIVELES: Record<NivelNegocio, { texto: string; color: string }> = {
  */
 function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): string {
   switch (nivel) {
+    case 'vencido':
+      return 'La próxima acción comprometida ya pasó'
+    case 'para_hoy':
+      return 'La próxima acción es hoy'
     case 'sin_gestion':
       return 'Nunca se registró un movimiento'
     case 'critico':
@@ -55,7 +61,14 @@ function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): str
   }
 }
 
-const ORDEN: NivelNegocio[] = ['sin_gestion', 'critico', 'advertencia', 'al_dia']
+const ORDEN: NivelNegocio[] = [
+  'vencido',
+  'para_hoy',
+  'sin_gestion',
+  'critico',
+  'advertencia',
+  'al_dia',
+]
 
 /**
  * Qué negocio hay que tocar hoy.
@@ -75,17 +88,26 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
 
   if (!data) return <EstadoConsulta de={consulta} alto={240} />
 
-  const requieren = data.resumen.sin_gestion + data.resumen.critico + data.resumen.advertencia
+  // Todo lo que no está al día. Se deriva de `ORDEN` en vez de sumar niveles a
+  // mano: la versión a mano de esto ya se rompió una vez en canjes al agregar dos
+  // niveles --el chip decía «2» sobre una lista de seis filas-- y el error no lo
+  // detecta ningún tipo.
+  const requieren = ORDEN.filter((n) => n !== 'al_dia').reduce(
+    (a, n) => a + data.resumen[n],
+    0,
+  )
+  // Los listados más los agendados: los agendados están abiertos, solo que su día
+  // no es hoy.
+  const abiertos = data.filas.length + data.resumen.agendados
 
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
-        {requieren} de {data.filas.length} negocios con liquidaciones abiertas requieren
-        atención. Los umbrales son en días, no en horas: acá los procesos duran de un mes a
-        varios.
+        {requieren} de {abiertos} negocios con liquidaciones abiertas requieren atención. Los
+        umbrales son en días, no en horas: acá los procesos duran de un mes a varios.
       </Text>
 
-      <SimpleGrid cols={{ base: 2, sm: 4 }}>
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Badge color={NIVELES[nivel].color} variant="light" mb={4}>
@@ -100,6 +122,19 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
           </Paper>
         ))}
       </SimpleGrid>
+
+      {/* Los agendados no van como recuadro porque no requieren atención: son
+          trabajo comprometido para otro día. Pero tienen que estar dichos, o el
+          conteo de arriba se lee como si fueran los únicos negocios abiertos. */}
+      {data.resumen.agendados > 0 && (
+        <Text size="sm" c="dimmed">
+          {data.resumen.agendados}{' '}
+          {data.resumen.agendados === 1
+            ? 'negocio tiene su próxima acción agendada para más adelante y no se lista acá'
+            : 'negocios tienen su próxima acción agendada para más adelante y no se listan acá'}
+          . Cada uno aparece el día que le toca.
+        </Text>
+      )}
 
       {data.filas.length === 0 ? (
         <Paper withBorder radius="md" p="xl">

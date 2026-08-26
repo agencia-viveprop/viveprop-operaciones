@@ -34,6 +34,20 @@ igual que el umbral de estancado del reporte semanal, y por eso viven acá y no 
 Hoy los 18 negocios están así, porque el pipeline nunca se usó: no hay un solo
 movimiento de negocio. Contarlos como críticos dejaría la bandeja en rojo
 completo y el color dejaría de informar.
+
+**Un compromiso registrado manda sobre el semáforo**, igual que en canjes
+(`D-059`). El semáforo *infiere* que algo está abandonado por el tiempo que pasó;
+el compromiso dice qué se prometió. Cuando los dos opinan, gana el que no
+infiere. De ahí salen los dos niveles de arriba --`vencido` y `para_hoy`-- y la
+regla de que un negocio agendado para adelante **no se lista**: se cuenta y se
+dice, porque la pantalla se llama "qué me toca hoy" y listar lo que no toca es lo
+que hace que se deje de mirar.
+
+Eso tiene una consecuencia que conviene tener presente: como registrar un avance
+agenda 3 días por defecto, ese negocio sale de la lista por 3 días. Con dos
+negocios abiertos, avanzar los dos deja la lista vacía hasta que vuelva el
+primero. No es un error --es lo mismo que hace canjes-- pero en canjes se diluye
+entre cien filas y acá son dos.
 """
 from datetime import date, datetime, timezone
 
@@ -49,7 +63,16 @@ from app.models.negocio import Negocio, NegocioHito
 UMBRAL_CRITICO = 30
 UMBRAL_ADVERTENCIA = 14
 
-PRIORIDAD = {"sin_gestion": 0, "critico": 1, "advertencia": 2, "al_dia": 3}
+# Orden de atención. Los dos primeros salen de un compromiso registrado y por eso
+# van antes que el semáforo, que es una inferencia.
+PRIORIDAD = {
+    "vencido": 0,
+    "para_hoy": 1,
+    "sin_gestion": 2,
+    "critico": 3,
+    "advertencia": 4,
+    "al_dia": 5,
+}
 
 
 class Duraciones(BaseModel):
@@ -81,13 +104,25 @@ class FilaBandejaNegocio(BaseModel):
     duraciones: Duraciones
     ultimo_movimiento: datetime | None
     ultimo_movimiento_nombre: str | None
+    # Lo que se prometió: el último compromiso que exista, no el del último
+    # movimiento. Nulo en los negocios que nunca se gestionaron desde la app.
+    proximo_seguimiento: date | None
+    # Días de atraso. Positivo si venció, cero si es para hoy, nulo si no hay
+    # compromiso. Va calculado para que la pantalla no reste fechas: el "hoy" del
+    # cálculo tiene que ser el del servidor.
+    dias_de_atraso: int | None
 
 
 class ResumenBandejaNegocios(BaseModel):
+    vencido: int
+    para_hoy: int
     sin_gestion: int
     critico: int
     advertencia: int
     al_dia: int
+    # Los agendados para más adelante. **No están en `filas`**: la pantalla se
+    # llama "qué me toca hoy". Se cuentan para que se sepa que no se perdieron.
+    agendados: int
 
 
 class BandejaNegocios(BaseModel):
@@ -97,12 +132,23 @@ class BandejaNegocios(BaseModel):
     umbral_advertencia_dias: int
 
 
-def clasificar(dias_sin_gestion: int | None) -> str:
-    """El nivel a partir de los días sin gestión.
+def clasificar(dias_sin_gestion: int | None, dias_de_atraso: int | None = None) -> str:
+    """El nivel a partir de los días sin gestión, o del compromiso si hay uno.
 
-    `None` es "nunca se registró un movimiento", que es su propio nivel y no el
-    peor: es trabajo por empezar, no trabajo abandonado.
+    **El compromiso manda.** Un negocio agendado para el jueves está al día el
+    martes aunque lleve dos meses sin tocarse: eso es exactamente lo que significa
+    haberlo agendado. Y uno con el compromiso vencido está atrasado aunque se haya
+    tocado ayer, porque lo prometido no se cumplió.
+
+    `None` en los dos es "nunca se registró un movimiento", que es su propio nivel
+    y no el peor: es trabajo por empezar, no trabajo abandonado.
     """
+    if dias_de_atraso is not None:
+        if dias_de_atraso > 0:
+            return "vencido"
+        if dias_de_atraso == 0:
+            return "para_hoy"
+        return "agendado"
     if dias_sin_gestion is None:
         return "sin_gestion"
     if dias_sin_gestion >= UMBRAL_CRITICO:
@@ -203,6 +249,29 @@ def ultimos_movimientos(db: Session):
     return cualquiera, con_etapa
 
 
+def compromisos(db: Session) -> dict[int, date]:
+    """El compromiso vigente de cada negocio: el último que **exista**.
+
+    No el del último movimiento, y la diferencia importa por la misma razón que en
+    canjes (`D-061`): hay movimientos que no agendan nada --un cambio de etapa
+    corregido a mano, por ejemplo-- y si se mirara solo el más reciente, esa
+    corrección borraría el compromiso que había. Un compromiso sigue en pie hasta
+    que alguien pone otro.
+    """
+    vigentes: dict[int, date] = {}
+    for negocio_id, seguimiento in db.execute(
+        select(Movimiento.entity_id, Movimiento.proximo_seguimiento)
+        .where(
+            Movimiento.entity_type == EntityType.negocio,
+            Movimiento.proximo_seguimiento.is_not(None),
+        )
+        # Ascendente: el último que se escribe sobre cada negocio es el más nuevo.
+        .order_by(Movimiento.fecha, Movimiento.id)
+    ).all():
+        vigentes[negocio_id] = seguimiento
+    return vigentes
+
+
 def _nombres_ultimo_movimiento(db: Session) -> dict[int, str]:
     """El nombre del tipo del último movimiento de cada negocio."""
     subconsulta = (
@@ -238,6 +307,7 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
     hoy = hoy or datetime.now(timezone.utc).date()
     cualquiera, con_etapa = ultimos_movimientos(db)
     nombres = _nombres_ultimo_movimiento(db)
+    seguimientos = compromisos(db)
 
     negocios = db.execute(
         select(Negocio)
@@ -247,6 +317,7 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
     ).scalars().all()
 
     filas: list[FilaBandejaNegocio] = []
+    agendados = 0
     for n in negocios:
         activos = [h for h in n.hitos if h.estado == EstadoNegocio.ACTIVO]
         # El hito abierto mas antiguo es el que define desde cuando esta abierto.
@@ -255,6 +326,17 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
 
         # La bandeja solo lista negocios con liquidaciones abiertas.
         d = duraciones_de(inicio, None, cualquiera.get(n.id), con_etapa.get(n.id), hoy, abierto=True)
+
+        seguimiento = seguimientos.get(n.id)
+        atraso = (hoy - seguimiento).days if seguimiento is not None else None
+        nivel = clasificar(d.dias_sin_gestion, atraso)
+
+        # Agendado para más adelante: se cuenta y no se lista. La pantalla se
+        # llama "qué me toca hoy", y este negocio no toca hoy.
+        if nivel == "agendado":
+            agendados += 1
+            continue
+
         filas.append(
             FilaBandejaNegocio(
                 negocio_id=n.id,
@@ -265,10 +347,12 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
                 comuna=n.propiedad.comuna if n.propiedad else None,
                 fecha_inicio=inicio,
                 comision_real_vp=str(real),
-                nivel=clasificar(d.dias_sin_gestion),
+                nivel=nivel,
                 duraciones=d,
                 ultimo_movimiento=cualquiera.get(n.id),
                 ultimo_movimiento_nombre=nombres.get(n.id),
+                proximo_seguimiento=seguimiento,
+                dias_de_atraso=atraso,
             )
         )
 
@@ -276,12 +360,17 @@ def obtener_bandeja_negocios(db: Session, hoy: date | None = None) -> BandejaNeg
     # abierto, que es lo que mas riesgo acumula.
     filas.sort(key=lambda f: (PRIORIDAD[f.nivel], -(f.duraciones.dias_abierto or 0)))
 
+    cuantos = lambda nivel: sum(1 for f in filas if f.nivel == nivel)  # noqa: E731
+
     return BandejaNegocios(
         resumen=ResumenBandejaNegocios(
-            sin_gestion=sum(1 for f in filas if f.nivel == "sin_gestion"),
-            critico=sum(1 for f in filas if f.nivel == "critico"),
-            advertencia=sum(1 for f in filas if f.nivel == "advertencia"),
-            al_dia=sum(1 for f in filas if f.nivel == "al_dia"),
+            vencido=cuantos("vencido"),
+            para_hoy=cuantos("para_hoy"),
+            sin_gestion=cuantos("sin_gestion"),
+            critico=cuantos("critico"),
+            advertencia=cuantos("advertencia"),
+            al_dia=cuantos("al_dia"),
+            agendados=agendados,
         ),
         filas=filas,
         umbral_critico_dias=UMBRAL_CRITICO,

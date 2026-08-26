@@ -301,3 +301,84 @@ def test_un_negocio_resuelto_sin_fecha_de_cierre_no_envejece_para_siempre():
 
     assert d.dias_abierto is None
     assert d.dias_hasta_el_cierre is None
+
+
+# ------------------------------------------- el compromiso manda sobre el tiempo
+
+
+def test_el_compromiso_manda_sobre_el_semaforo():
+    """La misma regla que canjes (`D-059`), y por el mismo motivo.
+
+    El semaforo *infiere* que algo esta abandonado por el tiempo que paso; el
+    compromiso dice que se prometio. Cuando los dos opinan, gana el que no
+    infiere: un negocio agendado para el jueves esta al dia el martes aunque lleve
+    dos meses sin tocarse, y uno con el compromiso vencido esta atrasado aunque se
+    haya tocado ayer.
+    """
+    assert clasificar(60, dias_de_atraso=-2) == "agendado"
+    assert clasificar(60, dias_de_atraso=0) == "para_hoy"
+    assert clasificar(60, dias_de_atraso=3) == "vencido"
+    assert clasificar(1, dias_de_atraso=5) == "vencido"
+    # Sin compromiso sigue mandando el semaforo de 30/14 dias.
+    assert clasificar(31, dias_de_atraso=None) == "critico"
+    assert clasificar(None, dias_de_atraso=None) == "sin_gestion"
+
+
+def test_el_agendado_a_futuro_no_se_lista_pero_se_cuenta(db, tipos):
+    """La pantalla se llama "que me toca hoy", y este negocio no toca hoy.
+
+    Se cuenta aparte para que no parezca que desaparecio: sin ese numero, el
+    resumen se lee como si fueran los unicos negocios abiertos.
+    """
+    n = _negocio(db, "AG-1")
+    _mov(db, n.id, "NEG_LLAMADA", 10)
+    # El movimiento agenda para dentro de cuatro dias.
+    mov = db.query(Movimiento).filter_by(entity_id=n.id).one()
+    mov.proximo_seguimiento = HOY + timedelta(days=4)
+    db.commit()
+
+    b = obtener_bandeja_negocios(db, hoy=HOY)
+
+    assert b.filas == []
+    assert b.resumen.agendados == 1
+
+
+def test_un_movimiento_sin_compromiso_no_borra_el_anterior(db, tipos):
+    """Corregir algo no puede borrar lo que se prometio (`D-061`).
+
+    Si se mirara el compromiso del **ultimo** movimiento, un movimiento sin
+    seguimiento --un cambio de etapa hecho a mano, por ejemplo-- dejaria el
+    negocio sin compromiso y lo devolveria a la lista sin que nadie lo decidiera.
+    """
+    n = _negocio(db, "CM-1")
+    _mov(db, n.id, "NEG_LLAMADA", 10)
+    db.query(Movimiento).filter_by(entity_id=n.id).one().proximo_seguimiento = HOY + timedelta(days=5)
+    db.commit()
+    # Un segundo movimiento, mas nuevo y sin compromiso.
+    _mov(db, n.id, "NEG_A_E4", 1, etapa="E4")
+
+    b = obtener_bandeja_negocios(db, hoy=HOY)
+
+    # Sigue agendado: el compromiso vigente es el ultimo que **existe**.
+    assert b.filas == []
+    assert b.resumen.agendados == 1
+
+
+def test_el_compromiso_vencido_sube_al_tope(db, tipos):
+    """Aunque el negocio se haya tocado ayer."""
+    viejo = _negocio(db, "V-1")
+    fresco = _negocio(db, "F-1")
+    _mov(db, viejo.id, "NEG_LLAMADA", 40)          # critico por tiempo
+    _mov(db, fresco.id, "NEG_LLAMADA", 1)          # al dia por tiempo
+    db.query(Movimiento).filter_by(entity_id=fresco.id).one().proximo_seguimiento = (
+        HOY - timedelta(days=2)
+    )
+    db.commit()
+
+    b = obtener_bandeja_negocios(db, hoy=HOY)
+
+    assert [f.codigo for f in b.filas] == ["F-1", "V-1"]
+    assert b.filas[0].nivel == "vencido"
+    assert b.filas[0].dias_de_atraso == 2
+    assert b.filas[1].nivel == "critico"
+    assert b.resumen.vencido == 1

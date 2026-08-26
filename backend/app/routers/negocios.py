@@ -294,12 +294,19 @@ class MovimientoOut(BaseModel):
     fecha: datetime
     autor_nombre: str | None
     comentario: str | None
+    # Cuándo se comprometió el próximo paso. Nunca nulo en los que se registran
+    # desde la app --si no se indica, se agenda a 3 días-- pero sí en los que
+    # puedan venir de una carga.
+    proximo_seguimiento: date | None
 
 
 class MovimientoIn(BaseModel):
     tipo_movimiento: str
     comentario: str | None = None
     fecha: datetime | None = None
+    # Optativo. Vacío significa "agendalo vos": 3 días hacia adelante de la fecha
+    # del avance, corrido al lunes si cae fin de semana.
+    proximo_seguimiento: date | None = None
 
 
 class TipoMovimientoOut(BaseModel):
@@ -772,6 +779,7 @@ def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:
         fecha=m.fecha,
         autor_nombre=autor.nombre if autor else None,
         comentario=m.comentario,
+        proximo_seguimiento=m.proximo_seguimiento,
     )
 
 
@@ -810,7 +818,13 @@ def crear_movimiento(
     _cargar(db, negocio_id)
     try:
         movimiento = crear_movimiento_negocio(
-            db, negocio_id, payload.tipo_movimiento, usuario.id, payload.comentario, payload.fecha
+            db,
+            negocio_id,
+            payload.tipo_movimiento,
+            usuario.id,
+            payload.comentario,
+            payload.fecha,
+            payload.proximo_seguimiento,
         )
     except MovimientoError as exc:
         db.rollback()

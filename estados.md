@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-26 · Las dos fechas del avance de negocio
+
+Pedido tuyo: en el pipeline de la ficha, registrar la fecha de la actividad y la de la próxima acción, con 3 días por defecto desde la última fecha registrada.
+
+**Están las dos**, en la ficha de cada negocio. Sin migración: `fecha` ya estaba implementada y validada en el backend y solo faltaba el campo en pantalla, y `proximo_seguimiento` ya era columna de la tabla compartida.
+
+**Tres días, y el fin de semana se corre** al lunes, como pediste. Verificado en vivo: un avance registrado hoy miércoles 26 quedó agendado para el **lunes 31**, porque 3 días caían sábado.
+
+**Se cuenta desde la fecha que registrás, no desde hoy**, como confirmaste. La consecuencia, verificada: un avance con fecha del 10 de agosto quedó agendado para el 13 y la bandeja lo puso **vencido con 13 días de atraso**. Es la lectura correcta, pero conviene saberlo antes de cargar cosas viejas.
+
+**«Qué me toca hoy» ahora lee ese compromiso**, igual que canjes, como elegiste: dos niveles nuevos --Vencido y Para hoy-- que van arriba del semáforo de 30/14 días, y lo agendado a futuro no se lista, se cuenta y se dice abajo de los recuadros.
+
+Y te lo repito porque es lo que más vas a notar: **registrar un avance saca ese negocio de la lista por 3 días**. Con dos negocios abiertos, avanzar los dos la deja vacía hasta que vuelva el primero. El formulario lo dice cuando registrás.
+
+Aparte, arreglé el contador de «requieren atención» para que se derive de los niveles en vez de sumarlos a mano — ese error exacto ya lo cometí una vez en canjes y ningún tipo lo detecta.
+
+**Verificado:** 663 tests, `alembic check` limpio, build y lint sin hallazgos, ciclo completo probado contra `dev` --registrar, ver el agendamiento, ver la bandeja-- y `dev` restaurado a su estado anterior. Ver `D-066`.
+
 ### 2026-08-25 · Listado de canjes activos con su historial desplegable
 
 Pedido tuyo: bajo Canjes, un listado de los activos con su estado --Al día o Pendiente-- y que al pinchar una fila se desplieguen sus registros en orden cronológico.

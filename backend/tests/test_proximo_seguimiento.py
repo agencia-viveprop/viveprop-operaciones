@@ -309,3 +309,45 @@ def test_la_bandeja_devuelve_el_compromiso(cliente, base):
     assert fila["nivel"] == "vencido"
     assert fila["dias_de_atraso"] == 2
     assert fila["proximo_seguimiento"] is not None
+
+
+# --------------------------------------------------- el default de negocios
+
+
+def test_el_default_de_negocio_son_tres_dias_desde_la_fecha_registrada():
+    """Tres dias, y contados desde la fecha del avance y no desde hoy.
+
+    Es distinto de canjes en las dos cosas, y las dos por pedido explicito: alla
+    son dos dias y se cuenta desde el mas nuevo entre la gestion y hoy.
+    """
+    from app.services.movimientos import seguimiento_de_negocio
+
+    # Lunes 17 mas tres da jueves 20.
+    assert seguimiento_de_negocio(date(2026, 8, 17)) == date(2026, 8, 20)
+
+
+def test_el_default_de_negocio_corre_el_fin_de_semana():
+    """Misma regla que canjes: tres dias de corrido y despues al lunes."""
+    from app.services.movimientos import seguimiento_de_negocio
+
+    # Jueves 20 mas tres da domingo 23 -> lunes 24.
+    assert seguimiento_de_negocio(date(2026, 8, 20)) == date(2026, 8, 24)
+    # Viernes 21 mas tres da lunes 24: no hay nada que correr.
+    assert seguimiento_de_negocio(date(2026, 8, 21)) == date(2026, 8, 24)
+    # Miercoles 19 mas tres da sabado 22 -> lunes 24.
+    assert seguimiento_de_negocio(date(2026, 8, 19)) == date(2026, 8, 24)
+
+
+def test_un_avance_atrasado_agenda_un_seguimiento_ya_vencido():
+    """La consecuencia de contar desde la fecha registrada, dicha en un test.
+
+    Cargar hoy un avance con fecha de hace un mes agenda un seguimiento vencido
+    hace casi un mes, asi que el negocio aparece de inmediato como atrasado. Es la
+    lectura correcta --se registro algo viejo, su seguimiento ya esta atrasado--
+    pero es una decision y no un efecto secundario. En canjes se resolvio al
+    revez, contando desde hoy.
+    """
+    from app.services.movimientos import seguimiento_de_negocio
+
+    hace_un_mes = date(2026, 7, 20)
+    assert seguimiento_de_negocio(hace_un_mes) == date(2026, 7, 23)

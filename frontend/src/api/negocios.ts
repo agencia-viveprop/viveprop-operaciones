@@ -60,9 +60,13 @@ export type Movimiento = {
   tipo_movimiento: string
   tipo_nombre: string
   etapa_resultante: string | null
+  /** Cuándo se hizo la actividad. La elige quien registra. */
   fecha: string
   autor_nombre: string | null
   comentario: string | null
+  /** Cuándo se comprometió la próxima acción. Nunca nulo en los que se registran
+   *  desde la app: si no se indica, se agenda a 3 días de la fecha del avance. */
+  proximo_seguimiento: string | null
 }
 
 export type TipoMovimientoNegocio = {
@@ -125,7 +129,15 @@ export type NegocioResumen = {
   duraciones: Duraciones
 }
 
-export type NivelNegocio = 'sin_gestion' | 'critico' | 'advertencia' | 'al_dia'
+/** Los dos primeros salen de un compromiso registrado; los otros del semáforo de
+ *  días sin gestión. El compromiso manda cuando existe. */
+export type NivelNegocio =
+  | 'vencido'
+  | 'para_hoy'
+  | 'sin_gestion'
+  | 'critico'
+  | 'advertencia'
+  | 'al_dia'
 
 export type FilaBandejaNegocio = {
   negocio_id: number
@@ -140,10 +152,17 @@ export type FilaBandejaNegocio = {
   duraciones: Duraciones
   ultimo_movimiento: string | null
   ultimo_movimiento_nombre: string | null
+  /** El compromiso vigente: el último que exista, no el del último movimiento. */
+  proximo_seguimiento: string | null
+  /** Positivo si venció, cero si es para hoy, nulo si nadie agendó nada. */
+  dias_de_atraso: number | null
 }
 
 export type BandejaNegocios = {
-  resumen: Record<NivelNegocio, number>
+  /** Los niveles más `agendados`, que **no están en `filas`**: la pantalla se
+   *  llama «qué me toca hoy» y esos negocios no tocan hoy. Se cuentan para que no
+   *  parezca que desaparecieron. */
+  resumen: Record<NivelNegocio, number> & { agendados: number }
   filas: FilaBandejaNegocio[]
   umbral_critico_dias: number
   umbral_advertencia_dias: number
@@ -259,7 +278,15 @@ export function listarMovimientos(negocioId: number): Promise<Movimiento[]> {
 
 export function crearMovimiento(
   negocioId: number,
-  payload: { tipo_movimiento: string; comentario?: string | null },
+  payload: {
+    tipo_movimiento: string
+    comentario?: string | null
+    /** Cuándo pasó. Nulo = ahora. */
+    fecha?: string | null
+    /** Cuándo se vuelve. Nulo = a 3 días de `fecha`, corrido al lunes si cae fin
+     *  de semana. */
+    proximo_seguimiento?: string | null
+  },
 ): Promise<Movimiento> {
   return json(`/api/negocios/${negocioId}/movimientos`, 'POST', payload)
 }

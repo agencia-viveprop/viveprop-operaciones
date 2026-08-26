@@ -28,7 +28,10 @@ CAMBIO_ETAPA = "CAMBIO_ETAPA"
 
 
 # Cuántos días hacia adelante se agenda un seguimiento cuando no se indica uno.
+# Son dos números y no uno porque son dos ritmos: un canje se responde en días y
+# un negocio dura de un mes a varios.
 DIAS_SEGUIMIENTO = 2
+DIAS_SEGUIMIENTO_NEGOCIO = 3
 
 # El sábado es 5 y el domingo 6 en `weekday()`.
 FIN_DE_SEMANA = (5, 6)
@@ -56,8 +59,25 @@ def proximo_habil(desde: date, dias: int = DIAS_SEGUIMIENTO) -> date:
     return fecha
 
 
+def seguimiento_de_negocio(fecha_movimiento: date) -> date:
+    """El seguimiento por defecto de un avance de negocio: 3 días.
+
+    **Se cuenta desde la fecha que se registra, no desde hoy**, y eso es distinto
+    de canjes a pedido explícito. Tiene una consecuencia que conviene tener
+    presente: cargar hoy un avance con fecha de hace un mes agenda un seguimiento
+    vencido hace casi un mes, así que el negocio aparece de inmediato como
+    atrasado. Es la lectura correcta --se registró algo viejo, su seguimiento ya
+    está atrasado-- pero es una decisión, no un efecto secundario.
+
+    El fin de semana se corre igual que en canjes: 3 días de corrido y después el
+    resultado se mueve al lunes si cayó sábado o domingo. Los feriados no se
+    saltan, por el motivo que explica `proximo_habil`.
+    """
+    return proximo_habil(fecha_movimiento, DIAS_SEGUIMIENTO_NEGOCIO)
+
+
 def seguimiento_por_defecto(fecha_movimiento: date, hoy: date) -> date:
-    """El seguimiento que se agenda cuando nadie indica uno.
+    """El seguimiento que se agenda cuando nadie indica uno, en canjes.
 
     **Se cuenta desde el más nuevo de los dos.** Anclarlo solo a la fecha del
     movimiento haría que anotar hoy una gestión de hace tres meses agendara un
@@ -350,8 +370,15 @@ def crear_movimiento_negocio(
     autor_id: int | None,
     comentario: str | None = None,
     fecha: datetime | None = None,
+    proximo_seguimiento: date | None = None,
 ) -> Movimiento:
     """Registra un movimiento y, si el tipo lo dice, avanza el negocio de etapa.
+
+    **`proximo_seguimiento` es optativo y cuando no viene se agenda solo**, a 3
+    días de la fecha del avance (`seguimiento_de_negocio`). Nunca queda en nulo
+    por omisión: un avance registrado siempre deja un próximo paso comprometido,
+    que es lo que hace que la bandeja pueda ordenarse por lo prometido en vez de
+    solo por el tiempo que pasó.
 
     `movimientos.entity_id` no tiene ni puede tener clave foranea porque apunta a
     dos tablas (canje o negocio). Por eso la existencia del negocio se verifica
@@ -374,6 +401,7 @@ def crear_movimiento_negocio(
         "la fecha de inicio del negocio",
     )
 
+    momento = fecha or datetime.now(timezone.utc)
     movimiento = Movimiento(
         entity_type=EntityType.negocio,
         entity_id=negocio_id,
@@ -381,6 +409,11 @@ def crear_movimiento_negocio(
         etapa_resultante=tipo.etapa_resultante,
         autor_id=autor_id,
         comentario=comentario,
+        proximo_seguimiento=(
+            proximo_seguimiento
+            if proximo_seguimiento is not None
+            else seguimiento_de_negocio(momento.date())
+        ),
         **({"fecha": fecha} if fecha is not None else {}),
     )
     db.add(movimiento)

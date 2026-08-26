@@ -1437,3 +1437,39 @@ Lo que sí los distingue no necesita ningún dato nuevo ni ninguna constante: **
 ### De paso: los rótulos de etapa estaban en tres copias
 
 `ETAPA_LABELS` estaba escrito en el modal de seguimiento, en la bandeja y en la pantalla de canjes. Este listado iba a ser la cuarta. Las tres decían lo mismo --se comparó, no había un error todavía-- pero eran tres lugares donde renombrar una etapa deja las pantallas diciendo cosas distintas de la misma cosa, sin que nada falle. Quedaron en `canjesEtiquetas.ts`, con dos helpers para el caso en que la etapa llega como texto suelto: `movimientos.etapa_resultante` es `String(20)` y no un tipo enumerado, porque la tabla es polimórfica.
+
+---
+
+## D-066 · Las dos fechas del avance de negocio, y el compromiso en la bandeja
+
+**Pedido.** En el pipeline de la ficha de negocio, poder registrar la fecha de la actividad y la de la próxima acción. La segunda es optativa y, si no se indica, **3 días hacia adelante de la última fecha registrada**.
+
+**Sin migración.** `fecha` ya estaba implementada y validada en el backend --rechaza fechas futuras y anteriores al inicio de la primera liquidación-- y solo faltaba el campo en la pantalla. Y `proximo_seguimiento` ya es columna de `movimientos`, que es la tabla compartida entre canjes y negocios.
+
+### Tres diferencias con canjes, las tres deliberadas
+
+**Son 3 días y no 2.** Dos ritmos distintos: un canje se responde en días, un negocio dura de un mes a varios. Quedaron como dos constantes, `DIAS_SEGUIMIENTO` y `DIAS_SEGUIMIENTO_NEGOCIO`.
+
+**Se cuenta desde la fecha que se registra, no desde hoy.** Es lo que dice el pedido, y se confirmó explícitamente. Tiene una consecuencia que conviene tener a la vista: cargar hoy un avance con fecha de hace dos semanas agenda una próxima acción vencida hace casi dos semanas, así que el negocio aparece de inmediato como atrasado. Se verificó en vivo: un avance con fecha del 10 de agosto quedó agendado para el 13 y la bandeja lo puso como **vencido con 13 días de atraso**. Es la lectura correcta --se registró algo viejo, su seguimiento ya está atrasado-- y en canjes se resolvió al revés, contando desde el más nuevo entre la gestión y hoy. Los dos criterios conviven a propósito y hay un test que lo declara.
+
+**El fin de semana sí se corre**, igual que en canjes, a pedido explícito del usuario después de que la primera propuesta planteara no hacerlo. Se reusa `proximo_habil`, así que la regla vive en un solo lugar. Los feriados siguen sin saltarse, por el motivo que ese helper ya documenta.
+
+### El compromiso manda en «Qué me toca hoy», como en canjes
+
+El usuario eligió *"igual que canjes"* entre tres opciones, después de preguntar cómo funcionaba allá. Así que la bandeja de negocios gana lo mismo:
+
+- Dos niveles arriba del semáforo: **vencido** y **para hoy**. Salen de un compromiso registrado, y por eso van antes que el semáforo de 30/14 días, que es una inferencia sobre el tiempo que pasó. Cuando los dos opinan, gana el que no infiere.
+- **Lo agendado a futuro no se lista.** Se cuenta y se dice en una línea abajo de los recuadros. La pantalla se llama "qué me toca hoy" y listar lo que no toca es lo que hace que se deje de mirar.
+- El compromiso vigente es el último que **exista**, no el del último movimiento (`D-061`): un movimiento sin seguimiento no borra lo que se prometió antes.
+
+**La consecuencia se le dijo antes de decidir**, y se repite en la pantalla del formulario: como registrar un avance agenda 3 días por defecto, ese negocio sale de la lista por 3 días. Con dos negocios abiertos, avanzar los dos deja la lista vacía hasta que vuelva el primero. En canjes se diluye entre cien filas; acá son dos.
+
+### El contador de «requieren atención» se deriva, no se suma a mano
+
+Era `sin_gestion + critico + advertencia`, escrito a mano. Con dos niveles nuevos habría seguido compilando y mostrando un número menor al real: **ese error exacto ya se cometió una vez en canjes** --el chip decía «2» sobre una lista de seis filas-- y ningún tipo lo detecta. Ahora sale de filtrar `ORDEN`, así que agregar un nivel lo incluye solo.
+
+Y el "de N negocios" del subtítulo pasó a contar los listados **más** los agendados: los agendados están abiertos, solo que su día no es hoy.
+
+### Nota de método
+
+La verificación en vivo registró dos avances en `dev` y eso **movió la etapa de los dos negocios a E1**, porque el tipo elegido traía `etapa_resultante`. Se restauraron las etapas originales --E5 y E4-- y se borraron los dos movimientos, dejando la bandeja igual que antes. No hay endpoint para borrar movimientos de negocio, así que la limpieza fue por SQL. Vale anotarlo: verificar contra una base con datos reales deja rastro, y el rastro hay que planificarlo antes de escribir el POST.
