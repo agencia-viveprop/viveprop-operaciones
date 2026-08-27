@@ -20,7 +20,6 @@ from app.services.reporte_mensual import (
 )
 from app.services.vista_directorio import VistaDirectorio, obtener_vista_directorio
 from app.services.reporte_semanal import (
-    DIAS_ESTANCADO_DEFECTO,
     ReporteSemanal,
     obtener_reporte_semanal,
 )
@@ -34,11 +33,15 @@ MAX_DIAS = 366
 def semanal(
     desde: date | None = Query(None, description="Inicio del período. Por defecto, el lunes de esta semana."),
     hasta: date | None = Query(None, description="Fin del período, incluido."),
-    dias_estancado: int = Query(
-        DIAS_ESTANCADO_DEFECTO,
+    dias_estancado: int | None = Query(
+        None,
         ge=1,
         le=365,
-        description="Días sin movimiento para considerar algo estancado.",
+        description=(
+            "Días sin movimiento para considerar algo estancado. "
+            "Por defecto, el largo del período: así las cuatro cifras del reporte "
+            "hablan de la misma ventana."
+        ),
     ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),

@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - El reporte semanal: una ventana, un renglon por negocio o canje
+
+Los cuatro puntos que marcaste, mas dos cosas que aparecieron al hacerlos.
+
+**El selector ahora manda en las cuatro casillas.** Habia dos controles de periodo: el navegador fijaba la semana y el 7/14/30 tocaba solo «Estancado». Ahora la ventana manda en todo y el umbral de estancado es su largo, asi que «Avanzo» y «Estancado» reparten la cartera abierta en vez de contar dos periodos distintos.
+
+Las opciones pasaron a ser **1 / 2 / 4 semanas** calendario, como quedamos: un numero tiene que significar lo mismo el martes y el viernes, y las flechas recien sirven cuando el periodo tiene nombre. Donde decia «30 dias» dice «4 semanas», que son 28.
+
+**Y encontre un defecto de paso:** «Estancado» se media contra hoy, asi que al navegar hacia atras las otras tres cifras cambiaban y esa se quedaba con el estancamiento de hoy. Ahora se mide al cierre de la ventana: el mismo canje sale con 13 dias en la ventana del 17 al 23 y con 17 en la del 24 al 30.
+
+**Las listas traen un renglon por negocio o canje, con su ultima actualizacion.** Se fue el VVP-15 tres veces. La casilla pasa a contar entidades --si dijera 23 movimientos sobre una lista de doce renglones seria el mismo desajuste de la bandeja-- y los movimientos quedan en el pie y en una columna «Registros»: *15 · canjes con actividad · 86 registros*.
+
+**Las cuatro listas dicen de que propiedad se habla:** direccion y comuna, mas alianza en negocios y tipo de operacion en canjes. Y «Quedo en» ya no dice `E4` sino `E4 · Coordinacion de firma`; en canjes va solo el nombre. Cuando el movimiento no movio la etapa dice «sigue en X», asi que la celda nunca queda muda -- antes salia «—» en fila sobre todo lo migrado del Excel.
+
+**Dos que no pediste.** El comentario largo se recorta a una linea con el texto completo en el tooltip, porque con tres columnas mas la tabla ya no cabia. Y el vacio decia «Nada que mostrar aca» debajo de un «Estancado 2»: ahora dice en que casilla no hay nada y donde si hay.
+
+**Verificado:** 721 tests, `alembic check` limpio, build y lint sin hallazgos, y capturas de la pantalla con datos. **Con una limitacion:** el clasificador bloqueo el script que lee la credencial de produccion, asi que verifique contra `dev`, y `dev` no tiene ni un movimiento de negocios --los 50 estan solo en produccion--. La tabla de negocios la vi por el lado de estancados, que usa los mismos componentes. Cuando abras la pantalla, el ojo que falta es ese. Ver `D-076`.
+
 ### 2026-08-27 - El grafico con selector siempre muestra el total
 
 Me pediste que en los graficos donde se elige que mostrar, el total se vea siempre. Aplicado, y encontre que el arreglo anterior estaba a medias.

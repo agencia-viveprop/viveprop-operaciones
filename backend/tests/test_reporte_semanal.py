@@ -11,14 +11,25 @@ Las dos propiedades que protegen:
    ultimo movimiento, y si nunca hubo ninguno contra la fecha de origen. Un
    canje sin gestion desde 2022 tiene que salir, no quedar invisible por no
    tener filas en `movimientos`.
+
+Y las tres que se agregaron con la ventana unica (`D-076`):
+
+3. **Un renglon por entidad, no por movimiento**, y los totales de la seccion
+   cuentan entidades: una lista de doce renglones bajo una cifra que dice 23 es
+   el desajuste que ya se habia arreglado en la bandeja.
+4. **La ventana manda en las cuatro cifras**, y el umbral de estancado es su
+   largo. Antes el selector movia solo una de las cuatro.
+5. **Estancado se mide al cierre de la ventana**, no contra hoy: una ventana
+   pasada tiene que decir lo que decia al terminar, o no se puede comparar con
+   la siguiente.
 """
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal as D
 
 import pytest
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa
-from app.models.catalogo import EstadoNegocio, Etapa, ModeloNegocio
+from app.models.canje import Canje, CanjeEstado, CanjeEtapa, OperacionTipo
+from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio, NegocioHito, Propiedad
 from app.services.reporte_semanal import (
@@ -137,9 +148,12 @@ def test_la_gestion_sin_cambio_de_etapa_cuenta_como_avance(db, tipos):
     seccion = _reporte(db).canjes
     assert seccion.total_avanzados == 1
     assert seccion.avanzados[0].referencia == "#1"
-    # Sin etapa, pero con el nombre del tipo para que se sepa que se hizo.
-    assert seccion.avanzados[0].etapa is None
     assert seccion.avanzados[0].comentario == "WA confirmación solicitante"
+    # No movio la etapa, pero la columna igual dice donde quedo: la etapa actual
+    # del canje. Antes venia nula y la celda quedaba muda sobre toda la historia
+    # migrada del Excel, que lleva `etapa_resultante` nulo a proposito.
+    assert seccion.avanzados[0].movio_etapa is False
+    assert seccion.avanzados[0].etapa_nombre == "En revisión"
 
 
 def test_cuando_el_movimiento_si_mueve_la_etapa_la_muestra(db, tipos):
@@ -147,7 +161,8 @@ def test_cuando_el_movimiento_si_mueve_la_etapa_la_muestra(db, tipos):
     _mov(db, EntityType.canje, 1, "PASA_A_OFERTA", _hace(2), etapa="EN_OFERTA")
     db.commit()
 
-    assert _reporte(db).canjes.avanzados[0].etapa == "EN_OFERTA"
+    item = _reporte(db).canjes.avanzados[0]
+    assert (item.etapa, item.etapa_nombre, item.movio_etapa) == ("EN_OFERTA", "En oferta", True)
 
 
 def test_una_caida_no_se_cuenta_tambien_como_avance(db, tipos):
@@ -241,7 +256,7 @@ def test_sin_movimientos_se_mide_desde_la_solicitud(db):
 
     item = _reporte(db).canjes.estancados[0]
     assert item.dias_sin_movimiento == 400
-    assert "sin gestión" in item.detalle
+    assert item.sin_gestion is True
 
 
 def test_manda_el_ultimo_movimiento_no_el_primero(db, tipos):
@@ -313,8 +328,15 @@ def test_el_endpoint_sin_parametros_devuelve_la_semana_en_curso(cliente):
     r = cliente.get("/api/reportes/semanal")
     assert r.status_code == 200
     cuerpo = r.json()
-    assert cuerpo["dias_estancado"] == 14
+    # Siete, no catorce: el umbral sale del largo de la ventana y la ventana por
+    # defecto es la semana en curso.
+    assert cuerpo["dias_estancado"] == 7
     assert set(cuerpo) == {"desde", "hasta", "dias_estancado", "negocios", "canjes"}
+
+
+def test_el_endpoint_deja_forzar_el_umbral(cliente):
+    r = cliente.get("/api/reportes/semanal", params={"dias_estancado": 30})
+    assert r.json()["dias_estancado"] == 30
 
 
 @pytest.mark.parametrize("params, trozo", [
@@ -327,6 +349,143 @@ def test_el_endpoint_rechaza_periodos_imposibles(cliente, params, trozo):
     r = cliente.get("/api/reportes/semanal", params=params)
     assert r.status_code == 400
     assert trozo in r.json()["detail"]
+
+
+# ------------------------------- un renglon por entidad, no por movimiento
+
+
+def test_el_canje_con_tres_registros_sale_una_vez_con_el_ultimo(db, tipos):
+    """Lo que el usuario vio: VVP-15 tres veces y #364 dos veces en la tabla."""
+    _canje(db, 1)
+    for dias in (4, 3, 1):
+        _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(dias))
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    # La cifra cuenta canjes y la lista tiene un renglon: los dos numeros cuadran.
+    assert (seccion.total_avanzados, len(seccion.avanzados)) == (1, 1)
+    # Y los movimientos no se pierden, van aparte.
+    assert seccion.movimientos_avanzados == 3
+    assert seccion.avanzados[0].registros == 3
+    assert seccion.avanzados[0].fecha == _hace(1).date()
+
+
+def test_el_negocio_muestra_el_comentario_del_ultimo_registro(db, tipos):
+    n = _negocio(db, "VVP-1")
+    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(3), comentario="primero")
+    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(1), comentario="ultimo")
+    db.commit()
+
+    seccion = _reporte(db).negocios
+    assert (seccion.total_avanzados, seccion.movimientos_avanzados) == (1, 2)
+    assert seccion.avanzados[0].comentario == "ultimo"
+    assert seccion.avanzados[0].registros == 2
+
+
+def test_los_avanzados_van_del_mas_nuevo_al_mas_viejo(db, tipos):
+    """Al reves que los estancados: con la lista topeada, lo que sobra es lo viejo."""
+    for id_, dias in ((1, 1), (2, 4), (3, 2)):
+        _canje(db, id_)
+        _mov(db, EntityType.canje, id_, "WA_SOLICITANTE", _hace(dias))
+    db.commit()
+
+    assert [i.referencia for i in _reporte(db).canjes.avanzados] == ["#1", "#3", "#2"]
+
+
+# ------------------------------ la ventana manda en las cuatro cifras
+
+
+def _cuatro_semanas(db):
+    return obtener_reporte_semanal(db, DOMINGO - timedelta(days=27), DOMINGO, ahora=AHORA)
+
+
+def test_el_umbral_de_estancado_sale_del_largo_de_la_ventana(db):
+    """Sin parametro explicito: una semana da 7 y cuatro semanas dan 28."""
+    assert obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA).dias_estancado == 7
+    assert _cuatro_semanas(db).dias_estancado == 28
+
+
+def test_la_ventana_larga_alcanza_lo_que_la_corta_deja_afuera(db, tipos):
+    """La misma actividad en dos ventanas: es lo que el selector tiene que mover.
+
+    Antes el selector solo cambiaba el umbral de estancado, asi que tres de las
+    cuatro casillas no se movian y el control se leia como si moviera las cuatro.
+    """
+    _canje(db, 1)
+    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(20))
+    db.commit()
+
+    una = obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA)
+    assert (una.canjes.total_avanzados, _cuatro_semanas(db).canjes.total_avanzados) == (0, 1)
+
+
+def test_estancado_se_mide_al_cierre_de_la_ventana_y_no_contra_hoy(db, tipos):
+    """Una ventana pasada tiene que decir lo que decia al terminar."""
+    _canje(db, 1, dias_solicitud=400)
+    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE",
+         datetime(2026, 7, 10, 12, tzinfo=timezone.utc))
+    db.commit()
+
+    # Al domingo 12 de julio llevaba dos dias quieto: no estaba estancado.
+    pasada = obtener_reporte_semanal(db, date(2026, 7, 6), date(2026, 7, 12), ahora=AHORA)
+    assert pasada.canjes.total_estancados == 0
+
+    # En la ventana en curso el corte es ahora, y ahi si lleva 42 dias.
+    en_curso = obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA)
+    assert en_curso.canjes.estancados[0].dias_sin_movimiento == 42
+
+
+# -------------------------------------- de que propiedad se esta hablando
+
+
+@pytest.fixture
+def alianza(db):
+    c = Catalogo(tipo="alianza", codigo="ASSETPLAN", nombre="Assetplan")
+    db.add(c)
+    db.flush()
+    return c
+
+
+def test_el_negocio_trae_direccion_comuna_alianza_y_el_texto_de_la_etapa(db, tipos, alianza):
+    n = _negocio(db, "VVP-1")
+    n.alianza_id = alianza.id
+    n.propiedad.unidad = "1802"
+    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(1))
+    db.commit()
+
+    item = _reporte(db).negocios.avanzados[0]
+    assert item.direccion == "Calle VVP-1 1802"
+    assert (item.comuna, item.alianza) == ("Nunoa", "Assetplan")
+    # El texto de la etapa, no solo el codigo: "E2" no le dice nada a quien lee.
+    assert (item.etapa, item.etapa_nombre) == ("E2", "Visita")
+
+
+def test_el_canje_trae_operacion_direccion_y_comuna(db, tipos):
+    _canje(db, 1)
+    db.flush()
+    canje = db.get(Canje, 1)
+    canje.tipo_operacion = OperacionTipo.ARRIENDO
+    canje.direccion = "Av. Siempre Viva 742"
+    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(1))
+    db.commit()
+
+    item = _reporte(db).canjes.avanzados[0]
+    # El rotulo, no el valor guardado: "ARRIENDO" es el enum, "Arriendo" se lee.
+    assert item.operacion == "Arriendo"
+    assert (item.direccion, item.comuna) == ("Av. Siempre Viva 742", "Providencia")
+
+
+def test_los_estancados_y_los_cerrados_tambien_dicen_de_que_hablan(db):
+    """Las cuatro listas de la seccion llevan las mismas columnas."""
+    _canje(db, 1, dias_solicitud=400)
+    _negocio(db, "G-1", EstadoNegocio.CERRADO, cierre=date(2026, 8, 19), real=D("10"))
+    db.commit()
+
+    r = _reporte(db)
+    estancado = r.canjes.estancados[0]
+    assert (estancado.comuna, estancado.etapa_nombre) == ("Providencia", "En revisión")
+    cerrado = r.negocios.cerrados[0]
+    assert (cerrado.direccion, cerrado.comuna) == ("Calle G-1", "Nunoa")
 
 
 def test_el_umbral_de_estancado_se_puede_cambiar_desde_la_query(cliente, db, tipos):

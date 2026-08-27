@@ -43,26 +43,43 @@ export function obtenerResumenCanjes(): Promise<ResumenCanjes> {
 
 // --------------------------------------------- reporte semanal de período
 
-export type ItemCerrado = {
+/** De qué propiedad se está hablando. Va en las cuatro listas de una sección.
+ *
+ * `alianza` la llena negocios y `operacion` canjes: los dos dominios comparten
+ * el resto de las columnas y se diferencian en esa. */
+export type Ubicacion = {
+  direccion: string | null
+  comuna: string | null
+  alianza: string | null
+  operacion: string | null
+}
+
+export type ItemCerrado = Ubicacion & {
   referencia: string
   detalle: string | null
   fecha: string | null
   monto: string | null
 }
 
-export type ItemMovido = {
+export type ItemMovido = Ubicacion & {
   referencia: string
-  detalle: string | null
   fecha: string
+  /** La etapa en que quedó: la que dejó el movimiento, o la actual si no la movió. */
   etapa: string | null
+  etapa_nombre: string | null
+  movio_etapa: boolean
   comentario: string | null
+  /** Cuántos movimientos tuvo en la ventana, contando el que se muestra. */
+  registros: number
 }
 
-export type ItemEstancado = {
+export type ItemEstancado = Ubicacion & {
   referencia: string
-  detalle: string | null
   etapa: string | null
+  etapa_nombre: string | null
   dias_sin_movimiento: number | null
+  /** Nunca se le registró nada: la cuenta corre desde su fecha de origen. */
+  sin_gestion: boolean
 }
 
 export type Seccion = {
@@ -75,6 +92,9 @@ export type Seccion = {
   total_avanzados: number
   total_caidos: number
   total_estancados: number
+  /** Movimientos, no entidades: `total_avanzados` cuenta negocios o canjes con
+   * actividad y este cuenta los registros que hicieron. */
+  movimientos_avanzados: number
 }
 
 export type ReporteSemanal = {

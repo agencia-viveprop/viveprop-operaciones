@@ -86,6 +86,15 @@ ETAPA_LABELS = {
     CanjeEtapa.CERRADO: "Cierre",
 }
 
+# Lo mismo para la operación. "VENTA" es el valor guardado; "Venta" es lo que se
+# lee. Vive acá y no en la pantalla porque el reporte lo manda ya redactado: un
+# rótulo escrito en el frontend se despega del enum en cuanto el enum cambia.
+OPERACION_LABELS = {
+    OperacionTipo.VENTA: "Venta",
+    OperacionTipo.ARRIENDO: "Arriendo",
+    OperacionTipo.OTRO: "Otro",
+}
+
 
 class Canje(Base):
     __tablename__ = "canjes"

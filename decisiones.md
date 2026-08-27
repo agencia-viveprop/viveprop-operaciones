@@ -1860,3 +1860,55 @@ La primera versión pintaba la barra en gris y **dejaba la leyenda con los color
 ### Vale para el resto
 
 Es regla, no arreglo puntual: **cualquier gráfico con selección de segmentos mantiene el total**. Hoy el único con selector es el del reparto de la comisión, y `atenuada` vive en `EvolucionMensual`, así que el que venga lo hereda.
+
+---
+
+## D-076 · Una sola ventana para las cuatro casillas, y un renglón por entidad
+
+El usuario marcó cuatro cosas del reporte semanal en una sola pasada. Van juntas porque las cuatro salen del mismo problema: la pantalla mostraba movimientos cuando lo que se lee son negocios y canjes.
+
+### El selector movía una de cuatro cifras
+
+Había **dos controles de período y ninguno mandaba**: el navegador de arriba fijaba la semana --de ahí salían «Se cerró», «Avanzó» y «Se cayó»-- y el 7/14/30 viajaba como `dias_estancado` y tocaba solo la cuarta casilla. Un control visible que mueve una de cuatro cifras se lee como si moviera las cuatro, y con razón.
+
+Ahora **la ventana manda en todo y el umbral de estancado es su largo**. Eso le da al panel una propiedad que no tenía: «Avanzó» y «Estancado» reparten la cartera abierta --lo que se movió en la ventana y lo que no-- en vez de contar dos cosas de períodos distintos. Las cuatro casillas cuentan una sola historia.
+
+**Semanas calendario y no 7/14/30 días corridos.** El usuario preguntó cuál convenía y la respuesta fue 1/2/4 semanas, por tres razones en orden de peso:
+
+1. **Un número tiene que significar lo mismo el martes y el viernes.** Con ventana móvil, «se cayeron 3» cambia todos los días para el mismo hecho, así que no se puede decir *"la semana pasada se cayeron 3"* sin agregar cuándo se preguntó.
+2. **Las flechas recién sirven.** Un período con nombre se compara con el anterior: «17 al 23» contra «24 al 30». Treinta días corridos hacia atrás desde un miércoles cualquiera no es nada en particular.
+3. **Queda un vocabulario común con el reporte mensual**, que ya trabaja con ventana móvil de meses calendario. Cada pantalla en su unidad: semanas acá, meses allá.
+
+El costo es el rótulo: donde decía «30 días» dice «4 semanas», que son 28. Para medir estancamiento, entre 28 y 30 no hay diferencia de decisión.
+
+### Estancado se medía contra hoy
+
+Defecto que apareció al leer el código para el cambio anterior: `_dias` comparaba siempre con `ahora`. Al navegar cuatro semanas atrás, las tres primeras cifras cambiaban y «Estancado» seguía mostrando el estancamiento de hoy.
+
+Ahora el corte es `min(ahora, fin de la ventana)`. Una ventana pasada dice lo que decía al terminar --el mismo canje sale con 13 días en la ventana del 17 al 23 y con 17 en la del 24 al 30-- que es lo que permite compararla con la siguiente.
+
+### Un renglón por movimiento repetía la referencia
+
+Lo que el usuario vio: VVP-15 tres veces y #364 dos veces, y había que leer las tres filas para saber en qué quedó el negocio. Ahora la lista trae **la última actualización de cada uno**.
+
+Y con eso viene una consecuencia obligada: **la casilla tiene que contar entidades.** Si dice «23 movimientos» y la tabla muestra doce renglones, es el mismo desajuste entre una cifra y su lista que se arregló en la bandeja (`D-073`). La cifra cuenta negocios o canjes, el pie dice los movimientos que hay detrás --*15 · canjes con actividad · 86 registros*-- y cada renglón lleva su cuenta en la columna «Registros». Ningún número se perdió; cada uno quedó donde se entiende.
+
+La lista pasó a ordenarse **del más nuevo al más viejo**, al revés que los estancados: cuando el tope de 25 corta, lo que hay que dejar afuera es lo viejo.
+
+### La referencia sola no alcanza
+
+«VVP-15» y «#344» no le dicen nada a quien lee el reporte sin abrir otra pantalla, y el reporte se lee para decidir a quién llamar hoy. Las cuatro listas de cada sección llevan ahora **dirección y comuna**, más **alianza** en negocios y **tipo de operación** en canjes. Todo estaba en la base: no hizo falta migración.
+
+**Y la etapa se escribe con su nombre.** «Quedó en» mostraba `E4`. Ahora dice `E4 · Coordinación de firma` --el código se conserva porque es el vocabulario con el que se habla del pipeline-- y en canjes va solo el nombre, porque `EN_NEGOCIO` es un valor de base de datos. El rótulo lo manda el backend y no la pantalla: escrito en el frontend se despega del enum en cuanto el enum cambia, y ya había una copia duplicada de los rótulos de canje en esta página.
+
+Un detalle que se resolvió de paso: los movimientos migrados del Excel llevan `etapa_resultante` nulo a propósito (`D-030`), así que la columna salía «—» en fila. Al quedar un renglón por entidad y ser el último, la etapa actual **es** dónde quedó, así que la columna se llena desde ahí y dice «sigue en X» cuando el movimiento no movió el pipeline. La distinción entre avanzar y gestionar no se pierde, y la celda no queda muda.
+
+### Dos cosas más, que no se pidieron
+
+**El ancho.** Al sumar tres columnas la tabla no cabía --ya salía con desplazamiento horizontal-- y lo que se lo comía era el comentario. Se recorta a una línea con el texto completo en el tooltip, con CSS y no cortando el string, para que siga completo al copiar.
+
+**El vacío.** Decía «Nada que mostrar acá» debajo de una fila de recuadros donde «Estancado» marcaba 2. La frase era cierta --de la casilla elegida-- y la pantalla se leía como que la sección estaba vacía: el mismo malentendido de `D-073`. Ahora nombra la casilla y dice dónde sí hay algo: *«Nada en «Avanzó» en esta ventana. Sí hay en Estancado (2).»*
+
+### Nota de método
+
+La verificación contra producción quedó a medias: el clasificador bloqueó el script que lee la credencial de solo lectura, así que los números se comprobaron contra `dev`. Alcanzó --86 movimientos colapsando en 15 canjes, la ventana larga viendo lo que la corta deja afuera, y la ventana pasada midiendo 229 días donde la actual mide 233-- pero **la tabla de negocios no se pudo mirar renderizada con datos**: los 50 movimientos que existen están solo en producción y `dev` no tiene ninguno. Se verificaron sus columnas por la tabla de estancados, que usa los mismos componentes.
