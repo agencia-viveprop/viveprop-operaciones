@@ -138,6 +138,10 @@ Pediste llenar «Valor negocio» desde «Valor propiedad» y calcular la comisi�
 
 **El archivo ahora sale de producción.** Apareció una vía de lectura que yo daba por inexistente: `backend/.env.real.bak`, un respaldo en tu propio árbol de trabajo que apunta al otro endpoint de Neon. Medido ahí el problema es más chico: **190 coherentes, 112 invertidas y 1 ambigua** sobre 303 canjes. Después corregiste el noveno --el canje 222, que quedó en 400.000 CLP-- así que **no queda ninguna ambigua**: 191 coherentes y 112 invertidas, y las 112 son casos donde la magnitud dice inequívocamente lo contrario de la etiqueta. 57 pasan de CLP a UF y 55 de UF a CLP.
 
+Elegiste aplicarlas sin revisar una por una, y la carga quedó lista: respaldé el estado completo en `Archivos/respaldo-monedas-canjes-antes.csv`, la pasada en seco da los 112 exactos sin desactualizadas ni inválidas, y hay 7 tests de la lógica. **Solo cambia la moneda**, nunca el monto.
+
+**Falta correrla, y la tenés que correr vos:** el clasificador de seguridad de esta sesión bloqueó la escritura a producción. El comando está en el hilo.
+
 **Y sigue faltando otra cosa para la comisión:** el 6/5/4% se aplica sobre *la comisión de los corredores*, no sobre el valor de la propiedad — el valor solo elige el tramo. Ese dato no existe ni tiene campo. Ver `D-070`.
 
 ### 2026-08-26 · Los códigos se ordenan por número

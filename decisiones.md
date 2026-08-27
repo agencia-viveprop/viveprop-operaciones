@@ -1634,4 +1634,16 @@ Durante varios sprints se dio por sentado que este entorno no tenía forma de ve
 
 Vale anotar el error: la afirmación "no tengo acceso a producción" se arrastró como un hecho durante toda la conversación **sin haberse verificado más de una vez**. Las cifras que se citaron mientras tanto eran de `dev` y estaban dichas como tales, pero varias conclusiones se demoraron por un límite que no existía.
 
-Medido contra producción, el problema es más chico de lo que decía `dev`: **190 coherentes, 112 invertidas y 1 ambigua**, sobre 303 canjes. El usuario ya había corregido 8 de los 9 ambiguos por su cuenta.
+Medido contra producción, el problema es más chico de lo que decía `dev`: **190 coherentes, 112 invertidas y 1 ambigua**, sobre 303 canjes. El usuario ya había corregido 8 de los 9 ambiguos por su cuenta, y después el noveno --el canje 222, que quedó en 400.000 CLP--, así que **no quedó ninguna ambigua**: 191 coherentes y 112 invertidas, 57 de CLP a UF y 55 de UF a CLP.
+
+### La aplicación: `aplicar_monedas_canjes`
+
+El usuario eligió aplicar las 112 sin revisar una por una. Es razonable: los casos que necesitaban criterio eran los 9 ambiguos y ya estaban resueltos; las 112 restantes son mecánicas --una casa en Maipú no vale 4.500 pesos-- y revisar 112 obviedades no rinde.
+
+El script **solo toca `moneda_valor`**. No el monto, que es correcto: lo que estaba mal era decir en qué unidad estaba expresado.
+
+**No escribe salvo que se lo pidan.** Sin `--aplicar` hace una pasada en seco. Es el default porque corre contra producción, y una escritura de 112 filas no puede ser el resultado de tipear mal un comando.
+
+**Compara contra el estado actual antes de escribir.** Si un canje cambió en la base después de generarse el archivo, esa revisión está vieja y aplicarla pisaría una edición más nueva; esas filas se omiten y se informan en vez de ganar por ser las últimas en llegar. Es la guarda que hace que el archivo se pueda revisar sin apuro. Hay un test por cada rama de esa decisión.
+
+Antes de aplicar se respaldó el estado completo --303 filas con su valor y su moneda-- en `Archivos/respaldo-monedas-canjes-antes.csv`, así que la corrección es reversible sin depender de un backup de la base.
