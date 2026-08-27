@@ -1765,3 +1765,34 @@ Van separados y nombrados por lo que son. Llamar "duración" a la mediana de las
 ### Nota de método
 
 Al mirar la pantalla contra `dev`, la comisión no concretada dio **1,6 billones de pesos**. No es un error del motor: `dev` no tiene la corrección de monedas que se aplicó en producción (`D-070`), así que 139 canjes tienen la moneda invertida y el motor los convierte fielmente. Entra basura, sale basura, y se ve. Es la mejor demostración de por qué esa corrección era condición previa.
+
+---
+
+## D-073 · Los recuadros de la bandeja reparten el universo
+
+El usuario señaló que los dos paneles de «Qué me toca hoy» no eran consistentes con la realidad. Tenía razón, y eran dos defectos distintos.
+
+### Los seis recuadros no sumaban el total
+
+En canjes: siete abiertos, y los seis recuadros mostraban 0, 2, 0, 0, 0, 0. En negocios: dos abiertos, y los seis en cero. El resto vivía en una línea de texto chica abajo: *"5 canjes tienen seguimiento agendado para más adelante y no se listan acá"*.
+
+Eso lo decidí a propósito, y el argumento era razonable: **los agendados no requieren atención, así que no merecen un recuadro.** Pero el resultado fue malo. Un tablero cuyos recuadros no reparten el universo obliga a leer la letra chica para saber dónde está el resto, y en negocios el efecto era peor: seis ceros al lado de un encabezado que dice "0 de 2 negocios" se lee como *no hay nada*.
+
+**Ahora «Agendados» es un recuadro más**, y los siete reparten exacto: 0+2+0+0+0+0+5 = 7 en canjes, y 0×6+2 = 2 en negocios. Va en **gris y no en un color de estado**, que es lo que dice "esto no es algo pendiente" sin sacarlo de la cuenta.
+
+El argumento original --que no requieren atención-- sigue siendo cierto; lo que estaba mal era la conclusión. No merecen un color de alarma, pero sí un lugar en la partición.
+
+### El vacío afirmaba algo falso
+
+Con los dos negocios abiertos agendados, la tabla queda sin filas y la pantalla decía **«No hay negocios con liquidaciones abiertas»** — justo debajo de un encabezado que decía *"0 de 2 negocios con liquidaciones abiertas"*. Dos frases de la misma pantalla contradiciéndose, y la que estaba en el lugar más visible era la falsa.
+
+El vacío tiene **dos causas distintas** y decía solo una:
+
+- No hay nada abierto → *"No hay negocios con liquidaciones abiertas."*
+- Todo lo abierto está agendado → *"Los 2 negocios abiertos tienen su próxima acción agendada para más adelante, así que hoy no toca ninguno."*
+
+Canjes tenía el mismo problema latente: su vacío decía *"Nada pendiente acá"*, que con todos los canjes agendados se habría leído igual de mal. Se arregló también, antes de que apareciera.
+
+### Nota de método
+
+Los dos defectos son consecuencia directa de haber agregado los agendados (`D-059`, `D-066`): esconder filas de una lista cambia lo que significan los conteos y los vacíos que la rodean, y eso no se revisó cuando se agregaron. Ninguno de los dos lo detecta un test --los números que sirve la API son correctos-- y ninguno se ve en `dev`, donde no había agendados. Aparecieron cuando el usuario usó la app con sus datos.

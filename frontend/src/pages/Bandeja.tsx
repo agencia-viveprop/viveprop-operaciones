@@ -193,7 +193,16 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         action={selector}
       />
 
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
+      {/* **Los recuadros reparten el universo, y por eso «Agendados» es uno de
+          ellos.** Antes eran seis y los agendados iban solo en una linea de texto
+          abajo, con el argumento de que no requieren atencion. El argumento era
+          cierto y el resultado malo: con siete canjes abiertos y cinco agendados,
+          los seis recuadros sumaban dos y no habia forma de ver donde estaban los
+          otros cinco sin leer la letra chica.
+
+          Va en gris y no en un color de estado, que es lo que dice "esto no es
+          algo pendiente" sin sacarlo de la cuenta. */}
+      <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Group gap="xs" mb={4}>
@@ -209,20 +218,20 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
             </Text>
           </Paper>
         ))}
+        <Paper withBorder radius="md" p="md">
+          <Group gap="xs" mb={4}>
+            <Badge color="gray" variant="light">
+              Agendados
+            </Badge>
+          </Group>
+          <Text size="28px" fw={800} lh={1.1}>
+            {resumen.agendados}
+          </Text>
+          <Text size="xs" c="dimmed" mt={4}>
+            Con seguimiento para más adelante
+          </Text>
+        </Paper>
       </SimpleGrid>
-
-      {/* Los agendados no van como recuadro porque no requieren atención: son
-          trabajo comprometido para otro día. Pero tienen que estar dichos, o el
-          conteo de arriba se lee como si fueran los únicos canjes abiertos. */}
-      {resumen.agendados > 0 && (
-        <Text size="sm" c="dimmed">
-          {resumen.agendados}{' '}
-          {resumen.agendados === 1
-            ? 'canje tiene seguimiento agendado para más adelante y no se lista acá'
-            : 'canjes tienen seguimiento agendado para más adelante y no se listan acá'}
-          . Cada uno aparece el día que le toca.
-        </Text>
-      )}
 
       <SegmentedControl
         value={filtro}
@@ -238,10 +247,19 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         ]}
       />
 
+      {/* El vacio tiene dos causas distintas y decia solo una: con todos los
+          canjes abiertos agendados, la tabla queda sin filas y "nada pendiente"
+          se lee como "no hay canjes abiertos". */}
       {visibles.length === 0 ? (
         <Paper withBorder radius="md" p="xl">
           <Text ta="center" c="dimmed">
-            Nada pendiente acá. {filtro === 'atencion' && 'Todos los canjes abiertos están al día.'}
+            {filas.length === 0 && resumen.agendados > 0
+              ? resumen.agendados === 1
+                ? 'El único canje abierto tiene su seguimiento agendado para más adelante, así que hoy no toca.'
+                : `Los ${resumen.agendados} canjes abiertos tienen su seguimiento agendado para más adelante, así que hoy no toca ninguno.`
+              : abiertos === 0
+                ? 'No hay canjes abiertos.'
+                : `Nada pendiente acá.${filtro === 'atencion' ? ' Todos los canjes listados están al día.' : ''}`}
           </Text>
         </Paper>
       ) : (

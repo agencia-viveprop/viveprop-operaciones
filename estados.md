@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - Los recuadros de la bandeja ahora reparten el total
+
+Me marcaste que los dos paneles de «Que me toca hoy» no eran consistentes con la realidad. Tenias razon, y eran dos cosas distintas.
+
+**Los seis recuadros no sumaban el total.** En canjes habia 7 abiertos y los recuadros sumaban 2; en negocios habia 2 y sumaban 0. El resto estaba en una linea de texto chica. Yo lo habia decidido asi con el argumento de que los agendados no requieren atencion -- cierto, pero la conclusion era mala: un tablero cuyos recuadros no reparten el universo obliga a leer la letra chica, y seis ceros al lado de "0 de 2 negocios" se lee como que no hay nada.
+
+Ahora **«Agendados» es un recuadro mas** y los siete cuadran exacto. Va en gris y no en un color de estado, que es lo que dice "esto no es algo pendiente" sin sacarlo de la cuenta.
+
+**Y el vacio afirmaba algo falso.** Con los dos negocios agendados, la pantalla decia «No hay negocios con liquidaciones abiertas» justo debajo del encabezado que decia "0 de 2 negocios con liquidaciones abiertas". Ahora distingue las dos causas: no hay nada abierto, o todo lo abierto esta agendado. Canjes tenia el mismo problema latente y se arreglo tambien.
+
+Los dos defectos son consecuencia de haber agregado los agendados: esconder filas cambia lo que significan los conteos y los vacios que las rodean, y eso no se reviso al agregarlos. Ninguno lo detecta un test -- los numeros de la API son correctos -- y ninguno se ve en `dev`, donde no habia agendados.
+
+**Verificado:** 721 tests, build y lint sin hallazgos, y capturas de las dos bandejas contra produccion. Ver `D-073`.
+
 ### 2026-08-27 - La comision de Dataprop y los plazos de canjes
 
 Con las tasas que definiste, la cadena cierra completa. Esta en el **dashboard de canjes** y en la **mitad de canjes de la vista directorio**.

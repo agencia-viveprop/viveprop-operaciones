@@ -107,7 +107,16 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
         umbrales son en días, no en horas: acá los procesos duran de un mes a varios.
       </Text>
 
-      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
+      {/* **Los recuadros reparten el universo, y por eso «Agendados» es uno de
+          ellos.** Antes eran seis y los agendados iban solo en una linea de texto
+          abajo, con el argumento de que no requieren atencion. El argumento era
+          cierto y el resultado malo: con dos negocios abiertos y los dos
+          agendados, los seis recuadros mostraban cero y la pantalla se leia como
+          "no hay nada" -- el dato real estaba en letra chica.
+
+          Va en gris y no en un color de estado, que es lo que dice "esto no es
+          algo pendiente" sin sacarlo de la cuenta. */}
+      <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Badge color={NIVELES[nivel].color} variant="light" mb={4}>
@@ -121,25 +130,32 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
             </Text>
           </Paper>
         ))}
+        <Paper withBorder radius="md" p="md">
+          <Badge color="gray" variant="light" mb={4}>
+            Agendados
+          </Badge>
+          <Text size="28px" fw={800} lh={1.1}>
+            {data.resumen.agendados}
+          </Text>
+          <Text size="xs" c="dimmed" mt={4}>
+            Con la próxima acción para más adelante
+          </Text>
+        </Paper>
       </SimpleGrid>
 
-      {/* Los agendados no van como recuadro porque no requieren atención: son
-          trabajo comprometido para otro día. Pero tienen que estar dichos, o el
-          conteo de arriba se lee como si fueran los únicos negocios abiertos. */}
-      {data.resumen.agendados > 0 && (
-        <Text size="sm" c="dimmed">
-          {data.resumen.agendados}{' '}
-          {data.resumen.agendados === 1
-            ? 'negocio tiene su próxima acción agendada para más adelante y no se lista acá'
-            : 'negocios tienen su próxima acción agendada para más adelante y no se listan acá'}
-          . Cada uno aparece el día que le toca.
-        </Text>
-      )}
-
+      {/* **El vacio tiene dos causas distintas y decia solo una.** Con los dos
+          negocios abiertos agendados, la tabla queda sin filas y el mensaje
+          afirmaba "no hay negocios con liquidaciones abiertas" -- justo debajo de
+          un encabezado que decia "0 de 2 negocios con liquidaciones abiertas". Dos
+          frases de la misma pantalla contradiciendose. */}
       {data.filas.length === 0 ? (
         <Paper withBorder radius="md" p="xl">
           <Text ta="center" c="dimmed">
-            No hay negocios con liquidaciones abiertas.
+            {abiertos === 0
+              ? 'No hay negocios con liquidaciones abiertas.'
+              : abiertos === 1
+                ? 'El único negocio abierto tiene su próxima acción agendada para más adelante, así que hoy no toca.'
+                : `Los ${abiertos} negocios abiertos tienen su próxima acción agendada para más adelante, así que hoy no toca ninguno.`}
           </Text>
         </Paper>
       ) : (
