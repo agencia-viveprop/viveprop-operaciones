@@ -1924,3 +1924,21 @@ Queda una consecuencia conocida: sobre los movimientos migrados, la celda va a d
 ### Nota de método
 
 La verificación contra producción quedó a medias: el clasificador bloqueó el script que lee la credencial de solo lectura, así que los números se comprobaron contra `dev`. Alcanzó --86 movimientos colapsando en 15 canjes, la ventana larga viendo lo que la corta deja afuera, y la ventana pasada midiendo 229 días donde la actual mide 233-- pero **la tabla de negocios no se pudo mirar renderizada con datos**: los 50 movimientos que existen están solo en producción y `dev` no tiene ninguno. Se verificaron sus columnas por la tabla de estancados, que usa los mismos componentes.
+
+---
+
+## D-077 · El código de etapa dice el nombre al pasar el mouse
+
+Pedido chico y directo: en el listado de Negocios, la insignia de etapa muestra `E7` y nada más.
+
+El código no se reemplaza por el nombre, se le agrega: `E7` es lo que cabe en una columna angosta al lado de otras once, y es el vocabulario con el que se habla del pipeline --«está en E2»--. Lo que no hace es decir qué falta hacer, y son siete. El nombre va en el tooltip.
+
+**Sale del catálogo, no de la pantalla.** El componente lee `catalogos.etapas`, que el listado ya consultaba para sus filtros: React Query lo sirve de la misma caché, así que sumarlo en la bandeja no cuesta una petición más. Escribir los siete rótulos en el frontend habría sido la variante rápida y es el error que se acaba de corregir en el reporte semanal --una copia se despega de la tabla en cuanto alguien renombra una etapa--.
+
+**Va en las dos pantallas donde aparece la insignia**, el listado y «Qué me toca hoy», y por eso vive en un componente propio (`EtapaBadge`). Con el tooltip en una y no en la otra hay que recordar dónde funciona, que es peor que no tenerlo. El caso «sin etapa» se queda en quien llama: cada tabla ya tenía resuelto cómo dibujar su vacío.
+
+Sin globo cuando no hay nombre --mientras el catálogo viaja, o con un código que ya no esté en la tabla--: un tooltip vacío es peor que ninguno.
+
+### Nota de método
+
+La primera captura salió con la pantalla en blanco y el log de Vite con un error de Mantine: *"Tooltip component children should be an element or a component that accepts ref"*. Era **la instrumentación y no el componente**: para poder fotografiar el globo lo forcé abierto con `opened` y dejé el comentario `{/* VERIF */}` **dentro** del `Tooltip`, así que recibió dos hijos. Vale anotarlo porque la lección es al revés de lo que parece: el ciclo de mirar la pantalla renderizada encontró un problema que no existía en el código que se iba a subir, pero el mensaje --y la certeza de que el globo sí sale, con «Terminado» sobre el E7-- solo aparecen mirando.

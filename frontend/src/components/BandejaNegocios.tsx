@@ -15,6 +15,7 @@ import {
   type NivelNegocio,
 } from '../api/negocios'
 import NegocioFichaModal from './NegocioFichaModal'
+import EtapaBadge from './EtapaBadge'
 import { clp, duracion, fecha, MODELO_CORTO } from './negociosFormato'
 import EstadoConsulta from './EstadoConsulta'
 
@@ -199,7 +200,7 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
                     </Text>
                   </Table.Td>
                   <Table.Td>
-                    {f.etapa ? <Badge variant="default">{f.etapa}</Badge> : '—'}
+                    {f.etapa ? <EtapaBadge codigo={f.etapa} /> : '—'}
                   </Table.Td>
                   <Table.Td ta="right">
                     <Text size="xs">{duracion(f.duraciones.dias_abierto)}</Text>

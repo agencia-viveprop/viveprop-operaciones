@@ -25,6 +25,7 @@ import NegocioFichaModal from '../components/NegocioFichaModal'
 import NegocioFormModal from '../components/NegocioFormModal'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import HistorialEtapasModal from '../components/HistorialEtapasModal'
+import EtapaBadge from '../components/EtapaBadge'
 import { COLOR_ESTADO, clp, duracion, fecha, MODELO_CORTO } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 
@@ -190,7 +191,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
                   <Table.Td>{MODELO_CORTO[n.modelo]}</Table.Td>
                   <Table.Td>
                     {n.etapa ? (
-                      <Badge variant="default">{n.etapa}</Badge>
+                      <EtapaBadge codigo={n.etapa} />
                     ) : (
                       <Text size="sm" c="dimmed">—</Text>
                     )}

@@ -101,6 +101,8 @@ Variables de entorno en Render:
 
 **El reparto de la comisión.** Reporte mensual y vista directorio muestran, apilado, quién se queda con cada peso: Real ViveProp, Corredores y Equipo. El alto de la barra es la plata que se reparte, y los chips de arriba eligen qué segmentos destacar: el que se apaga **queda en gris, no desaparece**, así que el alto de la barra sigue siendo el total del mes y la escala no se mueve (`D-075`). Los montos de los negocios van en paneles aparte --y **la venta separada del arriendo**, porque un precio de venta y un mes de renta no se suman-- (`D-064`).
 
+**La etapa dice su nombre al pasar el mouse.** La insignia del listado de Negocios y de «Qué me toca hoy» muestra el código --`E5`, que es lo que cabe en la columna y como se habla del pipeline-- y el nombre completo en el tooltip, tomado del catálogo de etapas (`D-077`).
+
 **El potencial no se mezcla con lo efectivo.** El listado de Negocios tiene tres columnas de plata --**Ganado**, **En pipeline**, **No concretado**-- y tres totales al pie, en vez de un total que sumaba los tres estados juntos. El tablero abre con las cantidades --negocios arriba, liquidaciones en el renglón chico-- y la tasa de cierre deja las abiertas afuera del denominador (`D-063`).
 
 **Sobre quién se hizo la gestión.** Tercer campo de la bitácora, junto al tipo y la etapa: a cuál de los dos corredores --solicitante o propietario--. El selector muestra los nombres, no las etiquetas. **Es optativo**: hay movimientos que no son sobre un corredor, y forzarlo pondría un dato falso. Los 605 migrados quedan en nulo, porque el Excel no lo traía (`D-062`).

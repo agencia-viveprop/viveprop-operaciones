@@ -126,6 +126,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - La insignia de etapa dice su nombre
+
+Pediste el tooltip sobre el codigo de etapa del listado de Negocios. Esta, y tambien en «Que me toca hoy», que tenia la misma insignia pelada: con el globo en una pantalla y no en la otra hay que recordar donde funciona.
+
+El nombre sale del catalogo de etapas --el listado ya lo consultaba para sus filtros, asi que no cuesta una peticion mas-- y no de una copia de los siete rotulos escrita en la pantalla, que es lo que se despega en cuanto alguien renombra una etapa. El codigo se queda a la vista: es lo que cabe en la columna y es como hablas del pipeline.
+
+**Verificado:** typecheck, build y lint sin hallazgos, y una captura con el globo abierto: sobre el `E7` de VVP-1 dice «Terminado». Ver `D-077`.
+
 ### 2026-08-27 - El reporte semanal: una ventana, un renglon por negocio o canje
 
 Los cuatro puntos que marcaste, mas dos cosas que aparecieron al hacerlos.
