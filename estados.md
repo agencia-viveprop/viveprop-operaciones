@@ -136,7 +136,7 @@ Pediste llenar «Valor negocio» desde «Valor propiedad» y calcular la comisi�
 
 **Tenés el archivo en `Archivos/revision-monedas-canjes.xlsx`.** 148 filas con su **fecha de solicitud**: los 9 ambiguos primero y en amarillo sin propuesta, y las 139 con la moneda propuesta ya puesta más el equivalente en pesos para que juzgues si es plausible. Si estás de acuerdo con una fila, no la toques. El script que lo genera quedó en `app/scripts/revisar_monedas_canjes.py`, y **no escribe nada en la base**: aplicar es un paso aparte.
 
-**El archivo ahora sale de producción.** Apareció una vía de lectura que yo daba por inexistente: `backend/.env.real.bak`, un respaldo en tu propio árbol de trabajo que apunta al otro endpoint de Neon. Medido ahí el problema es más chico: **190 coherentes, 112 invertidas y 1 ambigua** sobre 303 canjes. Ya habías corregido 8 de los 9 ambiguos.
+**El archivo ahora sale de producción.** Apareció una vía de lectura que yo daba por inexistente: `backend/.env.real.bak`, un respaldo en tu propio árbol de trabajo que apunta al otro endpoint de Neon. Medido ahí el problema es más chico: **190 coherentes, 112 invertidas y 1 ambigua** sobre 303 canjes. Después corregiste el noveno --el canje 222, que quedó en 400.000 CLP-- así que **no queda ninguna ambigua**: 191 coherentes y 112 invertidas, y las 112 son casos donde la magnitud dice inequívocamente lo contrario de la etiqueta. 57 pasan de CLP a UF y 55 de UF a CLP.
 
 **Y sigue faltando otra cosa para la comisión:** el 6/5/4% se aplica sobre *la comisión de los corredores*, no sobre el valor de la propiedad — el valor solo elige el tramo. Ese dato no existe ni tiene campo. Ver `D-070`.
 
