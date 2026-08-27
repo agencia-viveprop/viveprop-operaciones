@@ -1581,3 +1581,51 @@ La clave vive al lado del modelo, en `clave_de_orden`, porque es una propiedad d
 **En la plantilla importa más de lo que parece.** La persona llena 71 filas leyendo de arriba abajo, y un orden que salta de `VVP-1` a `VVP-10` y vuelve a `VVP-2` cincuenta filas después es una invitación a escribir la fecha en la fila del negocio equivocado. Justo después de haber arreglado dos negocios con el año mal, no era el momento de dejar una trampa de transcripción.
 
 Un código sin número al final va antes que los numerados de su prefijo. No es un caso que exista hoy, pero `-1` es determinista y no colisiona con ningún número real, así que el orden no depende de lo que devuelva el motor.
+
+---
+
+## D-070 · La moneda de `valor_prop` está invertida en 139 de 297 canjes
+
+**El pedido** fue llenar «Valor negocio» automáticamente desde «Valor propiedad» y calcular la comisión de Dataprop encima. Antes de escribir nada se midió el campo de origen, y no se puede usar como está.
+
+### La evidencia
+
+| Etiqueta | Coherentes | Invertidos |
+|---|---|---|
+| CLP | 93 | **69** con valores bajo 100.000 → son UF |
+| UF | 59 | **76** con valores sobre 100.000 → son CLP |
+
+Casos concretos: un arriendo de casa en Vitacura guardado como **70 CLP**, una venta de terreno en Osorno como **3 CLP**, un departamento en Providencia como **320.000.000 UF** --trece billones de pesos-- y 50 arriendos con mediana de **700.000 UF** mensuales, o sea 28 mil millones de renta al mes.
+
+El usuario había señalado, con razón, que el campo trae su moneda y que eso alcanza para convertir. Alcanzaría si la etiqueta fuera correcta; sus dos ejemplos lo eran, pero son de las 149 filas buenas.
+
+### La magnitud dice la verdad y la etiqueta no
+
+Las dos escalas están separadas por **cuatro órdenes de magnitud**: una venta en UF anda en miles y la misma en pesos en cientos de millones. No existe la propiedad que valga 5.000 pesos ni la que valga 300 millones de UF. Así que clasificar por monto no es adivinar.
+
+Medida la distribución, es limpiamente bimodal y **no hay una sola fila en el medio**: las 114 ventas del tramo UF van de 1.274 a 80.000, las 48 del tramo CLP de 21 a 720 millones. Los arriendos igual: 114 en pesos, de 140.000 a 5.000.000 mensuales.
+
+```
+Venta    → bajo 1.000.000 es UF · sobre 20.000.000 es CLP
+Arriendo → bajo 1.000 es UF · entre 100.000 y 20.000.000 es CLP
+```
+
+Entre esos rangos la regla **no afirma nada**, y eso es deliberado: son 9 casos cuyo monto no funciona en ninguna de las dos monedas --cuatro parcelas en Lo Barnechea con 2.100.000 y etiquetas que se contradicen entre sí-- así que probablemente les falten o les sobren ceros. Eso no lo puede resolver una regla.
+
+### Se corrige, pero nadie corrige 139 filas a ciegas
+
+Entre tres caminos --corregir las etiquetas, interpretar por magnitud sin tocar el registro, o calcular solo sobre las coherentes-- el usuario eligió **corregir**, previa revisión. Es la decisión correcta: una etiqueta equivocada no es un registro que haya que preservar, es un error, y mientras esté ahí cada cálculo futuro tiene que arrastrar el parche.
+
+Pero la corrección sale de una **inferencia**, así que no se aplica sola. `app/scripts/revisar_monedas_canjes.py` genera `Archivos/revision-monedas-canjes.xlsx` con las 148 filas que necesitan atención --los 9 ambiguos primero y en amarillo, sin propuesta-- y el equivalente en pesos de cada una para poder juzgar si el monto es plausible. Las 149 correctas no van: no hay nada que decidir sobre ellas.
+
+El script **no escribe en la base**. Aplicar los cambios es un paso aparte y deliberado.
+
+### Lo que sigue bloqueado, y es otra cosa
+
+Arreglar la moneda **no alcanza para calcular la comisión.** La regla que rige el Centro de Canje aplica 6/5/4% --u 8% en arriendo-- sobre *la comisión de los corredores participantes*, no sobre el valor de la propiedad: el valor solo elige el tramo. Y la comisión de los corredores no existe como dato ni como campo.
+
+También quedó aclarado un malentendido de fondo que venía de antes: **ViveProp no participa en los canjes ni percibe nada de ellos.** Opera a nombre de Dataprop. Así que la plata de canjes es de Dataprop, y cuando se muestre tiene que ir rotulada como tal y nunca sumada con la de negocios. Por eso el campo pasa a llamarse «Comisión Dataprop» en vez de «Comisión DBrokers».
+
+### Nota de método
+
+Las mediciones de canjes de esta conversación salen de `dev`, que está atrasado: el usuario señaló que producción tiene 7 canjes activos y `dev` muestra 4. Las proporciones y la forma del problema se sostienen --los 297 migrados son los mismos-- pero **ninguna cifra citada acá es la de producción**, y el archivo generado tampoco incluye los canjes más nuevos. Lo dice su propia hoja de instrucciones.
