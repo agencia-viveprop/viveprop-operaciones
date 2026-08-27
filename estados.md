@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - El grafico con selector siempre muestra el total
+
+Me pediste que en los graficos donde se elige que mostrar, el total se vea siempre. Aplicado, y encontre que el arreglo anterior estaba a medias.
+
+**La cifra ya era correcta; la forma no.** El numero de arriba de cada barra ya salia del mes completo. Pero al apagar un segmento la barra se encogia **y el eje se re-escalaba**, asi que marzo se veia mas alto con un segmento que con los tres. El rotulo decia $2.386.289 sobre una barra del tamano de una de $1.067.027, y en un grafico la forma se lee antes que el texto.
+
+**Ahora todos los segmentos se dibujan siempre.** El chip cambia el color, no la presencia: el que apagas queda en gris y sigue ocupando su lugar. El alto es siempre el total, el eje no se mueve y los meses siguen comparables. Seleccionar pasa a ser destacar en vez de restar.
+
+**El gris lo elegi con el validador, no a ojo.** El candidato obvio (`#ced4da`) daba 1.46:1 contra la superficie -- no se veia como bloque. Quedaron `#868e96` en claro y `#909296` en oscuro, los dos sobre 3:1.
+
+**Y la leyenda tuvo que seguir al relleno.** La primera version pintaba la barra en gris y dejaba el punto de la leyenda en su color original, que es romper la identidad justo donde se declara.
+
+Vale como regla para lo que venga: cualquier grafico con seleccion de segmentos mantiene el total.
+
+**Verificado:** 721 tests, build y lint sin hallazgos, y captura del reporte mensual contra produccion con un solo segmento elegido -- la barra conserva su alto de $2.386.289 y el eje no se movio. Ver `D-075`.
+
 ### 2026-08-27 - "Al dia" incluye los agendados
 
 Tercera vuelta sobre el mismo panel, y la que lo deja bien.

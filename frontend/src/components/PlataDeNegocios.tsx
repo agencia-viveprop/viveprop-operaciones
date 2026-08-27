@@ -47,15 +47,6 @@ const SEGMENTOS: (SerieDef & { clave: string })[] = [
   { clave: 'equipo', campo: 'comision_equipo', nombre: 'Equipo ViveProp', tono: 'terciaria' },
 ]
 
-/** La suma de los tres segmentos del mes, mostrados o no.
- *
- * Es lo que permite apagar un segmento sin mentir: si el total se calculara
- * sumando lo visible, apagar uno bajaría la cifra y eso se leería como que la
- * plata bajó. No bajó, la escondiste. */
-function sumaDeLosTres(m: MetricasMes): number {
-  return SEGMENTOS.reduce((a, s) => a + Number(m[s.campo]), 0)
-}
-
 function sumar(serie: MetricasMes[], campo: keyof MetricasMes): number {
   return serie.reduce((a, m) => a + Number(m[campo]), 0)
 }
@@ -73,7 +64,18 @@ export default function PlataDeNegocios({
   // filtro sirve para aislar uno, no para tener que armarlo cada vez.
   const [vistos, setVistos] = useState<string[]>(SEGMENTOS.map((s) => s.clave))
 
-  const elegidos = SEGMENTOS.filter((s) => vistos.includes(s.clave))
+  // **Todos los segmentos se dibujan siempre.** Lo que el selector cambia es el
+  // color: el que se apaga va en gris y sigue ocupando su lugar en la pila.
+  //
+  // La version anterior los sacaba del grafico y mantenia la cifra de arriba con
+  // una prop aparte. El numero no mentia, pero la forma si: al apagar un segmento
+  // la barra se encogia **y el eje se re-escalaba**, asi que el mismo mes se veia
+  // mas alto que un segundo antes. El total estaba dicho y la forma lo
+  // contradecia.
+  //
+  // Asi, seleccionar pasa a ser "destacar" en vez de "restar": el alto es siempre
+  // el total, el eje no se mueve y los meses siguen comparables.
+  const conAtenuados = SEGMENTOS.map((s) => ({ ...s, atenuada: !vistos.includes(s.clave) }))
   const rebate = sumar(serie, 'rebate_concentrador')
   const terceros = sumar(serie, 'comision_tercero')
   const arriendos = sumar(serie, 'valor_arriendo')
@@ -127,8 +129,8 @@ export default function PlataDeNegocios({
           </Chip.Group>
         </Group>
         <Text size="xs" c="dimmed">
-          Apagar un segmento lo saca de la pila, pero la cifra de arriba de cada barra
-          sigue siendo la del mes completo: es plata que se esconde, no plata que baja.
+          El segmento que apagues queda en gris, no desaparece: el alto de la barra sigue siendo
+          el total del mes y la escala no se mueve, así que los meses siguen comparables.
         </Text>
       </Paper>
 
@@ -141,10 +143,9 @@ export default function PlataDeNegocios({
             : 'Coincide con la comisión total, salvo las partidas que van en el recuadro de abajo.')
         }
         serie={serie}
-        series={elegidos}
+        series={conAtenuados}
         apilado
         etiquetaTotal="Se reparten"
-        totalDe={sumaDeLosTres}
         esPlata
       />
 

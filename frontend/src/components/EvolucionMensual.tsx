@@ -80,6 +80,14 @@ const PALETA = {
     negativa: '#DC2626',
     terciaria: '#0891B2',
     positiva: '#059669',
+    // Lo que el usuario apagó en el selector. **No desaparece: se atenúa**, para
+    // que el alto de la barra siga siendo el total. Es gris a propósito --cero
+    // croma, así que no se confunde con ninguna serie-- y llega a 3.2:1 contra la
+    // superficie, que es lo que lo hace visible como bloque. El validador marca
+    // FAIL de croma y de banda de luminosidad en este color, y está bien: sus
+    // comprobaciones son para paletas categóricas y esta marca es deliberadamente
+    // neutra. La que importa acá es el contraste, y pasa.
+    apagado: '#868e96',
     // La tendencia es una lectura, no una categoría: va en el teal de `info`,
     // que no está asignado a ninguna serie y así no se confunde con una.
     tendencia: '#0891B2',
@@ -95,6 +103,9 @@ const PALETA = {
     // El mismo verde en los dos modos: pasó el validador contra las dos
     // superficies, así que no hace falta un paso distinto.
     positiva: '#059669',
+    // Un paso más claro que en modo claro, por la misma razón invertida: contra
+    // fondo oscuro el gris tiene que subir para verse. 3.3:1 contra la superficie.
+    apagado: '#909296',
     tendencia: '#0ab9e3',
   },
 } as const
@@ -209,6 +220,13 @@ export type SerieDef = {
   /** El rol en la paleta validada. `tendencia` no entra: es la recta, no una
    *  serie de datos. */
   tono: 'principal' | 'secundaria' | 'negativa' | 'terciaria' | 'positiva'
+  /**
+   * Si va en gris en vez de su color, sin salir del gráfico.
+   *
+   * Es lo que hace que un selector de segmentos no cambie el alto de la barra ni
+   * la escala del eje: el segmento que se apaga sigue ocupando su lugar, atenuado.
+   */
+  atenuada?: boolean
 }
 
 
@@ -229,7 +247,6 @@ export default function EvolucionMensual({
   apilado = false,
   etiquetaTotal = 'Total',
   tendencia,
-  totalDe,
 }: {
   titulo: string
   subtitulo?: string
@@ -257,18 +274,6 @@ export default function EvolucionMensual({
   /** La recta de tendencia sobre la ventana, tal como la calcula el backend.
    *  Sus montos llegan como texto --son `Decimal`-- y se convierten acá. */
   tendencia?: Tendencia
-  /**
-   * De dónde sale el total de la pila, cuando no es la suma de los segmentos.
-   *
-   * Hace falta para poder **esconder segmentos sin mentir**. Si el total se
-   * calcula sumando lo que se ve, apagar un segmento baja el número y la barra,
-   * y eso se lee como que la plata bajó. No bajó: la escondiste. Con esto, el
-   * alto visible cambia pero la cifra rotulada sigue siendo la del mes completo.
-   *
-   * Solo se usa con `apilado`. Sin esto, el total es la suma de los segmentos,
-   * que es lo correcto cuando siempre se muestran todos.
-   */
-  totalDe?: (m: MetricasMes) => number
 }) {
   const modo = useComputedColorScheme('light')
   const paleta = PALETA[modo]
@@ -278,12 +283,14 @@ export default function EvolucionMensual({
     mes: rotuloCorto(m.etiqueta),
     ...Object.fromEntries(series.map((s) => [s.campo, Number(m[s.campo])])),
     // El total de la pila, precalculado. El alto de la barra ya lo dice, pero el
-    // número no estaba en ninguna parte: el globo listaba los dos segmentos y
-    // había que sumarlos de cabeza para tener la cifra del mes.
+    // número no estaba en ninguna parte: el globo listaba los segmentos y había
+    // que sumarlos de cabeza para tener la cifra del mes.
     //
-    // Con `totalDe` sale del mes completo y no de los segmentos visibles: ver la
-    // explicación en la prop.
-    [CAMPO_TOTAL]: totalDe ? totalDe(m) : series.reduce((a, s) => a + Number(m[s.campo]), 0),
+    // Sumar los segmentos alcanza porque **todos se dibujan siempre**: los que el
+    // usuario apaga van atenuados, no fuera del gráfico. Hubo una versión con una
+    // prop `totalDe` para calcular el total aparte, y dejó de hacer falta cuando
+    // apagar un segmento dejó de sacarlo de la pila.
+    [CAMPO_TOTAL]: series.reduce((a, s) => a + Number(m[s.campo]), 0),
   }))
 
   const ultimo = datos.length - 1
@@ -294,13 +301,10 @@ export default function EvolucionMensual({
     datos.length > 0
       ? {
           rotulo: datos[ultimo].mes,
-          valor:
-            apilado && totalDe
-              ? Number(datos[ultimo][CAMPO_TOTAL])
-              : (unaSola || apilado ? series : series.slice(0, 1)).reduce(
-                  (a, s) => a + Number(datos[ultimo][s.campo]),
-                  0,
-                ),
+          valor: (unaSola || apilado ? series : series.slice(0, 1)).reduce(
+            (a, s) => a + Number(datos[ultimo][s.campo]),
+            0,
+          ),
         }
       : null
   const conTotal = unaSola || apilado
@@ -421,7 +425,7 @@ export default function EvolucionMensual({
               key={s.campo}
               dataKey={s.campo}
               name={s.nombre}
-              fill={paleta[s.tono]}
+              fill={s.atenuada ? paleta.apagado : paleta[s.tono]}
               stackId={apilado ? 'total' : undefined}
               /* Solo el segmento de arriba lleva las esquinas redondeadas: en los
                  de abajo, redondear el tope deja un hueco contra el siguiente. */
@@ -478,17 +482,23 @@ export default function EvolucionMensual({
           {!unaSola &&
             series.map((s) => (
               <Group key={s.campo} gap={6} wrap="nowrap">
+                {/* El punto sigue al relleno de la barra, atenuado incluido: una
+                    leyenda que dice rojo donde la barra esta gris es peor que no
+                    tener leyenda. Y el nombre se atenua con el, para que se lea de
+                    un golpe cual esta apagado. */}
                 <span
                   aria-hidden
                   style={{
                     width: 9,
                     height: 9,
                     borderRadius: '50%',
-                    background: paleta[s.tono],
+                    background: s.atenuada ? paleta.apagado : paleta[s.tono],
                     display: 'inline-block',
                   }}
                 />
-                <Text size="xs">{s.nombre}</Text>
+                <Text size="xs" c={s.atenuada ? 'dimmed' : undefined}>
+                  {s.nombre}
+                </Text>
               </Group>
             ))}
           {/* La recta también se nombra: una línea sin explicación en un gráfico

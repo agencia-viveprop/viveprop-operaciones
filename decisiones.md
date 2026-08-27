@@ -1828,3 +1828,35 @@ Y dice **«dentro del plazo»** y no «hace menos de 24 h» porque el umbral lo 
 ### Lo que no cambió
 
 Los contadores de «requieren atención» --el del encabezado y el del filtro-- excluyen «al día» por construcción, así que la fusión no los toca. Siguen diciendo 2 de 7 y 0 de 2, que es correcto.
+
+---
+
+## D-075 · Un selector de segmentos destaca, no resta
+
+El usuario planteó la regla directa: *"en este tipo de gráficos donde se puede elegir que mostrar, siempre debe mostrar el total independiente de lo que esté seleccionado"*. Se aplicó, y de paso deja al descubierto que el arreglo anterior estaba a medias.
+
+### La cifra ya era correcta; la forma no
+
+En `D-064` los chips sacaban el segmento de la pila, y para que apagar uno no bajara el número se agregó una prop `totalDe` que calculaba el total del mes aparte de lo visible. El número, entonces, nunca mintió.
+
+**Pero la barra sí.** Al apagar un segmento la pila se encogía y, peor, **el eje se re-escalaba**: el mismo mes de marzo se veía más alto con un solo segmento que con los tres, porque el máximo del eje había bajado con él. Dos meses distintos dejaban de ser comparables entre una selección y la siguiente. Un rótulo que dice `$2.386.289` sobre una barra que ocupa lo mismo que otra de `$1.067.027` es una contradicción, y en un gráfico la forma gana: se lee antes que el texto.
+
+### Lo que se hizo
+
+**Todos los segmentos se dibujan siempre.** El chip cambia el color, no la presencia: el segmento apagado va en gris y sigue ocupando su lugar en la pila. Así el alto es siempre el total, el eje no se mueve y los meses siguen comparables. Seleccionar pasa a ser **destacar** en vez de **restar**.
+
+Y `totalDe` se fue: existía solo para tapar el hueco que dejaba esconder segmentos. Sin el hueco, el total vuelve a ser la suma de lo que se dibuja, que es lo correcto cuando se dibuja todo.
+
+### El gris, elegido con el validador y no a ojo
+
+`#ced4da` --el gris de borde de Mantine, el candidato obvio-- da **1.46:1** contra la superficie: no se ve como bloque. El validador lo rechazó antes de que llegara a la pantalla.
+
+Los que quedaron: **`#868e96`** en claro (3.2:1) y **`#909296`** en oscuro (3.3:1), un paso más claro por la razón inversa. En los dos, el validador marca FAIL de croma y de banda de luminosidad, y **está bien**: esas comprobaciones cuidan que dos *categorías* se distingan entre sí, y esta marca es deliberadamente neutra --cero croma es justamente lo que impide confundirla con una serie--. La que importa acá es el contraste, y pasa.
+
+### La leyenda tiene que seguir al relleno
+
+La primera versión pintaba la barra en gris y **dejaba la leyenda con los colores originales**: el punto rojo de «Corredores» al lado de un bloque gris. La leyenda es lo que une color con nombre; si los dos no dicen lo mismo, la identidad se rompe justo donde se declara. Ahora el punto y el texto siguen a `atenuada`: gris y `dimmed`.
+
+### Vale para el resto
+
+Es regla, no arreglo puntual: **cualquier gráfico con selección de segmentos mantiene el total**. Hoy el único con selector es el del reparto de la comisión, y `atenuada` vive en `EvolucionMensual`, así que el que venga lo hereda.
