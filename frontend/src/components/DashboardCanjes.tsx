@@ -13,6 +13,7 @@ const ETAPA_COLORS = ['brand.2', 'brand.3', 'brand.4', 'brand.5', 'brand.6', 'br
 const VISTAS = [
   { value: 'todos', label: 'Todos', campo: 'cantidad' },
   { value: 'activos', label: 'Activos', campo: 'activos' },
+  { value: 'cerrados', label: 'Cerrados', campo: 'cerrados' },
   { value: 'cancelados', label: 'Cancelados', campo: 'cancelados' },
 ] as const
 
@@ -44,9 +45,18 @@ export default function DashboardCanjes() {
 
   return (
     <Stack gap="lg">
-      <SimpleGrid cols={{ base: 2, sm: 4 }}>
-        <StatCard label="Total canjes" value={resumen.total} color="brand" caption="Histórico" />
-        <StatCard label="Activos" value={resumen.activos} color="good" />
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 5 }}>
+        <StatCard label="Total canjes" value={resumen.total} color="gray" caption="Histórico" />
+        <StatCard label="Activos" value={resumen.activos} color="brand" />
+        {/* Cero en todo el histórico, y es cierto: el estado no existía y los 31
+            que llegaron a la etapa de cierre se cayeron. Va igual, porque un tile
+            en cero que dice la verdad informa más que un tile ausente. */}
+        <StatCard
+          label="Cerrados"
+          value={resumen.cerrados}
+          color="good"
+          caption={`${resumen.tasa_cierre_pct}% de los resueltos`}
+        />
         <StatCard label="Cancelados" value={resumen.cancelados} color="critical" />
         <StatCard label="Tasa activos" value={`${resumen.tasa_activos_pct}%`} color="accent" />
       </SimpleGrid>

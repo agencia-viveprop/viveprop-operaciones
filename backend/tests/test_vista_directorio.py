@@ -240,22 +240,21 @@ def test_sin_cierres_no_hay_ticket(db):
 
 
 def test_los_conteos_de_canjes_van_por_estado_y_reconcilian(db):
-    """Los activos se cuentan por estado, plano, y no "activo y no cerrado".
+    """Los tres estados parten el total, sin condiciones extra.
 
-    Es un cambio respecto de la version anterior de esta vista, y tiene un motivo:
-    los conteos del periodo tienen que cumplir `solicitados = activos +
+    Los conteos del periodo tienen que cumplir `solicitados = activos + cerrados +
     cancelados` para poder dibujarse apilados (`D-055`), y eso solo se sostiene si
-    la particion es por estado sin condiciones extra.
+    la particion es por estado y nada mas.
 
-    Lo que la version anterior llamaba "vigentes" sigue siendo derivable:
-    `activos_historicos - cerrados_historicos`. Los dos numeros van en la
-    respuesta justamente para que reconcilien a la vista y no haya que elegir cual
-    creer.
+    **Antes los cerrados se deducian de la etapa**, con "estado activo y etapa
+    Cerrado", porque el estado `CERRADO` no existia. Ahora existe y el conteo sale
+    de el: un canje puede llegar a la etapa de cierre y caerse igual, y eso es
+    exactamente lo que paso 31 veces en el historico.
     """
     db.add_all([
         Canje(id=1, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
               etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
-        Canje(id=2, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
+        Canje(id=2, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CERRADO,
               etapa=CanjeEtapa.CERRADO, comuna="Santiago"),
         Canje(id=3, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
               etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
@@ -265,10 +264,10 @@ def test_los_conteos_de_canjes_van_por_estado_y_reconcilian(db):
     c = _vista(db).canjes
 
     assert c.solicitados_historicos == 3
-    assert c.activos_historicos == 2, "los dos con estado ACTIVO"
-    assert c.cerrados_historicos == 1, "el que tiene la etapa en Cerrado"
-    # El "vigentes" de antes: activo y sin la etapa cerrada.
-    assert c.activos_historicos - c.cerrados_historicos == 1
+    assert c.activos_historicos == 1, "solo el que sigue con estado ACTIVO"
+    assert c.cerrados_historicos == 1, "el que tiene estado CERRADO"
+    # Los tres estados parten el total sin dejar ni repetir ninguno.
+    assert c.solicitados == c.activos + c.cerrados + c.cancelados
 
 
 def test_los_conteos_del_periodo_suman_entre_si(db):
@@ -287,7 +286,7 @@ def test_los_conteos_del_periodo_suman_entre_si(db):
     c = _vista(db, ventana=3).canjes
 
     assert (c.solicitados, c.activos, c.cancelados) == (2, 1, 1)
-    assert c.solicitados == c.activos + c.cancelados
+    assert c.solicitados == c.activos + c.cerrados + c.cancelados
     # El historico si los cuenta todos.
     assert c.solicitados_historicos == 3
 
@@ -296,11 +295,11 @@ def test_la_tasa_de_cierre_de_canjes_va_sobre_los_resueltos(db):
     """Los que siguen abiertos no cuentan ni a favor ni en contra.
 
     Hoy da cero sobre los datos reales, y es cierto: ningun canje se ha cerrado
-    con exito (`D-054`). El test usa un cerrado inventado para verificar que la
-    formula funciona el dia que haya uno.
+    con exito. El test usa un cerrado inventado para verificar que la formula
+    funciona el dia que haya uno.
     """
     db.add_all([
-        Canje(id=20, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.ACTIVO,
+        Canje(id=20, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CERRADO,
               etapa=CanjeEtapa.CERRADO, comuna="Santiago"),
         Canje(id=21, fecha_solicitud=date(2026, 8, 1), estado=CanjeEstado.CANCELADO,
               etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),

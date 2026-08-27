@@ -459,6 +459,9 @@ export default function VistaDirectorio() {
         apilado
         etiquetaTotal="Solicitados"
         series={[
+          /* El orden no es negociable por estetica: es el que valido la paleta.
+             Ver `PALETA` en `EvolucionMensual`. */
+          { campo: 'canjes_cerrados', nombre: 'Cerrados', tono: 'positiva' },
           { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
           { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },
         ]}

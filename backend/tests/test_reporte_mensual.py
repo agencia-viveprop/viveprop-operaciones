@@ -278,14 +278,30 @@ def test_un_negocio_con_dos_hitos_se_inicia_una_sola_vez(db):
     assert (agosto.mes.hitos_cerrados, septiembre.mes.hitos_cerrados) == (1, 1)
 
 
-def test_los_canjes_cerrados_van_por_fecha_de_cierre(db):
-    _canje(db, 1, datetime(2026, 6, 1, tzinfo=timezone.utc),
-           etapa=CanjeEtapa.CERRADO, cierre=datetime(2026, 8, 15, tzinfo=timezone.utc))
+def test_los_canjes_cerrados_van_por_fecha_de_solicitud(db):
+    """Los tres estados con la misma base, para que el apilado cierre.
+
+    **Antes se contaban por fecha de cierre y con `etapa == CERRADO`**, y eso tenia
+    dos problemas. Daba 0 en los 46 meses del historico y no podia dar otra cosa:
+    esa etapa y esa fecha no coexisten en ninguna fila, porque la fecha es en
+    realidad la de cancelacion (`D-070`). Y mezclaba dos granos --mes de cierre
+    contra mes de solicitud-- asi que nunca pudo ser un segmento del apilado.
+
+    Cuando haya cierres de verdad va a hacer falta ademas contarlos por mes de
+    cierre, que es cuando se gana la comision. Eso llega con el eje de plata.
+    """
+    _canje(db, 1, datetime(2026, 8, 5, tzinfo=timezone.utc), estado=CanjeEstado.CERRADO)
+    _canje(db, 2, datetime(2026, 8, 6, tzinfo=timezone.utc), estado=CanjeEstado.CANCELADO)
+    _canje(db, 3, datetime(2026, 8, 7, tzinfo=timezone.utc), estado=CanjeEstado.ACTIVO)
 
     r = _reporte(db)
 
     assert r.mes.canjes_cerrados == 1
-    assert r.mes.canjes_solicitados == 0   # se solicitó en junio
+    assert r.mes.canjes_solicitados == 3
+    # La identidad que sostiene el grafico apilado.
+    assert r.mes.canjes_solicitados == (
+        r.mes.canjes_activos + r.mes.canjes_cerrados + r.mes.canjes_cancelados
+    )
 
 
 def test_los_cancelados_se_cuentan_por_fecha_de_solicitud(db):

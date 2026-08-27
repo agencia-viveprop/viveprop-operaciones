@@ -1,4 +1,12 @@
-export type CanjeEstado = 'ACTIVO' | 'CANCELADO'
+/** En qué terminó el canje, o si sigue en curso.
+ *
+ *  `CERRADO` llegó tarde: durante todo el histórico solo existieron los otros dos,
+ *  así que no había forma de registrar que un canje se concretó. Los 31 que tienen
+ *  la etapa en «Cierre» están cancelados — llegaron a la firma y se cayeron.
+ *
+ *  La **etapa** `CERRADO` y este estado son cosas distintas: la etapa dice hasta
+ *  dónde llegó el proceso, el estado en qué terminó. */
+export type CanjeEstado = 'ACTIVO' | 'CERRADO' | 'CANCELADO'
 export type CanjeEtapa = 'RECEPCION' | 'EN_REVISION' | 'PROCESO_DE_ACUERDO' | 'EN_OFERTA' | 'EN_NEGOCIO' | 'CERRADO'
 export type OperacionTipo = 'VENTA' | 'ARRIENDO' | 'OTRO'
 export type MonedaTipo = 'CLP' | 'UF' | 'OTRA'

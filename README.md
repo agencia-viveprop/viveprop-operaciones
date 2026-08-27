@@ -87,6 +87,8 @@ Variables de entorno en Render:
 
 **La secuencia del pipeline se valida.** Un negocio no puede llegar a E1 después de haber pasado por E3: la carga rechaza el negocio completo cuando las fechas contradicen el orden de las etapas, y señala cuál es la sospechosa. El historial se lee **de E1 hacia adelante**, con desempate por orden de registro para las etapas del mismo día (`D-068`).
 
+**Un canje puede estar cerrado.** El estado admite **Activo**, **Cerrado** y **Cancelado**. La etapa dice hasta dónde llegó el proceso y el estado en qué terminó: un canje puede llegar a la etapa de cierre y caerse igual, y eso pasó 31 veces en el histórico. El gráfico de solicitudes reparte el total del mes en los tres estados (`D-071`).
+
 **Carga del historial de etapas.** Negocios → «Historial de etapas»: una plantilla **pre-llenada** con una fila por cada etapa desde E1 hasta donde está hoy cada negocio, para cargar hacia atrás cuándo pasó por cada una y desbloquear la proyección de plazos. No agenda seguimientos, no hace retroceder la etapa actual, recargar no duplica, y se niega a corregir una fecha de inicio si eso movería la valorización (`D-067`).
 
 **Las dos fechas del avance de negocio.** El pipeline de la ficha registra cuándo pasó la actividad y cuándo es la próxima acción. La segunda es optativa: vacía se agenda a **3 días** de la fecha de la actividad, corridos al lunes si caen fin de semana. «Qué me toca hoy» lee ese compromiso y le gana al semáforo de días sin gestión; lo agendado a futuro no se lista, se cuenta (`D-066`).

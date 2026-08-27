@@ -7,13 +7,23 @@
 export type ConteoEtiqueta = { etiqueta: string; cantidad: number }
 
 /** Una etapa con su total y el desglose por estado, para filtrar sin reconsultar. */
-export type ConteoEtapa = ConteoEtiqueta & { activos: number; cancelados: number }
+export type ConteoEtapa = ConteoEtiqueta & {
+  activos: number
+  cerrados: number
+  cancelados: number
+}
 
 export type ResumenCanjes = {
   total: number
   activos: number
+  /** Los que se concretaron. Cero en todo el histórico: el estado no existía, y
+   *  los 31 que llegaron a la etapa de cierre se cayeron. */
+  cerrados: number
   cancelados: number
   tasa_activos_pct: number
+  /** Cerrados sobre resueltos. Los abiertos quedan afuera del denominador: si
+   *  entraran, una solicitud nueva bajaría la tasa sin que se pierda nada. */
+  tasa_cierre_pct: number
   /** Los que están ACTIVO pero con la etapa en Cerrado: el tile de «Activos» los
    *  excluye, así que explican por qué el desglose puede sumar más que el tile. */
   activos_con_etapa_cerrada: number
@@ -363,6 +373,8 @@ export type CanjesDirectorio = {
   activos_historicos: number
   /** Los que están ACTIVO con la etapa en Cerrado. Restados de los activos dan
    *  lo que el resto de la app llama «vigentes». */
+  /** Del período: `solicitados = activos + cerrados + cancelados` exacto. */
+  cerrados: number
   cerrados_historicos: number
   resueltos_historicos: number
   tasa_cierre_pct: string

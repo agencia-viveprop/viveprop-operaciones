@@ -9,7 +9,25 @@ from app.models.usuario import utcnow
 
 
 class CanjeEstado(str, enum.Enum):
+    """En qué terminó el canje, o si sigue en curso.
+
+    **`CERRADO` llegó tarde y por una necesidad concreta.** Durante todo el
+    histórico solo existieron `ACTIVO` y `CANCELADO`, así que no había forma de
+    registrar que un canje se concretó: los 31 que tienen la etapa en «Cierre»
+    están cancelados --llegaron hasta la firma y se cayeron-- y por eso la métrica
+    de canjes cerrados daba cero en los 46 meses y no podía dar otra cosa.
+
+    Hace falta porque la comisión de Dataprop se cobra **por cada operación
+    cerrada**, así que sin un estado que diga "cerró" no hay cuándo registrar lo
+    que se cobró.
+
+    **La etapa `CERRADO` y este estado son cosas distintas.** La etapa dice hasta
+    dónde llegó el proceso; el estado, en qué terminó. Un canje puede llegar a la
+    etapa de cierre y caerse igual, y eso es exactamente lo que pasó 31 veces.
+    """
+
     ACTIVO = "ACTIVO"
+    CERRADO = "CERRADO"
     CANCELADO = "CANCELADO"
 
 

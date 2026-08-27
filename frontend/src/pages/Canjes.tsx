@@ -38,7 +38,7 @@ import SeguimientoModal from '../components/SeguimientoModal'
 import PageHeader from '../components/PageHeader'
 import { ETAPA_LABELS, ETAPAS } from '../components/canjesEtiquetas'
 
-const ESTADOS: CanjeEstado[] = ['ACTIVO', 'CANCELADO']
+const ESTADOS: CanjeEstado[] = ['ACTIVO', 'CERRADO', 'CANCELADO']
 const OPERACIONES = ['VENTA', 'ARRIENDO', 'OTRO']
 const MONEDAS = ['CLP', 'UF', 'OTRA']
 

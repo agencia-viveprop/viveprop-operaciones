@@ -21,14 +21,20 @@ class ConteoEtapa(BaseModel):
     etiqueta: str
     cantidad: int
     activos: int
+    cerrados: int
     cancelados: int
 
 
 class ResumenCanjes(BaseModel):
     total: int
     activos: int
+    # Los que se concretaron. Cero en todo el historico: el estado no existia
+    # hasta ahora, y los 31 que llegaron a la etapa de cierre se cayeron.
+    cerrados: int
     cancelados: int
     tasa_activos_pct: float
+    # Cerrados sobre resueltos. Las abiertas quedan afuera del denominador.
+    tasa_cierre_pct: float
     # Los que están ACTIVO pero con la etapa en Cerrado. El tile de «Activos» los
     # excluye --un canje cerrado no está activo, aunque su estado no se haya
     # actualizado-- así que sin este número la suma del desglose por etapa no
@@ -52,8 +58,17 @@ def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
         )
         or 0
     )
+    cerrados = db.scalar(
+        select(func.count()).select_from(Canje).where(Canje.estado == CanjeEstado.CERRADO)
+    ) or 0
     cancelados = db.scalar(select(func.count()).select_from(Canje).where(Canje.estado == CanjeEstado.CANCELADO)) or 0
     tasa_activos_pct = round((activos / total * 100), 1) if total else 0.0
+    # Cerrados sobre resueltos, no sobre el total: un canje que sigue abierto
+    # todavia no fallo, y meterlo en el denominador haria que la tasa de cierre
+    # baje sola cuando entra una solicitud nueva. Es el mismo criterio que la tasa
+    # de cierre de negocios (`D-063`).
+    resueltos = cerrados + cancelados
+    tasa_cierre_pct = round((cerrados / resueltos * 100), 1) if resueltos else 0.0
 
     # Una sola consulta agrupada por las dos columnas: el desglose por estado sale
     # de acá, no de dos consultas más por etapa.
@@ -66,6 +81,7 @@ def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
             etiqueta=ETAPA_LABELS[e],
             cantidad=sum(n for (etapa, _), n in conteos.items() if etapa == e),
             activos=conteos.get((e, CanjeEstado.ACTIVO), 0),
+            cerrados=conteos.get((e, CanjeEstado.CERRADO), 0),
             cancelados=conteos.get((e, CanjeEstado.CANCELADO), 0),
         )
         for e in CanjeEtapa
@@ -111,8 +127,10 @@ def obtener_resumen_canjes(db: Session) -> ResumenCanjes:
     return ResumenCanjes(
         total=total,
         activos=activos,
+        cerrados=cerrados,
         cancelados=cancelados,
         tasa_activos_pct=tasa_activos_pct,
+        tasa_cierre_pct=tasa_cierre_pct,
         activos_con_etapa_cerrada=activos_con_etapa_cerrada,
         por_etapa=por_etapa,
         por_mes=por_mes,

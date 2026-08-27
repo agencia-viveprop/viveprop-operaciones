@@ -1665,3 +1665,42 @@ El clasificador de seguridad de la sesión bloqueó la escritura, así que la co
 Antes de la corrección esos totales mezclaban UF con pesos y no significaban nada. Un promedio de venta de 288 millones y una renta promedio de un millón son cifras que se sostienen solas.
 
 **Con esto `valor_prop` deja de ser inservible.** El motivo por el que se descartó en `D-054` --moneda equivocada en la mitad de las filas-- ya no existe. Lo que sigue faltando para calcular la comisión de Dataprop es otra cosa: la comisión de los corredores participantes, que es la base sobre la que se aplica el 6/5/4%.
+
+---
+
+## D-071 · Un canje ahora puede estar cerrado
+
+**El problema.** El estado de un canje solo admitía `ACTIVO` o `CANCELADO`, así que **no había forma de registrar que se concretó**. Los 296 cancelados incluyen 31 con la etapa en «Cierre», y el usuario confirmó que ésos se cayeron: llegaron hasta la firma y no cerraron. En cuatro años no se cerró ninguno.
+
+Eso ya se veía en dos pantallas, y las dos estaban haciendo lo mejor que se podía sin el estado:
+
+- La métrica «Canjes cerrados» del reporte mensual daba **0 en los 46 meses** y no podía dar otra cosa: contaba etapa «Cierre» **y** fecha de cierre, y esa combinación no existe en ninguna fila porque esa fecha es en realidad la de cancelación (`D-070`).
+- La vista directorio deducía los cerrados con la heurística «estado activo y etapa Cierre», que contaba como cierre exactamente a los 31 que se habían caído.
+
+**Y ahora hace falta de verdad**, porque la comisión de Dataprop se cobra *por cada operación cerrada*: sin un estado que diga «cerró», el campo donde se registra lo cobrado no tiene cuándo llenarse.
+
+Entre tres opciones --un tercer estado, redefinir la etapa «Cierre», o un campo aparte de resultado-- el usuario eligió **el tercer estado**.
+
+### La etapa y el estado son cosas distintas, y ahora se ve
+
+La etapa dice **hasta dónde llegó** el proceso; el estado, **en qué terminó**. Un canje puede llegar a la etapa de cierre y caerse igual, y eso pasó 31 veces. La migración **no reclasifica ninguna fila**: reetiquetar esos 31 sería inventar cierres que no ocurrieron.
+
+### La identidad del apilado se mantuvo, y por eso el gráfico sigue cerrando
+
+`canjes_solicitados = canjes_activos + canjes_cancelados` era exacta porque el estado tenía dos valores, y es lo que permite dibujar las solicitudes apiladas con el total en el alto de la barra. Con tres valores la identidad sigue siendo exacta --la partición sigue completa-- y el apilado pasa de dos segmentos a tres.
+
+**Pero `canjes_cerrados` no podía ser uno de esos segmentos como estaba.** Se contaba por **mes de cierre** y los otros dos por **mes de solicitud**: dos granos distintos. Ahora los tres van por fecha de solicitud, y lo que responden es "de los que entraron en agosto, cuántos terminaron cerrados". Cuando haya cierres de verdad va a hacer falta además contarlos por mes de cierre, que es cuando se gana la comisión; eso llega con el eje de plata de canjes, y hoy sería una serie de ceros.
+
+### El tercer color, otra vez validado y no elegido a ojo
+
+El apilado necesitaba un tercer tono. Acá los tres segmentos **son estados** --cerrado, en curso, cancelado-- no categorías, así que corresponde la paleta de estado: verde, marca, rojo. Validado en ese orden semántico con el script de la guía: ALL CHECKS PASS en los dos modos, peor par adyacente ΔE 15.1 en deuteranopía oscuro.
+
+El tritan de ese par baja a 7.4, que la guía permite **solo con codificación secundaria**. El apilado la tiene de sobra: leyenda con nombres, separación de 2px entre segmentos y el total rotulado arriba. Queda dicho en el código para que nadie lo lea como un descuido.
+
+### Lo que se propagó
+
+Tres servicios asumían dos estados: el resumen de canjes --que gana `cerrados` y una `tasa_cierre_pct` sobre los **resueltos**, no sobre el total--, la vista directorio, y el reporte mensual. En el frontend, el selector de estado del formulario, el filtro por etapa del dashboard, los dos gráficos apilados y los tiles.
+
+La **tasa de cierre va sobre cerrados más cancelados** y no sobre el total, por el mismo motivo que en negocios (`D-063`): si los abiertos entraran al denominador, una solicitud nueva bajaría la tasa sin que se haya perdido nada.
+
+**El importador de Dataprop no cambia.** Su export trae "Activo" y "Cancelado" nomás, así que `CERRADO` se marca en la app. Es coherente: Dataprop no sabe si el canje cerró, lo sabe quien lo gestiona.

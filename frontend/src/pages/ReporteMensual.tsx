@@ -382,11 +382,13 @@ export default function ReporteMensual() {
                   está sin cargar en todas las filas.
                 </Text>
               </Paper>
-              {/* Apilado y no lado a lado: los activos y los cancelados suman
-                  exactamente los solicitados, así que el alto total de la barra es
-                  la solicitud del mes y el activo queda como su propio segmento.
+              {/* Apilado y no lado a lado: los tres estados suman exactamente
+                  los solicitados, así que el alto total de la barra es la
+                  solicitud del mes y cada estado queda como su propio segmento.
                   Lado a lado, cuatro activos junto a noventa cancelados eran una
-                  raya al lado de una torre. */}
+                  raya al lado de una torre.
+
+                  Eran dos segmentos hasta que apareció el estado «Cerrado». */}
               <EvolucionMensual
                 titulo="Solicitudes por mes, y qué pasó con ellas"
                 subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó. Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
@@ -394,6 +396,9 @@ export default function ReporteMensual() {
                 apilado
                 etiquetaTotal="Solicitados"
                 series={[
+                  /* El orden no es negociable por estetica: es el que valido la
+                     paleta. Ver `PALETA` en `EvolucionMensual`. */
+                  { campo: 'canjes_cerrados', nombre: 'Cerrados', tono: 'positiva' },
                   { campo: 'canjes_activos', nombre: 'Siguen activos', tono: 'principal' },
                   { campo: 'canjes_cancelados', nombre: 'Cancelados', tono: 'negativa' },
                 ]}

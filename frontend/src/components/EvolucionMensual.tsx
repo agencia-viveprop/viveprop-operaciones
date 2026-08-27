@@ -60,6 +60,15 @@ import type { MetricasMes, Tendencia } from '../api/reportes'
  * Por eso el orden de los segmentos de ese gráfico no es negociable por estética:
  * cambiarlo vuelve a juntar el par que colisiona.
  *
+ * **`positiva` llegó con el tercer estado de los canjes.** Al aparecer `CERRADO`,
+ * el apilado de solicitudes pasó de dos segmentos a tres, y ahí los tres son
+ * estados y no categorías: cerrado, en curso, cancelado. Eso lo hace un caso de
+ * paleta de estado --verde, marca, rojo-- y no categórica. Validado en ese orden
+ * semántico: ALL CHECKS PASS en los dos modos, peor par adyacente ΔE 15.1 en
+ * deuteranopía oscuro. El tritan de ese par baja a 7.4, que la guía permite solo
+ * con codificación secundaria; el apilado la tiene de sobra: leyenda con nombres,
+ * separación de 2px entre segmentos y el total rotulado arriba.
+ *
  * El teal es además el color de la tendencia. En el gráfico del reparto no se
  * dibuja tendencia --una sola recta sobre una composición de tres partes no dice
  * de cuál es-- así que no compiten en la misma tarjeta.
@@ -70,6 +79,7 @@ const PALETA = {
     secundaria: '#F4545A',
     negativa: '#DC2626',
     terciaria: '#0891B2',
+    positiva: '#059669',
     // La tendencia es una lectura, no una categoría: va en el teal de `info`,
     // que no está asignado a ninguna serie y así no se confunde con una.
     tendencia: '#0891B2',
@@ -82,6 +92,9 @@ const PALETA = {
     // luminosidad como **relleno**: pasa como línea y no como área. El paso más
     // oscuro sí pasa, así que el relleno usa `info.6` en los dos modos.
     terciaria: '#0891B2',
+    // El mismo verde en los dos modos: pasó el validador contra las dos
+    // superficies, así que no hace falta un paso distinto.
+    positiva: '#059669',
     tendencia: '#0ab9e3',
   },
 } as const
@@ -195,7 +208,7 @@ export type SerieDef = {
   nombre: string
   /** El rol en la paleta validada. `tendencia` no entra: es la recta, no una
    *  serie de datos. */
-  tono: 'principal' | 'secundaria' | 'negativa' | 'terciaria'
+  tono: 'principal' | 'secundaria' | 'negativa' | 'terciaria' | 'positiva'
 }
 
 

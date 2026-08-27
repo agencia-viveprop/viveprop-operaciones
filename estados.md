@@ -126,6 +126,23 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 · Un canje ahora puede estar cerrado
+
+Elegiste la opción A: un tercer estado. Hasta ahora un canje solo podía estar **Activo** o **Cancelado**, así que no había dónde registrar que se concretó — y sin eso, la comisión real que se cobra al cerrar no tiene cuándo llenarse.
+
+**El estado ya está**, y con él dejan de existir dos parches que venían de no tenerlo:
+
+- «Canjes cerrados» del reporte mensual daba **0 en los 46 meses** y no podía dar otra cosa: pedía etapa «Cierre» *y* fecha de cierre a la vez, y esa combinación no existe en ninguna fila.
+- La vista directorio deducía los cerrados con «estado activo y etapa Cierre», que contaba como cierre justamente a los 31 que se cayeron.
+
+**Ningún canje se reclasificó.** Los 31 con la etapa en «Cierre» siguen cancelados, porque eso es lo que son. La etapa dice hasta dónde llegó el proceso; el estado, en qué terminó.
+
+**El gráfico de solicitudes pasa de dos segmentos a tres** — cerrados, activos, cancelados — y sigue cerrando exacto contra el total. El tercer color lo validé con el script de la guía en los dos modos, no a ojo.
+
+Y el dashboard de canjes gana un tile de **Cerrados** con su tasa de cierre, calculada sobre los resueltos: los que siguen abiertos no cuentan ni a favor ni en contra.
+
+**Verificado:** 698 tests, `alembic check` limpio, build y lint sin hallazgos. Ver `D-071`.
+
 ### 2026-08-27 · La moneda de «Valor propiedad» está invertida en 139 canjes
 
 Pediste llenar «Valor negocio» desde «Valor propiedad» y calcular la comisión encima. Medí el campo de origen antes de escribir nada, y no se puede usar como está.

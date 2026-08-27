@@ -144,8 +144,13 @@ class CanjesDirectorio(BaseModel):
     """
 
     # Del período elegido: son conteos de un rango, así que la ventana los manda.
+    #
+    # `solicitados = activos + cerrados + cancelados` **exacto**, porque el estado
+    # tiene esos tres valores y nada más. Eran dos hasta que apareció `CERRADO`;
+    # la identidad se mantiene porque la partición sigue siendo completa.
     solicitados: int
     activos: int
+    cerrados: int
     cancelados: int
     # Los totales de toda la historia, para que el número de la ventana tenga
     # contra qué leerse.
@@ -385,13 +390,16 @@ def _canjes(db: Session, desde: date, hasta: date) -> CanjesDirectorio:
             select(func.count()).select_from(Canje).where(*condiciones)
         ) or 0
 
-    cerrados = historico(Canje.etapa == CanjeEtapa.CERRADO, Canje.estado == CanjeEstado.ACTIVO)
+    # Ahora sale del estado y no de la heuristica "etapa Cierre y estado activo",
+    # que era lo mejor que se podia hacer cuando no existia el estado `CERRADO`.
+    cerrados = historico(Canje.estado == CanjeEstado.CERRADO)
     cancelados_hist = historico(Canje.estado == CanjeEstado.CANCELADO)
     resueltos = cerrados + cancelados_hist
 
     return CanjesDirectorio(
         solicitados=en_ventana(),
         activos=en_ventana(Canje.estado == CanjeEstado.ACTIVO),
+        cerrados=en_ventana(Canje.estado == CanjeEstado.CERRADO),
         cancelados=en_ventana(Canje.estado == CanjeEstado.CANCELADO),
         solicitados_historicos=historico(),
         activos_historicos=historico(Canje.estado == CanjeEstado.ACTIVO),

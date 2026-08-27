@@ -109,10 +109,15 @@ class MetricasMes(BaseModel):
     canjes_cancelados: int
     # Los que siguen vivos, contados como los cancelados: por su mes de solicitud.
     #
-    # `canjes_solicitados = canjes_activos + canjes_cancelados` **exacto**, porque
-    # el estado solo tiene esos dos valores. Esa identidad es la que permite
-    # dibujarlos apilados: el total de la barra es la solicitud y el activo es un
-    # segmento propio, en vez de una barra de 1 al lado de una de 28 donde no se ve.
+    # `canjes_solicitados = canjes_activos + canjes_cerrados + canjes_cancelados`
+    # **exacto**, porque el estado tiene esos tres valores y nada mas. Esa
+    # identidad es la que permite dibujarlos apilados: el total de la barra es la
+    # solicitud del mes y cada estado es un segmento, en vez de una barra de 1 al
+    # lado de una de 28 donde no se ve.
+    #
+    # Eran dos hasta que aparecio `CERRADO`. Al agregar el tercero la identidad se
+    # mantuvo porque la particion sigue siendo completa; lo que cambio es que el
+    # apilado pasa de dos segmentos a tres.
     canjes_activos: int
 
 
@@ -459,11 +464,28 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
             Canje.fecha_solicitud >= inicio, Canje.fecha_solicitud <= fin
         )
     )
+    # **Los cerrados van por fecha de solicitud, igual que los otros dos.**
+    #
+    # Antes se contaban por fecha de cierre y con `etapa == CERRADO`, y eso tenia
+    # dos problemas. El primero es que daba 0 en los 46 meses del historico y no
+    # podia dar otra cosa: la etapa de cierre y la fecha de cierre no coexisten en
+    # ninguna fila, porque esa fecha es en realidad la de cancelacion (`D-070`). El
+    # segundo es que mezclaba dos granos --mes de cierre contra mes de solicitud--
+    # asi que nunca pudo ser un segmento del apilado.
+    #
+    # Con la misma base que activos y cancelados, los tres parten exacto el total
+    # de solicitudes del mes y el apilado cierra. Lo que se responde es "de los que
+    # entraron en agosto, cuantos terminaron cerrados", que es la pregunta que el
+    # dato permite.
+    #
+    # Cuando haya cierres de verdad va a hacer falta ademas contarlos por **mes de
+    # cierre**, que es cuando se gana la comision. Eso llega con el eje de plata de
+    # canjes; hoy seria una serie de ceros.
     canjes_cerrados = db.scalar(
         select(func.count()).select_from(Canje).where(
-            Canje.etapa == CanjeEtapa.CERRADO,
-            Canje.fecha_cierre >= inicio,
-            Canje.fecha_cierre <= fin,
+            Canje.estado == CanjeEstado.CERRADO,
+            Canje.fecha_solicitud >= inicio,
+            Canje.fecha_solicitud <= fin,
         )
     )
     # Los cancelados se cuentan por fecha de solicitud: `canjes` no guarda cuándo
@@ -568,10 +590,13 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
         k = _clave(fecha)
         iniciados[k] = iniciados.get(k, 0) + 1
 
-    # Solicitados y cancelados salen del mismo recorrido: los dos se cuentan por
-    # fecha de solicitud, porque `canjes` no guarda cuándo se canceló.
+    # Los cuatro salen del mismo recorrido, y los cuatro por fecha de solicitud:
+    # `canjes` no guarda cuando se cancelo, asi que "cancelados en agosto" no se
+    # puede saber. Contando por solicitud, los tres estados parten exacto el total
+    # del mes y el apilado cierra.
     solicitados: dict[str, int] = {}
     cancelados: dict[str, int] = {}
+    cerrados_estado: dict[str, int] = {}
     activos: dict[str, int] = {}
     for fecha, estado in db.execute(
         select(Canje.fecha_solicitud, Canje.estado).where(
@@ -582,19 +607,10 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
         solicitados[k] = solicitados.get(k, 0) + 1
         if estado == CanjeEstado.CANCELADO:
             cancelados[k] = cancelados.get(k, 0) + 1
+        elif estado == CanjeEstado.CERRADO:
+            cerrados_estado[k] = cerrados_estado.get(k, 0) + 1
         else:
             activos[k] = activos.get(k, 0) + 1
-
-    canjes_cerrados: dict[str, int] = {}
-    for (fecha,) in db.execute(
-        select(Canje.fecha_cierre).where(
-            Canje.etapa == CanjeEtapa.CERRADO,
-            Canje.fecha_cierre >= inicio,
-            Canje.fecha_cierre <= fin,
-        )
-    ).all():
-        k = _clave(fecha)
-        canjes_cerrados[k] = canjes_cerrados.get(k, 0) + 1
 
     serie = []
     for k in claves:
@@ -606,7 +622,7 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
                 **plata,
                 negocios_iniciados=iniciados.get(k, 0),
                 canjes_solicitados=solicitados.get(k, 0),
-                canjes_cerrados=canjes_cerrados.get(k, 0),
+                canjes_cerrados=cerrados_estado.get(k, 0),
                 canjes_cancelados=cancelados.get(k, 0),
                 canjes_activos=activos.get(k, 0),
             )

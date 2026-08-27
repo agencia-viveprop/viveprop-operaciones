@@ -134,3 +134,40 @@ def test_el_resto_del_resumen_sigue_igual(cartera):
     assert [(x.etiqueta, x.cantidad) for x in r.por_tipo_inmueble] == [("DEPTO", 1)]
     assert [(x.etiqueta, x.cantidad) for x in r.por_operacion] == [("VENTA", 1)]
     assert [x.etiqueta for x in r.por_mes] == ["2026-03"]
+
+
+def test_el_estado_cerrado_se_cuenta_aparte(db):
+    """`CERRADO` es un tercer estado, no una variante de activo.
+
+    Durante todo el historico solo existieron ACTIVO y CANCELADO, asi que los
+    cerrados se deducian de la etapa --"estado activo y etapa Cerrado"-- y eso era
+    falso: los 31 que llegaron a la etapa de cierre se cayeron. Ahora el estado lo
+    dice, y la tasa de cierre va sobre los resueltos: los que siguen abiertos no
+    cuentan ni a favor ni en contra.
+    """
+    db.add_all([
+        Canje(id=1, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+              estado=CanjeEstado.CERRADO, etapa=CanjeEtapa.CERRADO, comuna="Santiago"),
+        Canje(id=2, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+              estado=CanjeEstado.CANCELADO, etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+        Canje(id=3, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+              estado=CanjeEstado.ACTIVO, etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"),
+    ])
+    db.commit()
+
+    r = obtener_resumen_canjes(db)
+
+    assert (r.total, r.activos, r.cerrados, r.cancelados) == (3, 1, 1, 1)
+    # Uno cerrado de dos resueltos. El activo no entra al denominador.
+    assert r.tasa_cierre_pct == 50.0
+    # Y el desglose por etapa distingue los tres.
+    cierre = next(e for e in r.por_etapa if e.cerrados > 0)
+    assert (cierre.cerrados, cierre.activos, cierre.cancelados) == (1, 0, 0)
+
+
+def test_sin_resueltos_la_tasa_de_cierre_es_cero_y_no_falla(db):
+    db.add(Canje(id=1, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                 estado=CanjeEstado.ACTIVO, etapa=CanjeEtapa.EN_OFERTA, comuna="Santiago"))
+    db.commit()
+
+    assert obtener_resumen_canjes(db).tasa_cierre_pct == 0.0
