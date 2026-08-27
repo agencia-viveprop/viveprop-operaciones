@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - "Al dia" incluye los agendados
+
+Tercera vuelta sobre el mismo panel, y la que lo deja bien.
+
+Me marcaste que con "Al dia" en cero y "Agendados" en cinco, la pantalla da la impresion de que no hay canjes activos. Tenias razon: un canje agendado para el jueves y uno gestionado hace tres horas estan **al dia** en el unico sentido que le importa a esa pantalla -- no requieren atencion hoy.
+
+**Ahora van juntos.** «Al dia» muestra **5** en canjes y **2** en negocios, y el desglose baja al pie. Se fue el recuadro de Agendados. Quedan seis que reparten exacto: 0+2+0+0+0+5 = 7, y 0x5+2 = 2.
+
+**Sin la condicion que planteaste.** Lo habias puesto como "si no hay incidentes, entonces...". Lo aplique siempre: si el numero cambia de significado segun el contexto, deja de ser comparable con el de ayer y hay que reconstruir cual de las dos definiciones se esta viendo.
+
+**Y tenias razon con el otro mensaje.** "0 gestionados hace menos de 24 h" se leia como desatencion siendo que la realidad era la opuesta. La regla que saque de eso: un pie que enumera lo que **no** hay se lee como un reproche; el mismo pie enumerando lo que hay se lee como informacion. Ahora dice solo lo que existe: "5 con seguimiento agendado". Y dice "dentro del plazo" en vez del numero de horas, porque el umbral lo manda la API.
+
+**Verificado:** 721 tests, build y lint sin hallazgos, y capturas de las dos bandejas contra produccion. Ver `D-074`.
+
 ### 2026-08-27 - Los recuadros de la bandeja ahora reparten el total
 
 Me marcaste que los dos paneles de «Que me toca hoy» no eran consistentes con la realidad. Tenias razon, y eran dos cosas distintas.

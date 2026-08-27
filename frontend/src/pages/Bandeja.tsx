@@ -172,6 +172,28 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
   // solo que su día no es hoy.
   const abiertos = filas.length + resumen.agendados
 
+  // «Al día» son los dos: los que tienen fecha comprometida y los que se tocaron
+  // dentro del plazo. Ninguno de los dos requiere atención hoy.
+  const alDia = resumen.al_dia + resumen.agendados
+
+  /**
+   * El pie de «Al día», que **solo nombra las poblaciones que existen**.
+   *
+   * Antes decía "0 gestionados hace menos de 24 h" cuando los cinco eran
+   * agendados, y eso se leía como desatención siendo que la realidad era la
+   * opuesta. Un pie que enumera lo que no hay se lee como un reproche; el mismo
+   * pie enumerando lo que hay se lee como información.
+   *
+   * Dice "dentro del plazo" y no "hace menos de 24 h" porque el umbral lo manda
+   * la API: escribirlo a mano en dos lugares es como se despegan.
+   */
+  const desgloseAlDia = [
+    resumen.agendados > 0 && `${resumen.agendados} con seguimiento agendado`,
+    resumen.al_dia > 0 && `${resumen.al_dia} gestionados dentro del plazo`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   const visibles =
     filtro === 'todos'
       ? filas
@@ -193,16 +215,24 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         action={selector}
       />
 
-      {/* **Los recuadros reparten el universo, y por eso «Agendados» es uno de
-          ellos.** Antes eran seis y los agendados iban solo en una linea de texto
-          abajo, con el argumento de que no requieren atencion. El argumento era
-          cierto y el resultado malo: con siete canjes abiertos y cinco agendados,
-          los seis recuadros sumaban dos y no habia forma de ver donde estaban los
-          otros cinco sin leer la letra chica.
+      {/* **«Al día» incluye los agendados, y los seis recuadros reparten el
+          universo.**
 
-          Va en gris y no en un color de estado, que es lo que dice "esto no es
-          algo pendiente" sin sacarlo de la cuenta. */}
-      <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }}>
+          Primero los agendados no tenían recuadro --el argumento era que no
+          requieren atención-- y quedaban en una línea de texto: con siete canjes
+          abiertos y cinco agendados, los recuadros sumaban dos y no había forma de
+          ver dónde estaban los otros cinco. Después tuvieron el suyo, y ahí «Al
+          día» mostraba cero al lado de un «Agendados» en cinco, que se leía como
+          que no había nada vivo.
+
+          Los dos están **al día** en el único sentido que importa acá: no
+          requieren atención hoy. Uno porque se comprometió una fecha y el otro
+          porque se tocó recién. Van juntos en el número y separados en el pie.
+
+          La regla vale siempre, no solo cuando no hay incidentes: si el número
+          cambiara de significado según el contexto, dejaría de ser comparable con
+          el de ayer. */}
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Group gap="xs" mb={4}>
@@ -211,26 +241,15 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
               </Badge>
             </Group>
             <Text size="28px" fw={800} lh={1.1}>
-              {resumen[nivel]}
+              {nivel === 'al_dia' ? alDia : resumen[nivel]}
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
-              {ayudaDe(nivel, data.umbral_critico_horas, data.umbral_advertencia_horas)}
+              {nivel === 'al_dia' && alDia > 0
+                ? desgloseAlDia
+                : ayudaDe(nivel, data.umbral_critico_horas, data.umbral_advertencia_horas)}
             </Text>
           </Paper>
         ))}
-        <Paper withBorder radius="md" p="md">
-          <Group gap="xs" mb={4}>
-            <Badge color="gray" variant="light">
-              Agendados
-            </Badge>
-          </Group>
-          <Text size="28px" fw={800} lh={1.1}>
-            {resumen.agendados}
-          </Text>
-          <Text size="xs" c="dimmed" mt={4}>
-            Con seguimiento para más adelante
-          </Text>
-        </Paper>
       </SimpleGrid>
 
       <SegmentedControl

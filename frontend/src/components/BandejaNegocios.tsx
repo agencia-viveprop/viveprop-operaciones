@@ -100,6 +100,19 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
   // no es hoy.
   const abiertos = data.filas.length + data.resumen.agendados
 
+  // «Al día» son los dos: con la próxima acción comprometida, o gestionados dentro
+  // del plazo. Ninguno requiere atención hoy. Ver `Bandeja.tsx`.
+  const alDia = data.resumen.al_dia + data.resumen.agendados
+
+  // Solo nombra las poblaciones que existen: un pie que enumera lo que no hay se
+  // lee como un reproche.
+  const desgloseAlDia = [
+    data.resumen.agendados > 0 && `${data.resumen.agendados} con su próxima acción agendada`,
+    data.resumen.al_dia > 0 && `${data.resumen.al_dia} gestionados dentro del plazo`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
     <Stack gap="md">
       <Text size="sm" c="dimmed">
@@ -107,40 +120,25 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
         umbrales son en días, no en horas: acá los procesos duran de un mes a varios.
       </Text>
 
-      {/* **Los recuadros reparten el universo, y por eso «Agendados» es uno de
-          ellos.** Antes eran seis y los agendados iban solo en una linea de texto
-          abajo, con el argumento de que no requieren atencion. El argumento era
-          cierto y el resultado malo: con dos negocios abiertos y los dos
-          agendados, los seis recuadros mostraban cero y la pantalla se leia como
-          "no hay nada" -- el dato real estaba en letra chica.
-
-          Va en gris y no en un color de estado, que es lo que dice "esto no es
-          algo pendiente" sin sacarlo de la cuenta. */}
-      <SimpleGrid cols={{ base: 2, sm: 4, lg: 7 }}>
+      {/* **«Al día» incluye los agendados, y los seis recuadros reparten el
+          universo.** Ver la explicación larga en `Bandeja.tsx`: es la misma
+          decisión y por los mismos motivos. */}
+      <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
           <Paper key={nivel} withBorder radius="md" p="md">
             <Badge color={NIVELES[nivel].color} variant="light" mb={4}>
               {NIVELES[nivel].texto}
             </Badge>
             <Text size="28px" fw={800} lh={1.1}>
-              {data.resumen[nivel]}
+              {nivel === 'al_dia' ? alDia : data.resumen[nivel]}
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
-              {ayudaDe(nivel, data.umbral_critico_dias, data.umbral_advertencia_dias)}
+              {nivel === 'al_dia' && alDia > 0
+                ? desgloseAlDia
+                : ayudaDe(nivel, data.umbral_critico_dias, data.umbral_advertencia_dias)}
             </Text>
           </Paper>
         ))}
-        <Paper withBorder radius="md" p="md">
-          <Badge color="gray" variant="light" mb={4}>
-            Agendados
-          </Badge>
-          <Text size="28px" fw={800} lh={1.1}>
-            {data.resumen.agendados}
-          </Text>
-          <Text size="xs" c="dimmed" mt={4}>
-            Con la próxima acción para más adelante
-          </Text>
-        </Paper>
       </SimpleGrid>
 
       {/* **El vacio tiene dos causas distintas y decia solo una.** Con los dos

@@ -1796,3 +1796,35 @@ Canjes tenía el mismo problema latente: su vacío decía *"Nada pendiente acá"
 ### Nota de método
 
 Los dos defectos son consecuencia directa de haber agregado los agendados (`D-059`, `D-066`): esconder filas de una lista cambia lo que significan los conteos y los vacíos que la rodean, y eso no se revisó cuando se agregaron. Ninguno de los dos lo detecta un test --los números que sirve la API son correctos-- y ninguno se ve en `dev`, donde no había agendados. Aparecieron cuando el usuario usó la app con sus datos.
+
+---
+
+## D-074 · «Al día» incluye los agendados
+
+Tercera vuelta sobre el mismo panel, y la que lo deja bien. Vale seguir las tres porque cada una arregló algo y creó lo siguiente.
+
+**Primero** los agendados no tenían recuadro: iban en una línea de texto, con el argumento de que no requieren atención. Resultado: con siete canjes abiertos y cinco agendados, los seis recuadros sumaban dos y no había forma de ver dónde estaban los otros cinco (`D-073`).
+
+**Después** tuvieron el suyo. Los siete repartían el universo, pero apareció otra cosa: «Al día» mostraba **0** al lado de un «Agendados» en **5**, y el usuario señaló que eso *"da la impresión de que no hay canjes o negocios activos"*. Tenía razón.
+
+**Ahora los dos van juntos.** Un canje agendado para el jueves y uno gestionado hace tres horas están **al día** en el único sentido que le importa a esta pantalla: no requieren atención hoy. Uno porque se comprometió una fecha, el otro porque el reloj no llegó al umbral. Van juntos en el número y separados en el pie.
+
+Quedan seis recuadros que reparten exacto: 0+2+0+0+0+**5** = 7 en canjes, y 0×5+**2** = 2 en negocios.
+
+### La regla vale siempre, no solo cuando no hay incidentes
+
+El usuario la había planteado condicionada --*"si no hay incidentes… entonces Al día muestra los agendados"*--. Se aplicó **sin la condición**: si el número cambiara de significado según si hay incidentes o no, dejaría de ser comparable con el de ayer, y quien lo mire tendría que reconstruir cuál de las dos definiciones está viendo. «Al día» significa siempre lo mismo: todo lo que no requiere atención hoy.
+
+### No enumerar ausencias
+
+El pie decía **«0 gestionados hace menos de 24 h»** cuando los cinco eran agendados, y el usuario observó que *"da la sensación de desatención de los procesos, cuando la realidad es otra"*. Exacto, y la regla general que sale de eso vale más que el arreglo puntual:
+
+> Un pie que enumera lo que **no** hay se lee como un reproche. El mismo pie enumerando lo que hay se lee como información.
+
+Así que el desglose solo nombra las poblaciones que existen: `5 con seguimiento agendado`, o `2 gestionados dentro del plazo`, o las dos separadas por un punto. Cuando «Al día» es cero, queda el texto del umbral de siempre.
+
+Y dice **«dentro del plazo»** y no «hace menos de 24 h» porque el umbral lo manda la API: escribirlo a mano en la pantalla es como se despega del que aplica de verdad --el mismo error que ya se había corregido en la explicación de los niveles--.
+
+### Lo que no cambió
+
+Los contadores de «requieren atención» --el del encabezado y el del filtro-- excluyen «al día» por construcción, así que la fusión no los toca. Siguen diciendo 2 de 7 y 0 de 2, que es correcto.
