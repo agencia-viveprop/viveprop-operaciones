@@ -128,8 +128,14 @@ class Canje(Base):
     # Campos que Dataprop no provee -- solo se completan a mano en la app.
     valor_negocio: Mapped[float | None] = mapped_column(Numeric(16, 2), nullable=True)
     valor_negocio_moneda: Mapped[MonedaTipo | None] = mapped_column(Enum(MonedaTipo, name="moneda_tipo"), nullable=True)
-    comision_dbrokers: Mapped[float | None] = mapped_column(Numeric(16, 2), nullable=True)
-    comision_dbrokers_moneda: Mapped[MonedaTipo | None] = mapped_column(Enum(MonedaTipo, name="moneda_tipo"), nullable=True)
+    # **La comisión real que Dataprop cobró al cerrar el canje**, no una
+    # estimación. La estimada la calcula el motor a partir del valor de la
+    # propiedad; ésta se negocia y se factura, así que es un dato que se registra.
+    #
+    # Vacía en las 303 filas: nunca se cerró un canje. Y la plata es de Dataprop,
+    # no de ViveProp, que opera el programa a nombre de ella y no percibe nada.
+    comision_dataprop: Mapped[float | None] = mapped_column(Numeric(16, 2), nullable=True)
+    comision_dataprop_moneda: Mapped[MonedaTipo | None] = mapped_column(Enum(MonedaTipo, name="moneda_tipo"), nullable=True)
     notas: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     gestionado_en_app: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

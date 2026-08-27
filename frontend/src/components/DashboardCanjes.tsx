@@ -6,6 +6,7 @@ import { obtenerResumenCanjes } from '../api/reportes'
 import StatCard from './StatCard'
 import BarList from './BarList'
 import EstadoConsulta from './EstadoConsulta'
+import PlataDeCanjes from './PlataDeCanjes'
 
 const ETAPA_COLORS = ['brand.2', 'brand.3', 'brand.4', 'brand.5', 'brand.6', 'brand.7']
 
@@ -102,6 +103,10 @@ export default function DashboardCanjes() {
           </Text>
         )}
       </Stack>
+
+      {/* La plata va despues del volumen: primero cuantos canjes hay y en que
+          etapa, despues cuanta comision hay en juego. */}
+      <PlataDeCanjes />
 
       <SimpleGrid cols={{ base: 1, md: 2 }}>
         <Paper withBorder radius="md" p="md">

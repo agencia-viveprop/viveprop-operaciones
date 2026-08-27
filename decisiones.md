@@ -1704,3 +1704,64 @@ Tres servicios asumían dos estados: el resumen de canjes --que gana `cerrados` 
 La **tasa de cierre va sobre cerrados más cancelados** y no sobre el total, por el mismo motivo que en negocios (`D-063`): si los abiertos entraran al denominador, una solicitud nueva bajaría la tasa sin que se haya perdido nada.
 
 **El importador de Dataprop no cambia.** Su export trae "Activo" y "Cancelado" nomás, así que `CERRADO` se marca en la app. Es coherente: Dataprop no sabe si el canje cerró, lo sabe quien lo gestiona.
+
+---
+
+## D-072 · El motor de comisiones de canjes, y los plazos que sí se pueden medir
+
+Cierra el pedido de ver, en canjes, las comisiones reales de lo cerrado, las potenciales de lo abierto y una estimación de plazos.
+
+### La plata de canjes es de Dataprop, y eso cambia cómo se muestra
+
+Quedó aclarado un malentendido que venía de lejos: **ViveProp no participa en los canjes ni percibe nada de ellos.** Opera el Centro de Canje a nombre de Dataprop. Toda la demás plata de la app --los tres buckets, el reparto de la comisión, el ticket-- es ingreso de ViveProp, así que un monto de canjes puesto en las mismas pantallas invita a sumarlo.
+
+Por eso el panel dice **en texto, no solo en el título**, que esa plata es de Dataprop. Un rótulo se lee; un párrafo que explica de quién es la plata, se entiende.
+
+### Las reglas, y las dos que no estaban en el contrato
+
+El contrato fija lo que percibe Dataprop: 6/5/4% según el tramo en UF en venta, u 8% en arriendo. Pero eso se aplica **sobre la comisión de los corredores**, no sobre el valor de la propiedad, y esa comisión no existía como dato. El usuario definió las dos tasas que faltaban: **2% por cada corredor en venta** y **50% por cada corredor en arriendo**, sobre el precio de la propiedad. Participan dos corredores, así que la comisión total es 4% del precio en venta y un mes completo en arriendo.
+
+**El tramo lo define el valor de la operación en UF**, no la comisión. Y todo va **neto, sin IVA**: el IVA no es ingreso ni egreso, se recauda y se entrega.
+
+Un detalle de la redacción quedó fijado en un test porque invita a "arreglarlo" mal: el contrato dice "% de la comisión de **cada** corredor participante", y como los dos cobran lo mismo, aplicarlo a cada uno y sumar da idéntico a aplicarlo al total. La ambigüedad existe y es inocua.
+
+### El motor está anclado a los 7 canjes reales
+
+Los casos del test no son números inventados para que pase: son los **7 canjes activos de producción**, con los montos y los valores en UF que el usuario verificó uno por uno contra su propia planilla. Coincidieron al peso, incluidos los dos guardados en pesos y los cinco en UF. Si alguien cambia una tasa o un tramo, esos siete dejan de dar y hay que decidirlo a propósito.
+
+### Tres cifras que significan cosas distintas
+
+| Cuál | De dónde sale | Qué es |
+|---|---|---|
+| Cobrada | el campo manual de los cerrados | un hecho |
+| Potencial | la regla, sobre los abiertos | una estimación |
+| No concretada | la regla, sobre los cancelados | lo que no se llegó a cobrar |
+
+**La cobrada no se calcula: se registra.** Cuando un canje cierra, la comisión se negocia y se factura. Ese fue el aporte del usuario sobre la propuesta original --que planteaba el campo manual como "override para excepciones"-- y es mejor: separa *estimado* de *real*, que es la distinción que el reporte necesita.
+
+Por eso el campo pasó a llamarse **«Comisión Dataprop cobrada»**, y un canje cerrado sin ese dato cuenta en el conteo pero no en el monto: cerró y todavía nadie registró cuánto se cobró, que es distinto de cobrar cero.
+
+### Cada caso con la UF que le corresponde
+
+- **Abiertos** → la de hoy. Es un potencial: vale lo que valdría si cerrara ahora.
+- **Cerrados** → la del cierre. Ahí la comisión se gana.
+- **Cancelados** → la de la fecha de solicitud. Ese valor de propiedad se registró en ese momento; ponerle la UF de hoy a un canje que se cayó en 2023 sería valorizarlo con una unidad que nunca tuvo.
+
+Todo con `valor_uf`, que **falla si no hay UF para esa fecha** en vez de agarrar el último valor de la serie. No es paranoia: una consulta armada al momento tomó la UF del **09-09-2026** --futura, porque la serie se publica adelantada-- y el error solo salió porque el usuario preguntó qué fecha se había usado.
+
+Y donde no hay UF, el canje se informa como **no valorizado**, no como cero. En producción eso son 178 canjes de 2022 a 2025, porque allá la serie empieza el 01-01-2026; `dev` sí tiene el histórico. Queda `cargar_uf_historica`, que lo trae del SII --se verificó que sirve los años pasados: 365 fechas de 2025-- y que solo inserta lo que falta.
+
+### Los plazos miden dos cosas, y ninguna es cuánto tarda en cerrar
+
+No hay un solo canje cerrado, así que ese número no existe. Lo que sí se puede medir:
+
+- **Cuánto sobreviven antes de caerse:** 42 casos, mediana 8 días, de 1 a 44.
+- **Cuánto llevan los abiertos:** 7 casos, mediana 17 días, de 1 a 49.
+
+Van separados y nombrados por lo que son. Llamar "duración" a la mediana de las cancelaciones sería publicar el tiempo que tardan en morir como si fuera el que tardan en cerrar --el error que casi se cometió al ver esa mediana de 8 días por primera vez--.
+
+**Y se dice cuántos quedan afuera.** 254 cancelados no tienen fecha de término, así que su duración es desconocida y no entra en ninguna mediana. Una duración de cero días también se cuenta como desconocida: no se distingue de "el origen traía una sola fecha".
+
+### Nota de método
+
+Al mirar la pantalla contra `dev`, la comisión no concretada dio **1,6 billones de pesos**. No es un error del motor: `dev` no tiene la corrección de monedas que se aplicó en producción (`D-070`), así que 139 canjes tienen la moneda invertida y el motor los convierte fielmente. Entra basura, sale basura, y se ve. Es la mejor demostración de por qué esa corrección era condición previa.

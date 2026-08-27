@@ -26,7 +26,7 @@ def test_importa_filas_nuevas_y_mapea_los_campos(db, fila, construir_xlsx):
     assert canje.fecha_solicitud.date().isoformat() == "2026-03-15"
     # Lo que Dataprop no provee queda vacio, no en cero.
     assert canje.valor_negocio is None
-    assert canje.comision_dbrokers is None
+    assert canje.comision_dataprop is None
     # Una fila importada no esta gestionada en la app.
     assert canje.gestionado_en_app is False
 

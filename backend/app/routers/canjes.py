@@ -19,6 +19,8 @@ from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.usuario import RolUsuario, Usuario
 from app.services.bandeja_canjes import Bandeja, obtener_bandeja
 from app.services.canjes_activos import ListadoCanjesActivos, obtener_listado
+from app.services.plata_canjes import PlataCanjes, obtener_plata_canjes
+from app.services.uf import UFNoDisponible
 from app.services.estructura_archivo import EstructuraArchivo
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import (
@@ -54,8 +56,8 @@ class CanjeOut(BaseModel):
     link_propiedad: str | None
     valor_negocio: float | None
     valor_negocio_moneda: MonedaTipo | None
-    comision_dbrokers: float | None
-    comision_dbrokers_moneda: MonedaTipo | None
+    comision_dataprop: float | None
+    comision_dataprop_moneda: MonedaTipo | None
     notas: str | None
     gestionado_en_app: bool
 
@@ -80,8 +82,8 @@ class CanjeCreate(BaseModel):
     link_propiedad: str | None = None
     valor_negocio: float | None = None
     valor_negocio_moneda: MonedaTipo | None = None
-    comision_dbrokers: float | None = None
-    comision_dbrokers_moneda: MonedaTipo | None = None
+    comision_dataprop: float | None = None
+    comision_dataprop_moneda: MonedaTipo | None = None
     notas: str | None = None
 
 
@@ -102,8 +104,8 @@ class CanjeUpdate(BaseModel):
     link_propiedad: str | None = None
     valor_negocio: float | None = None
     valor_negocio_moneda: MonedaTipo | None = None
-    comision_dbrokers: float | None = None
-    comision_dbrokers_moneda: MonedaTipo | None = None
+    comision_dataprop: float | None = None
+    comision_dataprop_moneda: MonedaTipo | None = None
     notas: str | None = None
 
 
@@ -126,6 +128,23 @@ def reporte_activos(
     `activos` calzaría con el parámetro de ruta.
     """
     return obtener_listado(db)
+
+
+@router.get("/reportes/plata", response_model=PlataCanjes)
+def reporte_plata(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """La comisión de Dataprop y los plazos del Centro de Canje.
+
+    **Es plata de Dataprop, no de ViveProp**, y la pantalla la rotula como tal.
+    """
+    try:
+        return obtener_plata_canjes(db)
+    except UFNoDisponible as exc:
+        # Sin UF de hoy no se puede valorizar nada, y decirlo es mejor que devolver
+        # ceros que parecen datos.
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc))
 
 
 @router.get("/reportes/resumen", response_model=ResumenCanjes)

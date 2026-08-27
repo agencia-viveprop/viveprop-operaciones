@@ -30,8 +30,14 @@ export type Canje = {
   link_propiedad: string | null
   valor_negocio: number | null
   valor_negocio_moneda: MonedaTipo | null
-  comision_dbrokers: number | null
-  comision_dbrokers_moneda: MonedaTipo | null
+  /** La comisión real que Dataprop cobró al cerrar, no una estimación: la
+   *  estimada la calcula el motor a partir del valor de la propiedad. Vacía en las
+   *  303 filas, porque nunca se cerró un canje.
+   *
+   *  Y la plata es de **Dataprop**, no de ViveProp, que opera el Centro de Canje a
+   *  nombre de ella y no percibe nada. Nunca se suma con la plata de negocios. */
+  comision_dataprop: number | null
+  comision_dataprop_moneda: MonedaTipo | null
   notas: string | null
   gestionado_en_app: boolean
 }
@@ -232,4 +238,63 @@ export type ListadoCanjesActivos = {
 
 export function obtenerCanjesActivos(): Promise<ListadoCanjesActivos> {
   return fetch('/api/canjes/reportes/activos', { credentials: 'include' }).then(parseOrThrow)
+}
+
+// ------------------------------------- la plata y los plazos del Centro de Canje
+
+/**
+ * Un grupo de canjes con su plata.
+ *
+ * `con_monto` dice **sobre cuántos se pudo calcular**, y va a propósito: es menor
+ * que `canjes` cuando falta el valor, la moneda, la operación o la UF de esa fecha.
+ * Sin eso no hay comisión, y contarlos como cero bajaría los promedios con datos
+ * que no existen.
+ */
+export type BolsaDeCanjes = {
+  canjes: number
+  con_monto: number
+  valor_propiedades: string
+  comision_corredores: string
+  comision_dataprop: string
+}
+
+/** Cuántos días, sobre las dos poblaciones que sí se pueden medir.
+ *
+ *  **Ninguna mide "cuánto tarda en cerrar"**: no hay un solo canje cerrado. Llamar
+ *  «duración» a la mediana de las cancelaciones sería publicar el tiempo que tardan
+ *  en morir como si fuera el que tardan en cerrar. */
+export type PlazosCanjes = {
+  sobrevivencia_n: number
+  sobrevivencia_mediana: number | null
+  sobrevivencia_min: number | null
+  sobrevivencia_max: number | null
+  edad_n: number
+  edad_mediana: number | null
+  edad_min: number | null
+  edad_max: number | null
+  /** Cancelados sin fecha de término: su duración es desconocida y no entran en
+   *  ninguna mediana. Se dice cuántos son para que no parezca que la muestra es más
+   *  grande de lo que es. */
+  sin_fecha_de_termino: number
+}
+
+/**
+ * **Es plata de Dataprop, no de ViveProp.** ViveProp opera el Centro de Canje a
+ * nombre de Dataprop y no percibe nada de él, así que estos montos nunca se suman
+ * con los de negocios.
+ *
+ * Las tres cifras significan cosas distintas: la **cobrada** sale del campo manual
+ * de los cerrados y es un hecho; las otras dos salen de la regla y son proyecciones.
+ */
+export type PlataCanjes = {
+  cobrada: BolsaDeCanjes
+  potencial: BolsaDeCanjes
+  no_concretada: BolsaDeCanjes
+  plazos: PlazosCanjes
+  uf_de_hoy: string
+  fecha_uf: string
+}
+
+export function obtenerPlataCanjes(): Promise<PlataCanjes> {
+  return fetch('/api/canjes/reportes/plata', { credentials: 'include' }).then(parseOrThrow)
 }

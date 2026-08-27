@@ -26,6 +26,7 @@ import PageHeader from '../components/PageHeader'
 import { clp, fecha, MODELO_CORTO } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 import PlataDeNegocios from '../components/PlataDeNegocios'
+import PlataDeCanjes from '../components/PlataDeCanjes'
 import EvolucionMensual, { Veredicto } from '../components/EvolucionMensual'
 
 function Tile({
@@ -445,12 +446,16 @@ export default function VistaDirectorio() {
           tendencia={data.tendencias.canjes_solicitados}
         />
         <Text size="xs" c="dimmed" mt={6}>
-          Canjes no tiene eje de plata. Sí genera comisión —la de administración de
-          Dataprop, 6/5/4% en venta según el tramo en UF u 8% en arriendo— pero se calcula
-          sobre la comisión de los corredores participantes, y ese dato está sin cargar en
-          las {data.canjes.solicitados_historicos} filas.
+          La plata de canjes es comisión de <strong>Dataprop</strong>, no ingreso de ViveProp,
+          así que va en su propio panel y no se suma con la de Negocios.
         </Text>
       </Paper>
+
+      {/* Ya tiene eje de plata. La nota anterior decía que no podía tenerlo porque
+          faltaba la comisión de los corredores; se resolvió al definir la tasa de
+          corretaje que se asume, así que la regla puede aplicarse sobre el valor de
+          la propiedad. */}
+      <PlataDeCanjes />
 
       <EvolucionMensual
         titulo="Solicitudes por mes, y qué pasó con ellas"

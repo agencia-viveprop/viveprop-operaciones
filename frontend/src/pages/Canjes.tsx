@@ -59,8 +59,8 @@ function vacio() {
     link_propiedad: '',
     valor_negocio: '' as number | '',
     valor_negocio_moneda: '',
-    comision_dbrokers: '' as number | '',
-    comision_dbrokers_moneda: '',
+    comision_dataprop: '' as number | '',
+    comision_dataprop_moneda: '',
     notas: '',
     estado: 'ACTIVO' as CanjeEstado,
     etapa: 'RECEPCION' as CanjeEtapa,
@@ -124,8 +124,8 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
       }
       if (payload.valor_prop === '') payload.valor_prop = null
       if (payload.valor_negocio === '') payload.valor_negocio = null
-      if (payload.comision_dbrokers === '') payload.comision_dbrokers = null
-      ;['tipo_operacion', 'moneda_valor', 'valor_negocio_moneda', 'comision_dbrokers_moneda'].forEach((k) => {
+      if (payload.comision_dataprop === '') payload.comision_dataprop = null
+      ;['tipo_operacion', 'moneda_valor', 'valor_negocio_moneda', 'comision_dataprop_moneda'].forEach((k) => {
         if (payload[k] === '') payload[k] = null
       })
       if (editandoId !== null) {
@@ -164,8 +164,8 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
       link_propiedad: c.link_propiedad ?? '',
       valor_negocio: c.valor_negocio ?? '',
       valor_negocio_moneda: c.valor_negocio_moneda ?? '',
-      comision_dbrokers: c.comision_dbrokers ?? '',
-      comision_dbrokers_moneda: c.comision_dbrokers_moneda ?? '',
+      comision_dataprop: c.comision_dataprop ?? '',
+      comision_dataprop_moneda: c.comision_dataprop_moneda ?? '',
       notas: c.notas ?? '',
       estado: c.estado,
       etapa: c.etapa,
@@ -392,15 +392,16 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               </Group>
               <Group gap="xs" align="flex-end">
                 <NumberInput
-                  label="Comisión DBrokers"
-                  value={form.comision_dbrokers}
-                  onChange={(v) => setForm({ ...form, comision_dbrokers: v as number | '' })}
+                  label="Comisión Dataprop cobrada"
+                  description="Solo al cerrar: lo que efectivamente se cobró"
+                  value={form.comision_dataprop}
+                  onChange={(v) => setForm({ ...form, comision_dataprop: v as number | '' })}
                   flex={1}
                 />
                 <Select
                   data={MONEDAS}
-                  value={form.comision_dbrokers_moneda || null}
-                  onChange={(v) => setForm({ ...form, comision_dbrokers_moneda: v ?? '' })}
+                  value={form.comision_dataprop_moneda || null}
+                  onChange={(v) => setForm({ ...form, comision_dataprop_moneda: v ?? '' })}
                   w={80}
                 />
               </Group>

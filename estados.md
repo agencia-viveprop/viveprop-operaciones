@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-27 - La comision de Dataprop y los plazos de canjes
+
+Con las tasas que definiste, la cadena cierra completa. Esta en el **dashboard de canjes** y en la **mitad de canjes de la vista directorio**.
+
+**Tres cifras, y no son el mismo numero en tres estados.** La **cobrada** sale del campo manual de los cerrados: cuando un canje cierra, la comision se negocia y se factura, asi que es un hecho que se registra -- eso fue tu aporte y es mejor que mi propuesta original. La **potencial** y la **no concretada** salen de la regla.
+
+**El motor esta anclado a tus 7 canjes.** Los casos del test son los 7 activos reales con los montos que verificaste contra tu planilla, no numeros inventados: si alguien cambia una tasa o un tramo, esos siete dejan de dar.
+
+**Cada caso usa la UF que le corresponde:** hoy para los abiertos, la del cierre para los cerrados, la de la solicitud para los cancelados. Y donde no hay UF para esa fecha, el canje se informa **no valorizado**, no como cero.
+
+Ahi aparece algo: en produccion la serie de UF empieza el 01-01-2026, asi que **178 canjes de 2022 a 2025 no se pueden valorizar**. `dev` si tiene el historico. Deje `cargar_uf_historica` para traerlo del SII, verificado que sirve los anos pasados.
+
+**Los plazos: 8 dias de mediana antes de caerse** (42 casos) y **17 dias** de mediana los que siguen abiertos (7 casos). Ninguna mide cuanto tarda en cerrar -- no hay un solo caso cerrado. Y 254 cancelados sin fecha de termino quedan afuera, dicho en pantalla.
+
+**El campo se llama ahora "Comision Dataprop cobrada"**, columna incluida.
+
+**Verificado:** 721 tests, `alembic check` limpio, build y lint sin hallazgos, y captura de la pantalla. Ver `D-072`.
+
 ### 2026-08-27 · Un canje ahora puede estar cerrado
 
 Elegiste la opción A: un tercer estado. Hasta ahora un canje solo podía estar **Activo** o **Cancelado**, así que no había dónde registrar que se concretó — y sin eso, la comisión real que se cobra al cerrar no tiene cuándo llenarse.
