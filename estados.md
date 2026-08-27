@@ -140,7 +140,11 @@ Pediste llenar «Valor negocio» desde «Valor propiedad» y calcular la comisi�
 
 Elegiste aplicarlas sin revisar una por una, y la carga quedó lista: respaldé el estado completo en `Archivos/respaldo-monedas-canjes-antes.csv`, la pasada en seco da los 112 exactos sin desactualizadas ni inválidas, y hay 7 tests de la lógica. **Solo cambia la moneda**, nunca el monto.
 
-**Falta correrla, y la tenés que correr vos:** el clasificador de seguridad de esta sesión bloqueó la escritura a producción. El comando está en el hilo.
+**Aplicado.** La corriste vos --el clasificador de seguridad de mi sesión bloqueó la escritura-- y verifiqué contra producción: **303 coherentes, 0 invertidas, 0 ambiguas**. Comparando contra el respaldo: 112 monedas cambiadas, **0 valores** y 0 tipos de operación, que era la comprobación que importaba.
+
+Y el control más fuerte es que los promedios pasaron a tener sentido: venta activa $265.987.956, venta cancelada $288.271.368, arriendo cancelado $1.059.697 de renta mensual. Antes esos totales mezclaban UF con pesos y no significaban nada.
+
+**`valor_prop` deja de ser inservible.** El motivo por el que se había descartado ya no existe. Lo que falta para la comisión de Dataprop es otra cosa: la comisión de los corredores, que es la base del 6/5/4%.
 
 **Y sigue faltando otra cosa para la comisión:** el 6/5/4% se aplica sobre *la comisión de los corredores*, no sobre el valor de la propiedad — el valor solo elige el tramo. Ese dato no existe ni tiene campo. Ver `D-070`.
 

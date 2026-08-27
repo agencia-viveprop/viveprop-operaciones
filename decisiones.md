@@ -1647,3 +1647,21 @@ El script **solo toca `moneda_valor`**. No el monto, que es correcto: lo que est
 **Compara contra el estado actual antes de escribir.** Si un canje cambió en la base después de generarse el archivo, esa revisión está vieja y aplicarla pisaría una edición más nueva; esas filas se omiten y se informan en vez de ganar por ser las últimas en llegar. Es la guarda que hace que el archivo se pueda revisar sin apuro. Hay un test por cada rama de esa decisión.
 
 Antes de aplicar se respaldó el estado completo --303 filas con su valor y su moneda-- en `Archivos/respaldo-monedas-canjes-antes.csv`, así que la corrección es reversible sin depender de un backup de la base.
+
+### Aplicado, y cómo se verificó
+
+El clasificador de seguridad de la sesión bloqueó la escritura, así que la corrió el usuario con el comando documentado. Tres comprobaciones después, contra producción:
+
+1. **La regla ya no encuentra nada:** 303 coherentes, 0 invertidas, 0 ambiguas.
+2. **Solo cambió la moneda.** Comparando fila por fila contra el respaldo: 112 monedas cambiadas, **0 valores** y **0 tipos de operación**. Es la comprobación que importa, porque el modo de falla temido era mover un monto sin querer.
+3. **Los promedios pasaron a tener sentido**, que es la señal más fuerte de que la clasificación era correcta:
+
+| | Canjes | Promedio |
+|---|---|---|
+| Venta · activos | 7 | $265.987.956 |
+| Venta · cancelados | 167 | $288.271.368 |
+| Arriendo · cancelados | 129 | $1.059.697 de renta mensual |
+
+Antes de la corrección esos totales mezclaban UF con pesos y no significaban nada. Un promedio de venta de 288 millones y una renta promedio de un millón son cifras que se sostienen solas.
+
+**Con esto `valor_prop` deja de ser inservible.** El motivo por el que se descartó en `D-054` --moneda equivocada en la mitad de las filas-- ya no existe. Lo que sigue faltando para calcular la comisión de Dataprop es otra cosa: la comisión de los corredores participantes, que es la base sobre la que se aplica el 6/5/4%.
