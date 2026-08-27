@@ -66,17 +66,17 @@ with e.begin() as c:
         text("select fecha from uf_diaria order by fecha desc limit 1")
     ).scalar()
     filas = c.execute(text("""
-        select id, estado::text, etapa::text, tipo_operacion::text, tipo_inmueble,
-               comuna, direccion, valor_prop, moneda_valor::text
+        select id, fecha_solicitud, estado::text, etapa::text, tipo_operacion::text,
+               tipo_inmueble, comuna, direccion, valor_prop, moneda_valor::text
         from canjes order by id
     """)).all()
 
 ambiguos, a_corregir, correctos = [], [], []
 for f in filas:
-    (id_, estado, etapa, op, inmueble, comuna, direccion, valor, moneda) = f
+    (id_, solicitud, estado, etapa, op, inmueble, comuna, direccion, valor, moneda) = f
     real = inferir(op, float(valor) if valor is not None else None)
     fila = {
-        "id": id_, "estado": estado, "etapa": etapa, "op": op,
+        "id": id_, "solicitud": solicitud, "estado": estado, "etapa": etapa, "op": op,
         "inmueble": inmueble, "comuna": comuna, "direccion": direccion,
         "valor": valor, "moneda": moneda, "propuesta": real,
     }
@@ -99,6 +99,10 @@ GRIS = Font(color="6B7280", italic=True)
 
 COLUMNAS = [
     ("Canje", 9, False),
+    # La fecha de solicitud y no `creado_en`: la de creacion es la del momento en
+    # que corrio la carga masiva, o sea la misma para los 297 y por lo tanto
+    # inutil para ubicar un caso. La de solicitud es cuando el canje existio.
+    ("Fecha solicitud", 15, False),
     ("Estado", 12, False),
     ("Operación", 11, False),
     ("Tipo inmueble", 17, False),
@@ -142,7 +146,9 @@ for grupo, marca in ((ambiguos, True), (a_corregir, False)):
             equivale = None
 
         datos = [
-            f["id"], f["estado"], f["op"], f["inmueble"], f["comuna"],
+            f["id"],
+            f["solicitud"].strftime("%d-%m-%Y") if f["solicitud"] else "",
+            f["estado"], f["op"], f["inmueble"], f["comuna"],
             valor, f["moneda"], propuesta or "", equivale,
             "" if propuesta else "REVISAR: el monto no funciona en ninguna moneda",
         ]
@@ -150,7 +156,8 @@ for grupo, marca in ((ambiguos, True), (a_corregir, False)):
             celda = hoja.cell(row=fila_n, column=i, value=valor_celda)
             if marca:
                 celda.fill = AMARILLO
-            if i in (6, 9):
+            # Las dos columnas de plata, ahora corridas un lugar por la fecha.
+            if i in (7, 10):
                 celda.number_format = "#,##0"
         fila_n += 1
 

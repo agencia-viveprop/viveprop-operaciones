@@ -1618,6 +1618,8 @@ Entre tres caminos --corregir las etiquetas, interpretar por magnitud sin tocar 
 
 Pero la corrección sale de una **inferencia**, así que no se aplica sola. `app/scripts/revisar_monedas_canjes.py` genera `Archivos/revision-monedas-canjes.xlsx` con las 148 filas que necesitan atención --los 9 ambiguos primero y en amarillo, sin propuesta-- y el equivalente en pesos de cada una para poder juzgar si el monto es plausible. Las 149 correctas no van: no hay nada que decidir sobre ellas.
 
+Cada fila lleva la **fecha de solicitud**, que es la que ubica el caso. No `creado_en`: esa es la del momento en que corrió la carga masiva, o sea la misma para los 297, y por lo tanto inútil para encontrar un canje.
+
 El script **no escribe en la base**. Aplicar los cambios es un paso aparte y deliberado.
 
 ### Lo que sigue bloqueado, y es otra cosa

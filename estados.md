@@ -134,7 +134,7 @@ Pediste llenar «Valor negocio» desde «Valor propiedad» y calcular la comisi�
 
 **La buena noticia:** la magnitud dice la verdad. Las dos escalas están separadas por cuatro órdenes de magnitud, así que la regla clasifica 288 de 297 sin ambigüedad y deja solo **9** que necesitan tu ojo — su monto no funciona en ninguna moneda, así que les faltan o sobran ceros.
 
-**Tenés el archivo en `Archivos/revision-monedas-canjes.xlsx`.** 148 filas: los 9 ambiguos primero y en amarillo sin propuesta, y las 139 con la moneda propuesta ya puesta más el equivalente en pesos para que juzgues si es plausible. Si estás de acuerdo con una fila, no la toques. El script que lo genera quedó en `app/scripts/revisar_monedas_canjes.py`, y **no escribe nada en la base**: aplicar es un paso aparte.
+**Tenés el archivo en `Archivos/revision-monedas-canjes.xlsx`.** 148 filas con su **fecha de solicitud**: los 9 ambiguos primero y en amarillo sin propuesta, y las 139 con la moneda propuesta ya puesta más el equivalente en pesos para que juzgues si es plausible. Si estás de acuerdo con una fila, no la toques. El script que lo genera quedó en `app/scripts/revisar_monedas_canjes.py`, y **no escribe nada en la base**: aplicar es un paso aparte.
 
 **Ojo con el alcance:** se generó desde `dev`, que está atrasado. Vos dijiste 7 activos y `dev` muestra 4, así que los canjes más nuevos de producción no están en el archivo.
 
