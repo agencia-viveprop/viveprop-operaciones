@@ -28,7 +28,12 @@ from openpyxl.utils import get_column_letter
 from sqlalchemy import create_engine, text
 
 RAIZ = Path(__file__).resolve().parent.parent.parent
-load_dotenv(RAIZ / ".env")
+
+# La conexión se puede pasar por variable de entorno. Sin eso lee `.env`, que
+# apunta a desarrollo: correrlo contra producción tiene que ser explícito y no un
+# efecto de qué archivo estaba a mano.
+if not os.environ.get("DATABASE_URL"):
+    load_dotenv(RAIZ / ".env")
 
 # Los cortes de la regla. Entre ellos no se afirma nada.
 VENTA_UF_HASTA = 1_000_000
@@ -183,5 +188,6 @@ for titulo, cuerpo in texto:
     f += 2
 
 destino = RAIZ.parent / "Archivos" / "revision-monedas-canjes.xlsx"
+print("base:", os.environ["DATABASE_URL"].split("@")[-1].split("/")[0])
 libro.save(destino)
 print("guardado en", destino)

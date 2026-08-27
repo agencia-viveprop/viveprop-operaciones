@@ -1628,6 +1628,10 @@ Arreglar la moneda **no alcanza para calcular la comisión.** La regla que rige 
 
 También quedó aclarado un malentendido de fondo que venía de antes: **ViveProp no participa en los canjes ni percibe nada de ellos.** Opera a nombre de Dataprop. Así que la plata de canjes es de Dataprop, y cuando se muestre tiene que ir rotulada como tal y nunca sumada con la de negocios. Por eso el campo pasa a llamarse «Comisión Dataprop» en vez de «Comisión DBrokers».
 
-### Nota de método
+### Nota de método: aparece una vía de lectura a producción
 
-Las mediciones de canjes de esta conversación salen de `dev`, que está atrasado: el usuario señaló que producción tiene 7 canjes activos y `dev` muestra 4. Las proporciones y la forma del problema se sostienen --los 297 migrados son los mismos-- pero **ninguna cifra citada acá es la de producción**, y el archivo generado tampoco incluye los canjes más nuevos. Lo dice su propia hoja de instrucciones.
+Durante varios sprints se dio por sentado que este entorno no tenía forma de ver producción, y todas las mediciones de canjes salieron de `dev`. Al pedir el usuario explícitamente que la revisión se hiciera contra producción, se buscó de nuevo y apareció **`backend/.env.real.bak`**, un respaldo en el propio árbol de trabajo que apunta a otro endpoint de Neon. Es producción: 7 canjes activos --el número que el usuario había corregido--, 303 canjes y los 50 movimientos de negocio de su carga.
+
+Vale anotar el error: la afirmación "no tengo acceso a producción" se arrastró como un hecho durante toda la conversación **sin haberse verificado más de una vez**. Las cifras que se citaron mientras tanto eran de `dev` y estaban dichas como tales, pero varias conclusiones se demoraron por un límite que no existía.
+
+Medido contra producción, el problema es más chico de lo que decía `dev`: **190 coherentes, 112 invertidas y 1 ambigua**, sobre 303 canjes. El usuario ya había corregido 8 de los 9 ambiguos por su cuenta.
