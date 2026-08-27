@@ -146,16 +146,27 @@ def _etiqueta(valor) -> str:
     return valor.value if hasattr(valor, "value") else str(valor)
 
 
-def _cortes(db: Session, consulta: Select) -> list[Corte]:
+def _cortes(db: Session, consulta: Select, columnas_de_etiqueta: int = 1) -> list[Corte]:
+    """Una fila por corte: las primeras columnas son la etiqueta, las últimas
+    cuatro los montos.
+
+    Las etapas usan **dos** columnas --código y nombre-- y quedan como
+    `E4 · Coordinación de firma`. El código solo era lo que se mostraba antes, y
+    no dice qué falta hacer; el nombre solo perdería el vocabulario con el que se
+    habla del pipeline. El rótulo se arma acá, del lado que tiene la tabla:
+    escribir los siete nombres en la pantalla es como se despegan cuando alguien
+    renombra una etapa.
+    """
     return [
         Corte(
-            etiqueta=_etiqueta(etiqueta),
-            hitos=hitos,
-            negocios=negocios,
-            comision_total=total,
-            comision_real_vp=real,
+            etiqueta=' · '.join(_etiqueta(p) for p in fila[:columnas_de_etiqueta] if p is not None)
+            or _etiqueta(None),
+            hitos=fila[columnas_de_etiqueta],
+            negocios=fila[columnas_de_etiqueta + 1],
+            comision_total=fila[columnas_de_etiqueta + 2],
+            comision_real_vp=fila[columnas_de_etiqueta + 3],
         )
-        for etiqueta, hitos, negocios, total, real in db.execute(consulta).all()
+        for fila in db.execute(consulta).all()
     ]
 
 
@@ -227,10 +238,10 @@ def obtener_resumen_negocios(db: Session) -> ResumenNegocios:
 
     # El pipeline se mira por etapa: es donde esta detenido cada negocio.
     por_etapa = _con_estados(
-        select(Etapa.codigo, *_montos())
+        select(Etapa.codigo, Etapa.nombre, *_montos())
         .join(Negocio, Negocio.id == NegocioHito.negocio_id)
         .outerjoin(Etapa, Etapa.codigo == Negocio.etapa)
-        .group_by(Etapa.codigo, Etapa.orden)
+        .group_by(Etapa.codigo, Etapa.nombre, Etapa.orden)
         .order_by(Etapa.orden),
         BUCKETS["pipeline"],
     )
@@ -259,7 +270,7 @@ def obtener_resumen_negocios(db: Session) -> ResumenNegocios:
         ganado_por_mes=_por_mes(db, ganado),
         ganado_por_alianza=_cortes(db, por_alianza),
         ganado_por_modelo=_cortes(db, por_modelo),
-        pipeline_por_etapa=_cortes(db, por_etapa),
+        pipeline_por_etapa=_cortes(db, por_etapa, columnas_de_etiqueta=2),
         hitos_sin_valorizar=sin_valorizar or 0,
         total_negocios=db.scalar(select(func.count(Negocio.id))) or 0,
         total_hitos=db.scalar(select(func.count(NegocioHito.id))) or 0,

@@ -132,7 +132,11 @@ Pediste el tooltip sobre el codigo de etapa del listado de Negocios. Esta, y tam
 
 El nombre sale del catalogo de etapas --el listado ya lo consultaba para sus filtros, asi que no cuesta una peticion mas-- y no de una copia de los siete rotulos escrita en la pantalla, que es lo que se despega en cuanto alguien renombra una etapa. El codigo se queda a la vista: es lo que cabe en la columna y es como hablas del pipeline.
 
-**Verificado:** typecheck, build y lint sin hallazgos, y una captura con el globo abierto: sobre el `E7` de VVP-1 dice «Terminado». Ver `D-077`.
+**Y despues, el tercer lugar:** «Pipeline por etapa», en el dashboard de Negocios. Ahi no va tooltip porque el rotulo tiene una fila entera para el, asi que el nombre va escrito: `E5 · Escritura / Contrato / firma final`. Lo arma el backend --la consulta ya unia la tabla de etapas para ordenar-- y la pantalla no cambio una linea.
+
+**Verificado:** 732 tests, typecheck, build y lint sin hallazgos, una captura con el globo abierto --sobre el `E7` de VVP-1 dice «Terminado»-- y los rotulos del pipeline leidos contra la base: los mismos dos negocios y montos que se ven en tu captura.
+
+**Con una limitacion y un descuido.** La captura del dashboard no salio: Chrome dejo de escribir el archivo y no insisti mas; verifique los rotulos contra la base y el layout leyendo el componente, asi que los pixeles de ese bloque no los vi. Y al matar procesos de Chrome para desbloquear la captura cerre tambien tus ventanas normales del navegador -- el filtro tenia que excluirlas. Ver `D-077`.
 
 ### 2026-08-27 - El reporte semanal: una ventana, un renglon por negocio o canje
 

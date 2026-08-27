@@ -1939,6 +1939,21 @@ El código no se reemplaza por el nombre, se le agrega: `E7` es lo que cabe en u
 
 Sin globo cuando no hay nombre --mientras el catálogo viaja, o con un código que ya no esté en la tabla--: un tooltip vacío es peor que ninguno.
 
+### Y donde hay lugar, el nombre va escrito
+
+Tercer lugar donde aparecía un código pelado: «Pipeline por etapa», en el dashboard de Negocios. Ahí no va tooltip: el rótulo tiene una fila entera para él --el monto está pinneado a la derecha-- así que el nombre se escribe. Queda `E5 · Escritura / Contrato / firma final`.
+
+**Lo arma el backend, y la pantalla no cambió una línea.** La consulta ya unía la tabla de etapas para ordenar por `orden`; ahora también trae el nombre. El helper `_cortes` --que sirve a los tres desgloses del dashboard-- pasó a aceptar cuántas columnas son etiqueta, y las etapas usan dos. La alternativa era concatenar en SQL, que mete presentación en la consulta, o escribir los siete nombres en el frontend, que es el error que este mismo cambio viene corrigiendo.
+
+El caso nulo tiene test propio: un negocio abierto sin etapa deja el `outerjoin` sin código **y** sin nombre, y sin filtrar los nulos la etiqueta habría salido como `" · "`. Cae en el mismo «Sin dato» que el resto de los desgloses.
+
 ### Nota de método
 
 La primera captura salió con la pantalla en blanco y el log de Vite con un error de Mantine: *"Tooltip component children should be an element or a component that accepts ref"*. Era **la instrumentación y no el componente**: para poder fotografiar el globo lo forcé abierto con `opened` y dejé el comentario `{/* VERIF */}` **dentro** del `Tooltip`, así que recibió dos hijos. Vale anotarlo porque la lección es al revés de lo que parece: el ciclo de mirar la pantalla renderizada encontró un problema que no existía en el código que se iba a subir, pero el mensaje --y la certeza de que el globo sí sale, con «Terminado» sobre el E7-- solo aparecen mirando.
+
+
+### Postdata sobre la verificación de este último
+
+La captura del dashboard **no se pudo tomar**: Chrome dejó de escribir el archivo --dos intentos, uno con perfil limpio-- y en el camino, al matar procesos para desbloquearlo, me llevé también las ventanas normales del navegador del usuario. El filtro tenía que excluirlas y no lo hacía.
+
+Lo que se verificó sin navegador, que para un cambio de esta forma alcanza: los rótulos reales contra la base --`E4 · Documentación / EETT / Tasación` y `E5 · Escritura / Contrato / firma final`, los mismos dos negocios y montos que se ven en la captura del usuario-- y el layout leyendo `BarrasMontos`, donde la etiqueta es un `Text` con `truncate` en una fila de `space-between`: 39 caracteres entran de sobra y, en el peor caso, recorta con puntos suspensivos en vez de romper la fila. Lo que no se miró son los píxeles, y queda dicho.

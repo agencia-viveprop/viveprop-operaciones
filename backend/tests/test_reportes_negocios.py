@@ -184,11 +184,32 @@ def test_por_modelo_usa_el_valor_del_enum(cartera):
 
 
 def test_el_pipeline_se_mira_por_etapa(cartera):
-    """Es donde está detenido cada negocio."""
+    """Es donde está detenido cada negocio.
+
+    Y la etiqueta lleva **código y nombre**: `E2` es el vocabulario con el que se
+    habla del pipeline, pero por sí solo no dice qué falta hacer. El rótulo se
+    arma del lado que tiene la tabla de etapas, no en la pantalla.
+    """
     r = obtener_resumen_negocios(cartera)
 
-    assert [c.etiqueta for c in r.pipeline_por_etapa] == ["E2"]
+    assert [c.etiqueta for c in r.pipeline_por_etapa] == ["E2 · Visita"]
     assert r.pipeline_por_etapa[0].comision_real_vp == D("400000")
+
+
+def test_un_negocio_sin_etapa_no_queda_con_un_rotulo_a_medias(db, cartera):
+    """Con la etapa nula el `outerjoin` no trae ni código ni nombre.
+
+    Sin el filtro de nulos la etiqueta saldría como " · " o como "None": tiene que
+    caer en el mismo "Sin dato" que el resto de los desgloses.
+    """
+    abierto = db.execute(
+        select(NegocioHito).where(NegocioHito.estado == EstadoNegocio.ACTIVO)
+    ).scalars().first()
+    abierto.negocio.etapa = None
+    db.commit()
+
+    r = obtener_resumen_negocios(cartera)
+    assert [c.etiqueta for c in r.pipeline_por_etapa] == ["Sin dato"]
 
 
 def test_los_hitos_sin_valorizar_se_cuentan_aparte(db, cartera):
