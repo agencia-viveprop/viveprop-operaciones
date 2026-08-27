@@ -73,12 +73,28 @@ function rotulo(desde: string, hasta: string): string {
  * Se recorta con CSS y no cortando el string, para que el texto siga completo
  * para copiar y el tooltip tenga qué mostrar.
  */
-function Recortado({ texto, ancho }: { texto: string | null; ancho: number }) {
-  if (!texto) return <>—</>
+function Recortado({
+  texto,
+  detalle,
+  ancho,
+}: {
+  texto: string | null
+  /** Lo que va después, atenuado: la categoría primero y el detalle detrás. */
+  detalle?: string | null
+  ancho: number
+}) {
+  const completo = [texto, detalle].filter(Boolean).join(' · ')
+  if (!completo) return <>—</>
   return (
-    <Tooltip label={texto} multiline w={420} withArrow openDelay={400}>
+    <Tooltip label={completo} multiline w={420} withArrow openDelay={400}>
       <Text size="xs" truncate="end" style={{ maxWidth: ancho }}>
         {texto}
+        {detalle && (
+          <Text component="span" c="dimmed">
+            {texto ? ' · ' : ''}
+            {detalle}
+          </Text>
+        )}
       </Text>
     </Tooltip>
   )
@@ -222,8 +238,13 @@ function TablaMovidos({
             <Table.Td ta="right" ff="monospace">
               {m.registros}
             </Table.Td>
+            {/* Las dos piezas de "qué pasó": la categoría del movimiento y, en
+                gris, el comentario de ese registro. Antes en canjes se mostraba
+                solo la categoría --«Respuesta Corredor» en ocho filas seguidas--
+                y el texto que distingue un caso del otro no llegaba a la
+                pantalla. */}
             <Table.Td>
-              <Recortado texto={m.comentario} ancho={340} />
+              <Recortado texto={m.tipo} detalle={m.comentario} ancho={420} />
             </Table.Td>
             {columnaEtapa && (
               <Table.Td>

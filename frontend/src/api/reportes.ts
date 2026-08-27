@@ -68,6 +68,9 @@ export type ItemMovido = Ubicacion & {
   etapa: string | null
   etapa_nombre: string | null
   movio_etapa: boolean
+  /** Qué pasó, en dos piezas: la categoría del movimiento y el comentario del
+   * caso. Vienen separadas y la pantalla las combina. */
+  tipo: string | null
   comentario: string | null
   /** Cuántos movimientos tuvo en la ventana, contando el que se muestra. */
   registros: number

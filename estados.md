@@ -142,7 +142,13 @@ Las opciones pasaron a ser **1 / 2 / 4 semanas** calendario, como quedamos: un n
 
 **Dos que no pediste.** El comentario largo se recorta a una linea con el texto completo en el tooltip, porque con tres columnas mas la tabla ya no cabia. Y el vacio decia «Nada que mostrar aca» debajo de un «Estancado 2»: ahora dice en que casilla no hay nada y donde si hay.
 
-**Verificado:** 721 tests, `alembic check` limpio, build y lint sin hallazgos, y capturas de la pantalla con datos. **Con una limitacion:** el clasificador bloqueo el script que lee la credencial de produccion, asi que verifique contra `dev`, y `dev` no tiene ni un movimiento de negocios --los 50 estan solo en produccion--. La tabla de negocios la vi por el lado de estancados, que usa los mismos componentes. Cuando abras la pantalla, el ojo que falta es ese. Ver `D-076`.
+**Y despues, sobre la misma columna.** Me marcaste que en canjes «Que paso» mostraba solo la categoria --ocho filas de «Respuesta Corredor»-- sin el texto de cada registro. El defecto era mio y estaba en el servicio: en canjes mandaba el nombre del tipo **y tiraba el comentario**, con el argumento de que el de los migrados viene vacio o con ruido. Cierto para los 605 del Excel y falso para todo lo que se registra en la app, que es justo lo que sale en una ventana reciente.
+
+Ahora la API manda las dos piezas separadas y la pantalla las combina: la categoria en tinta normal y el comentario en gris detras, con el texto completo en el tooltip. Lo hice igual en negocios --ahi no faltaba nada, pero pasa a decir `Cambio de etapa · Vendedor aprobo instruccion…`-- para que las dos secciones respondan "que paso" de la misma forma. Si la categoria estorba en negocios, sacarla es una linea.
+
+Sobre los movimientos viejos la celda va a decir «Comentario general · Migrado del Excel — fecha aproximada…», que es ruido. No lo filtro por texto: esconder filas porque coinciden con una cadena conocida es peor, y esas son de 2022 a 2025, asi que casi no caen en estas ventanas.
+
+**Verificado:** 731 tests, `alembic check` limpio, build y lint sin hallazgos, y capturas de la pantalla con datos. **Con una limitacion:** el clasificador bloqueo el script que lee la credencial de produccion, asi que verifique contra `dev`, y `dev` no tiene ni un movimiento de negocios --los 50 estan solo en produccion--. La tabla de negocios la vi por el lado de estancados, que usa los mismos componentes. Cuando abras la pantalla, el ojo que falta es ese. Ver `D-076`.
 
 ### 2026-08-27 - El grafico con selector siempre muestra el total
 

@@ -106,6 +106,14 @@ class ItemMovido(Ubicacion):
     # Si el último movimiento cambió la etapa, o fue gestión sin mover el
     # pipeline. Las dos cosas son avance, pero no son la misma cosa.
     movio_etapa: bool = False
+    # Qué pasó, en dos piezas: el tipo de movimiento --la categoría, «Respuesta
+    # Corredor»-- y el comentario que se escribió --el detalle del caso--.
+    #
+    # Van **separadas y no pegadas de este lado**: la primera versión mandaba una
+    # sola cadena, y en canjes traía el tipo y tiraba el comentario, así que el
+    # dato más específico de cada registro no llegaba a la pantalla. Pegarlas es
+    # decisión de presentación; el reporte manda los dos hechos.
+    tipo: str | None = None
     comentario: str | None = None
     # Cuántos movimientos tuvo en la ventana, contando este.
     registros: int = 1
@@ -243,9 +251,11 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
     movidos = db.execute(
         select(Negocio.codigo, Movimiento.fecha, Movimiento.etapa_resultante,
                Movimiento.comentario, Movimiento.tipo_movimiento, Negocio.etapa,
-               Propiedad.direccion, Propiedad.unidad, Propiedad.comuna, Catalogo.nombre)
+               Propiedad.direccion, Propiedad.unidad, Propiedad.comuna, Catalogo.nombre,
+               TipoMovimiento.nombre)
         .join(Negocio, Negocio.id == Movimiento.entity_id)
         .join(Propiedad, Propiedad.id == Negocio.propiedad_id)
+        .join(TipoMovimiento, TipoMovimiento.codigo == Movimiento.tipo_movimiento)
         .outerjoin(Catalogo, Catalogo.id == Negocio.alianza_id)
         .where(
             Movimiento.entity_type == EntityType.negocio,
@@ -258,7 +268,8 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
     ).all()
 
     def _item(fila) -> ItemMovido:
-        cod, f, etapa_mov, com, _tipo, etapa_actual, calle, unidad, comuna, alianza = fila
+        (cod, f, etapa_mov, com, _tipo, etapa_actual, calle, unidad, comuna,
+         alianza, nombre_tipo) = fila
         etapa = etapa_mov or etapa_actual
         return ItemMovido(
             referencia=cod,
@@ -266,6 +277,7 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
             etapa=etapa,
             etapa_nombre=etapas.get(etapa) if etapa else None,
             movio_etapa=etapa_mov is not None,
+            tipo=nombre_tipo,
             comentario=com,
             direccion=_direccion(calle, unidad),
             comuna=comuna,
@@ -379,7 +391,7 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
     ).all()
 
     def _item(fila) -> ItemMovido:
-        cid, f, etapa_mov, _com, _tipo, nombre_tipo, etapa_actual, op, calle, comuna = fila
+        cid, f, etapa_mov, com, _tipo, nombre_tipo, etapa_actual, op, calle, comuna = fila
         etapa = etapa_mov or (etapa_actual.value if etapa_actual else None)
         return ItemMovido(
             referencia=f"#{cid}",
@@ -387,9 +399,8 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
             etapa=etapa,
             etapa_nombre=LABELS_CANJE.get(etapa, etapa) if etapa else None,
             movio_etapa=etapa_mov is not None,
-            # En canjes "qué pasó" es el nombre del tipo de movimiento y no el
-            # comentario: el de los migrados viene vacío o con ruido.
-            comentario=nombre_tipo,
+            tipo=nombre_tipo,
+            comentario=com,
             operacion=_operacion(op),
             direccion=calle,
             comuna=comuna,
@@ -398,11 +409,7 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
     planos = [_item(f) for f in movidos if f[4] not in CAIDA_CANJE]
     avanzados = _ultimo_por_referencia(planos)
     caidos = _ultimo_por_referencia([
-        _item(f).model_copy(update={
-            "etapa": None, "etapa_nombre": None, "movio_etapa": False,
-            # Acá sí manda el comentario: por qué se cayó no lo dice el tipo.
-            "comentario": f[3],
-        })
+        _item(f).model_copy(update={"etapa": None, "etapa_nombre": None, "movio_etapa": False})
         for f in movidos
         if f[4] in CAIDA_CANJE
     ])

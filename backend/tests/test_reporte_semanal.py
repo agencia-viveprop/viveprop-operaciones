@@ -148,7 +148,12 @@ def test_la_gestion_sin_cambio_de_etapa_cuenta_como_avance(db, tipos):
     seccion = _reporte(db).canjes
     assert seccion.total_avanzados == 1
     assert seccion.avanzados[0].referencia == "#1"
-    assert seccion.avanzados[0].comentario == "WA confirmación solicitante"
+    # Las dos piezas de "que paso" van separadas: la categoria y el comentario de
+    # ese registro. La primera version mandaba una sola cadena y en canjes traia
+    # la categoria y tiraba el comentario, asi que el dato mas especifico de cada
+    # fila no llegaba a la pantalla.
+    assert seccion.avanzados[0].tipo == "WA confirmación solicitante"
+    assert seccion.avanzados[0].comentario == "x"
     # No movio la etapa, pero la columna igual dice donde quedo: la etapa actual
     # del canje. Antes venia nula y la celda quedaba muda sobre toda la historia
     # migrada del Excel, que lleva `etapa_resultante` nulo a proposito.
@@ -177,7 +182,8 @@ def test_una_caida_no_se_cuenta_tambien_como_avance(db, tipos):
     assert (seccion.total_avanzados, seccion.total_caidos) == (1, 1)
     assert seccion.avanzados[0].referencia == "#1"
     assert seccion.caidos[0].referencia == "#2"
-    assert seccion.caidos[0].comentario == "se arrepintio"
+    # Por que se cayo lo dice el comentario, y la categoria lo acompaña.
+    assert (seccion.caidos[0].tipo, seccion.caidos[0].comentario) == ("Cancelación", "se arrepintio")
 
 
 def test_la_perdida_de_un_negocio_no_cuenta_como_avance(db, tipos):
@@ -379,6 +385,9 @@ def test_el_negocio_muestra_el_comentario_del_ultimo_registro(db, tipos):
     seccion = _reporte(db).negocios
     assert (seccion.total_avanzados, seccion.movimientos_avanzados) == (1, 2)
     assert seccion.avanzados[0].comentario == "ultimo"
+    # Negocios tambien trae la categoria, para que las dos secciones respondan
+    # "que paso" de la misma forma.
+    assert seccion.avanzados[0].tipo == "Llamada"
     assert seccion.avanzados[0].registros == 2
 
 

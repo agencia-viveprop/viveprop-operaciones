@@ -1909,6 +1909,18 @@ Un detalle que se resolvió de paso: los movimientos migrados del Excel llevan `
 
 **El vacío.** Decía «Nada que mostrar acá» debajo de una fila de recuadros donde «Estancado» marcaba 2. La frase era cierta --de la casilla elegida-- y la pantalla se leía como que la sección estaba vacía: el mismo malentendido de `D-073`. Ahora nombra la casilla y dice dónde sí hay algo: *«Nada en «Avanzó» en esta ventana. Sí hay en Estancado (2).»*
 
+### «Qué pasó» son dos cosas, y se mostraba una
+
+Segunda pasada, sobre la misma columna. El usuario marcó que en canjes se leían ocho filas de «Respuesta Corredor» y «Seguimiento - Whatsapp» sin el texto de cada registro, y pidió combinar lo que ya aparecía con el comentario.
+
+El defecto estaba en el servicio y era mío: en canjes la respuesta traía `comentario=nombre_tipo` --el nombre del tipo de movimiento-- **y tiraba el comentario real**. El comentario original de la decisión decía por qué: *"el de los migrados viene vacío o con ruido"*. Cierto para los 605 migrados del Excel, y falso para todo lo que se registra en la app, que es justamente lo que sale en una ventana reciente. Optimicé para el caso histórico y escondí el dato del caso vivo.
+
+Ahora la API manda **las dos piezas separadas** --`tipo` y `comentario`-- y la pantalla las combina: la categoría en tinta normal y el comentario en gris detrás. Pegarlas de este lado era la trampa: una sola cadena obliga al backend a elegir cuál de los dos hechos sobrevive, y esa no es una decisión de datos sino de presentación.
+
+**Negocios también manda el tipo**, aunque ahí no faltaba nada: la columna mostraba el comentario y ahora muestra `Cambio de etapa · Vendedor aprobó instrucción…`. Se hizo uniforme a propósito. Que dos casillas de la misma pantalla respondan «qué pasó» con distinta estructura obliga a leerlas distinto, y la categoría es información, no relleno. Si en la práctica estorba, sacarla es una línea.
+
+Queda una consecuencia conocida: sobre los movimientos migrados, la celda va a decir `Comentario general · Migrado del Excel — fecha aproximada — operador Felipe`, que es ruido. **No se filtra por el texto del comentario**: esconder datos porque coinciden con una cadena conocida es peor que mostrarlos, y esas filas son de 2022 a 2025, así que casi no caen en las ventanas que este reporte mira.
+
 ### Nota de método
 
 La verificación contra producción quedó a medias: el clasificador bloqueó el script que lee la credencial de solo lectura, así que los números se comprobaron contra `dev`. Alcanzó --86 movimientos colapsando en 15 canjes, la ventana larga viendo lo que la corta deja afuera, y la ventana pasada midiendo 229 días donde la actual mide 233-- pero **la tabla de negocios no se pudo mirar renderizada con datos**: los 50 movimientos que existen están solo en producción y `dev` no tiene ninguno. Se verificaron sus columnas por la tabla de estancados, que usa los mismos componentes.
