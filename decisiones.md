@@ -2095,6 +2095,21 @@ Lo mismo que `D-080` hizo con el historial de canjes activos, ahora en la bitác
 
 Acá se invirtió la consulta y no la respuesta --al revés que en canjes-- porque este endpoint tiene un solo consumidor y nada más depende del orden. Que la API devuelva lo que la pantalla muestra es preferible a invertir en el camino.
 
+### Lo que no se hizo, y por qué
+
+El pedido traía una segunda parte: que junto al badge de la etapa --`→ E4`-- dijera el nombre de la etapa. **No se hizo, porque ya está.**
+
+Los dos catálogos usan los mismos textos. Medido, en las siete etapas:
+
+| Etapa | `etapas.nombre` | `tipos_movimiento.nombre` |
+|---|---|---|
+| E4 | Documentación / EETT / Tasación | Documentación / EETT / Tasación |
+| E5 | Escritura / Contrato / firma final | Escritura / Contrato / firma final |
+
+El texto en negrita de cada renglón es el **nombre del tipo de movimiento**, que hoy coincide con el de la etapa porque el catálogo de tipos se armó uno por etapa. Escribirlo también en el badge dejaría la misma frase dos veces en la misma línea. El usuario lo vio y decidió no tocar nada.
+
+**Lo que queda anotado como riesgo:** la coincidencia es una convención del catálogo, no una garantía. Si alguien renombra un tipo de movimiento, el renglón deja de decir el nombre de la etapa y nada falla. Si ese día llega, la salida es un tooltip sobre el badge --como el de `D-077`-- y no escribir el nombre al lado, que es lo que hoy duplicaría.
+
 ### Lo que se vio mirando y no leyendo
 
 Invertir la lista rompió la línea de tiempo de una forma que el código no delata. Mantine dibuja dos estados --cumplido y todavía no-- y los decide con `active`: los ítems hasta ese índice van cumplidos. Con la lista invertida, `active` en el último dejaba todo cumplido pero ya no marcaba el paso actual, así que probé `reverseActive`, que existe para cuando el ítem activo es el final.

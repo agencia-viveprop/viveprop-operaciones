@@ -134,6 +134,8 @@ Lo mismo que hicimos en canjes, ahora en la bitacora del pipeline de un negocio:
 
 **Y el orden dentro del mismo dia sigue siendo determinista**, que era el defecto que se habia arreglado cuando este orden se invirtio la primera vez: dos etapas cargadas el mismo dia se desempatan por `id`, ahora tambien descendente.
 
+**De la otra mitad del pedido no hicimos nada, y con razon:** el nombre de la etapa ya aparece en negrita en cada renglon. Lo que se ve ahi es el nombre del *tipo de movimiento*, que hoy coincide con el de la etapa porque el catalogo se armo uno por etapa -- lo verifique en las siete. Ponerlo tambien en el badge habria dejado la misma frase dos veces en la misma linea.
+
 **Verificado:** 773 tests, typecheck, build y lint sin hallazgos, y capturas del historial con tres movimientos creados por la API contra Postgres --que despues borre, junto con devolver a VVP-15 su etapa--. Ver `D-082`.
 
 ### 2026-08-28 - «Recepcion» deja de ser una etapa
