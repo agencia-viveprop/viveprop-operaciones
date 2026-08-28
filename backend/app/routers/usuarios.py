@@ -1,5 +1,6 @@
 import secrets
 import string
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -9,28 +10,40 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.usuario import RolUsuario, Sesion, Usuario
-from app.config import settings
 from app.security import hash_password
+from app.services import dominios_organizacion as servicio_dominios
 from app.services.intentos_login import ClaveDebil, validar_clave
 
 
-def _validar_email(email: str) -> None:
-    """El dominio tiene que estar permitido.
+def _autorizacion_externa(
+    db: Session, email: str, autoriza_externo: bool, admin: Usuario
+) -> tuple[int | None, datetime | None]:
+    """Devuelve el rastro a guardar, o rechaza el alta.
 
-    No es paranoia: en una app con las comisiones adentro, un dedazo en el correo
-    al crear una cuenta le da acceso a un desconocido. Si `DOMINIOS_EMAIL` esta
-    vacio no se restringe nada, para no dejar a nadie encerrado si cambia el
-    dominio de la empresa.
+    Si el correo es de un dominio de la organización, no hay nada que autorizar y
+    los dos campos quedan nulos. Si no lo es, hace falta que el admin lo autorice
+    explícitamente, y queda registrado quién y cuándo.
+
+    **Por qué así y no una lista de dominios permitidos.** Un director o un
+    advisor puede tener un correo cualquiera, y son parte del diseño de la app.
+    Habilitar su dominio para dejarlo entrar significaría abrir `gmail.com`
+    entero y para siempre: después del primer caso la lista dejaría de decir algo
+    y seguiría pareciendo un control. La excepción es por persona, y con nombre.
+
+    Y la protección que se busca es contra el dedazo, no contra la intrusión: la
+    app no manda correos, así que una dirección equivocada no le entrega nada a
+    nadie. Quien puede juzgar si «ese correo raro» es intencional es el admin que
+    lo está escribiendo, en el momento en que lo escribe.
     """
-    permitidos = settings.dominios_email_lista
-    if not permitidos:
-        return
-    dominio = email.rsplit("@", 1)[-1].strip().lower()
-    if dominio not in permitidos:
+    if servicio_dominios.es_de_la_organizacion(db, email):
+        return None, None
+    if not autoriza_externo:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"El email tiene que ser de {' o '.join(permitidos)}.",
+            "El correo no es de la organización. Para crear un usuario externo hay que "
+            "autorizarlo explícitamente.",
         )
+    return admin.id, datetime.now(timezone.utc)
 
 
 def _validar_clave_o_400(clave: str) -> None:
@@ -57,8 +70,34 @@ class UsuarioOut(BaseModel):
     rol: RolUsuario
     activo: bool
     debe_cambiar_password: bool = False
+    # El rastro del acceso externo, resuelto para que la pantalla no tenga que
+    # cruzar ids: quién lo autorizó, por nombre, y cuándo.
+    es_externo: bool = False
+    externo_autorizado_por: str | None = None
+    externo_autorizado_en: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+def _salida(usuario: Usuario) -> UsuarioOut:
+    autor = usuario.externo_autorizado_por
+    return UsuarioOut(
+        id=usuario.id,
+        email=usuario.email,
+        nombre=usuario.nombre,
+        rol=usuario.rol,
+        activo=usuario.activo,
+        debe_cambiar_password=usuario.debe_cambiar_password,
+        # Externo es tener la autorización, no que el correo se vea de fuera: si
+        # mañana se agrega su dominio a la lista, el hecho de que se autorizó a
+        # mano no deja de ser cierto.
+        es_externo=usuario.externo_autorizado_en is not None,
+        # El nombre de quien autorizó, y su correo si la cuenta ya no existe --el
+        # `SET NULL` deja la fecha sin autor, y decir solo "externo" perdería la
+        # mitad del rastro--.
+        externo_autorizado_por=(autor.nombre if autor is not None else None),
+        externo_autorizado_en=usuario.externo_autorizado_en,
+    )
 
 
 class ClaveReseteada(BaseModel):
@@ -78,6 +117,10 @@ class UsuarioCreate(BaseModel):
     nombre: str
     password: str
     rol: RolUsuario = RolUsuario.operaciones
+    # El admin declara que sabe que el correo no es de la organización y que
+    # autoriza igual ese acceso. Por defecto en `False`: la autorización tiene
+    # que ser un acto, no un descuido del que llama a la API.
+    autoriza_externo: bool = False
 
 
 class UsuarioUpdate(BaseModel):
@@ -86,16 +129,21 @@ class UsuarioUpdate(BaseModel):
     rol: RolUsuario | None = None
     activo: bool | None = None
     password: str | None = None
+    autoriza_externo: bool = False
 
 
 @router.get("", response_model=list[UsuarioOut])
 def listar(db: Session = Depends(get_db)):
-    return db.scalars(select(Usuario).order_by(Usuario.email)).all()
+    return [_salida(u) for u in db.scalars(select(Usuario).order_by(Usuario.email)).all()]
 
 
 @router.post("", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
-def crear(payload: UsuarioCreate, db: Session = Depends(get_db)):
-    _validar_email(payload.email)
+def crear(
+    payload: UsuarioCreate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_user),
+):
+    autor_id, autorizado_en = _autorizacion_externa(db, payload.email, payload.autoriza_externo, admin)
     _validar_clave_o_400(payload.password)
     if db.scalar(select(Usuario).where(Usuario.email == payload.email)) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya tiene una cuenta")
@@ -105,24 +153,38 @@ def crear(payload: UsuarioCreate, db: Session = Depends(get_db)):
         nombre=payload.nombre,
         rol=payload.rol,
         password_hash=hash_password(payload.password),
+        externo_autorizado_por_id=autor_id,
+        externo_autorizado_en=autorizado_en,
     )
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
-    return usuario
+    return _salida(usuario)
 
 
 @router.patch("/{usuario_id}", response_model=UsuarioOut)
-def actualizar(usuario_id: int, payload: UsuarioUpdate, db: Session = Depends(get_db)):
+def actualizar(
+    usuario_id: int,
+    payload: UsuarioUpdate,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_user),
+):
     usuario = db.get(Usuario, usuario_id)
     if usuario is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
     if payload.email is not None and payload.email != usuario.email:
-        _validar_email(payload.email)
+        autor_id, autorizado_en = _autorizacion_externa(
+            db, payload.email, payload.autoriza_externo, admin
+        )
         if db.scalar(select(Usuario).where(Usuario.email == payload.email)) is not None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ese email ya tiene una cuenta")
         usuario.email = payload.email
+        # El rastro sigue al correo: si pasa a uno de la organización, la
+        # autorización deja de aplicar --ese correo ya no la necesita-- y si pasa
+        # a otro externo, queda quién lo autorizó esta vez.
+        usuario.externo_autorizado_por_id = autor_id
+        usuario.externo_autorizado_en = autorizado_en
     if payload.nombre is not None:
         usuario.nombre = payload.nombre
     if payload.rol is not None:
@@ -135,7 +197,7 @@ def actualizar(usuario_id: int, payload: UsuarioUpdate, db: Session = Depends(ge
 
     db.commit()
     db.refresh(usuario)
-    return usuario
+    return _salida(usuario)
 
 
 @router.post("/{usuario_id}/resetear-clave", response_model=ClaveReseteada)

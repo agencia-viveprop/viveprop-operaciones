@@ -126,6 +126,26 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Los dominios de la organizacion se administran desde la app
+
+Necesitabas dar acceso a correos que no son `@viveprop.com`. Quedo asi:
+
+**Una lista de dominios editable en Usuarios**, solo admin, que arranca con `viveprop.com` y `dataprop.cl`. Render sale del camino: agregar un dominio ya no es entrar al panel ni un deploy.
+
+**Y los correos de fuera no necesitan estar en la lista.** Se autorizan uno por uno al crear el usuario --el aviso dice de que dominio no es y que va a quedar registrado quien autoriza-- asi que para dejar entrar a un advisor con gmail no hay que habilitar gmail entero. En el listado queda la insignia «Externo» con «Autorizado por Felipe Donoso · 28-08-2026».
+
+**La lista vacia cierra, no abre.** La variable de entorno que esto reemplaza hacia lo contrario: vacia significaba «sin restriccion», asi que borrarla por error abria la app a cualquier dominio y nadie se enteraba. Ahora vacia es lo mas cerrado que hay, y no bloquea a nadie porque autorizar siempre se puede.
+
+**Lo que la lista no hace:** no re-valida hacia atras. Quitar un dominio no le saca el acceso a nadie -- eso lo hace el switch de activo, que corta en el siguiente clic. El boton de quitar lo aclara en su tooltip.
+
+Para un director de Dataprop: usuario con rol `gerencia` (solo lectura) mas autorizar el correo externo. Las dos cosas desde la app.
+
+**Y algo que confirme en el camino:** la app **no manda correos**. No hay SMTP ni recuperacion de clave por mail, asi que un correo equivocado no le entrega nada a nadie. El codigo decia que un dedazo «le da acceso a un desconocido» y era falso; lo corregi. La lista protege del desorden, no de una intrusion.
+
+**Verificado:** 40 tests nuevos (770 en total), la migracion corrida contra `dev`, el flujo probado contra Postgres por HTTP --400 sin autorizar, 201 con el rastro al admin correcto-- y capturas de las tres piezas de pantalla.
+
+**Dos tests fallan y no es por esto:** dos tests de seguimiento comparan una fecha local con una UTC y fallan entre las 20:00 y la medianoche de Chile. Lo comprobe apartando mis cambios: fallan igual sin ellos. Te lo dejo dicho como pendiente aparte.
+
 ### 2026-08-27 - La insignia de etapa dice su nombre
 
 Pediste el tooltip sobre el codigo de etapa del listado de Negocios. Esta, y tambien en «Que me toca hoy», que tenia la misma insignia pelada: con el globo en una pantalla y no en la otra hay que recordar donde funciona.

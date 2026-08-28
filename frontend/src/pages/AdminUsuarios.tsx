@@ -15,17 +15,21 @@ import {
   Table,
   Text,
   TextInput,
+  Tooltip,
 } from '@mantine/core'
 import { IconKey } from '@tabler/icons-react'
 import {
   actualizarUsuario,
   crearUsuario,
+  listarDominios,
   listarUsuarios,
   resetearClave,
   type ClaveReseteada,
   type RolUsuario,
 } from '../api/usuarios'
 import PageHeader from '../components/PageHeader'
+import DominiosOrganizacion from '../components/DominiosOrganizacion'
+import { fecha } from '../components/negociosFormato'
 
 const ROLES: { value: RolUsuario; label: string }[] = [
   { value: 'gerencia', label: 'Gerencia' },
@@ -33,15 +37,31 @@ const ROLES: { value: RolUsuario; label: string }[] = [
   { value: 'admin', label: 'Admin' },
 ]
 
+const dominioDe = (email: string) => email.trim().toLowerCase().split('@')[1] ?? ''
+
 export default function AdminUsuarios() {
   const queryClient = useQueryClient()
   const { data: usuarios, isLoading } = useQuery({ queryKey: ['admin-usuarios'], queryFn: listarUsuarios })
+  // La lista de dominios se consulta acá para poder avisar **antes** de mandar el
+  // alta. La API igual lo exige: esto no es la guarda, es no hacerle escribir todo
+  // el formulario a alguien para después rechazarlo.
+  const { data: dominios } = useQuery({ queryKey: ['admin-dominios'], queryFn: listarDominios })
   const [modalAbierto, setModalAbierto] = useState(false)
   const [claveNueva, setClaveNueva] = useState<ClaveReseteada | null>(null)
   const [form, setForm] = useState({ email: '', nombre: '', password: '', rol: 'operaciones' as RolUsuario })
+  // Un cambio de correo que la API rechazó por externo, esperando la
+  // autorización. Se guarda para poder reenviarlo tal cual.
+  const [porAutorizar, setPorAutorizar] = useState<{ id: number; email: string } | null>(null)
+
+  const activos = (dominios ?? []).filter((d) => d.activo).map((d) => d.dominio)
+  const esExterno = (email: string) => {
+    const dominio = dominioDe(email)
+    return dominio.length > 0 && !activos.includes(dominio)
+  }
+  const nuevoEsExterno = esExterno(form.email)
 
   const crear = useMutation({
-    mutationFn: () => crearUsuario(form),
+    mutationFn: () => crearUsuario({ ...form, autoriza_externo: nuevoEsExterno }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] })
       setModalAbierto(false)
@@ -54,6 +74,19 @@ export default function AdminUsuarios() {
       actualizarUsuario(vars.id, vars.payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin-usuarios'] }),
   })
+
+  /** Cambia el correo, y si la API lo rechaza por externo, ofrece autorizarlo.
+   *
+   * El aviso sale del rechazo de la API y no de una revisión previa en la
+   * pantalla: la celda se edita al salir del campo, así que este es el punto donde
+   * de verdad se sabe que el correo nuevo es de fuera. */
+  const cambiarEmail = (id: number, email: string) =>
+    actualizar
+      .mutateAsync({ id, payload: { email } })
+      .catch((error: Error) => {
+        if (error.message.includes('no es de la organización')) setPorAutorizar({ id, email })
+        else throw error
+      })
 
   const resetear = useMutation({
     mutationFn: resetearClave,
@@ -88,12 +121,32 @@ export default function AdminUsuarios() {
                     defaultValue={u.email}
                     onBlur={(e) => {
                       const nuevo = e.currentTarget.value.trim()
-                      if (nuevo && nuevo !== u.email) actualizar.mutate({ id: u.id, payload: { email: nuevo } })
+                      if (nuevo && nuevo !== u.email) void cambiarEmail(u.id, nuevo)
                     }}
                     w={220}
                   />
                 </Table.Td>
-                <Table.Td>{u.nombre}</Table.Td>
+                <Table.Td>
+                  <Group gap="xs" wrap="nowrap">
+                    <Text size="sm">{u.nombre}</Text>
+                    {/* Quién autorizó y cuándo, no solo que es externo: cuando
+                        alguien pregunte por qué ese correo tiene acceso, la
+                        respuesta tiene que estar en la misma fila. */}
+                    {u.es_externo && (
+                      <Tooltip
+                        label={
+                          u.externo_autorizado_por
+                            ? `Autorizado por ${u.externo_autorizado_por} · ${fecha(u.externo_autorizado_en)}`
+                            : `Autorizado el ${fecha(u.externo_autorizado_en)}`
+                        }
+                      >
+                        <Badge variant="default" size="sm">
+                          Externo
+                        </Badge>
+                      </Tooltip>
+                    )}
+                  </Group>
+                </Table.Td>
                 <Table.Td>
                   <Select
                     data={ROLES}
@@ -137,6 +190,8 @@ export default function AdminUsuarios() {
         </Alert>
       )}
 
+      <DominiosOrganizacion />
+
       {/* La temporal se muestra una sola vez: lo que queda guardado es su hash.
           Si se cierra sin copiarla, hay que resetear de nuevo. */}
       <Modal
@@ -165,6 +220,41 @@ export default function AdminUsuarios() {
             <Alert color="warning" variant="light">
               Se muestra una sola vez. Sus sesiones abiertas ya se cerraron.
             </Alert>
+          </Stack>
+        )}
+      </Modal>
+
+      <Modal
+        opened={porAutorizar !== null}
+        onClose={() => setPorAutorizar(null)}
+        title="Este correo no es de la organización"
+      >
+        {porAutorizar && (
+          <Stack gap="sm">
+            <Text size="sm">
+              <strong>{porAutorizar.email}</strong> no pertenece a{' '}
+              {activos.length > 0 ? activos.join(' ni a ') : 'ningún dominio de la lista'}. Confirma
+              que es un usuario externo y que autorizas su acceso. Va a quedar registrado que lo
+              autorizaste tú.
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setPorAutorizar(null)}>
+                Cancelar
+              </Button>
+              <Button
+                color="accent"
+                loading={actualizar.isPending}
+                onClick={() => {
+                  actualizar.mutate({
+                    id: porAutorizar.id,
+                    payload: { email: porAutorizar.email, autoriza_externo: true },
+                  })
+                  setPorAutorizar(null)
+                }}
+              >
+                Autorizar acceso externo
+              </Button>
+            </Group>
           </Stack>
         )}
       </Modal>
@@ -202,9 +292,23 @@ export default function AdminUsuarios() {
               value={form.rol}
               onChange={(value) => value && setForm({ ...form, rol: value as RolUsuario })}
             />
+            {/* El aviso aparece mientras se escribe, no después de mandar: la
+                decisión se toma con el dato a la vista. Y el botón cambia de
+                texto, así que autorizar es un acto y no una casilla que se pasa
+                por alto. */}
+            {nuevoEsExterno && (
+              <Alert color="warning" variant="light" title="Este correo no es de la organización">
+                <Text size="sm">
+                  <strong>{form.email}</strong> no pertenece a{' '}
+                  {activos.length > 0 ? activos.join(' ni a ') : 'ningún dominio de la lista'}.
+                  Confirma que es un usuario externo y que autorizas su acceso. Va a quedar
+                  registrado que lo autorizaste tú.
+                </Text>
+              </Alert>
+            )}
             {crear.isError && <Alert color="critical" variant="filled">{(crear.error as Error).message}</Alert>}
             <Button type="submit" color="accent" loading={crear.isPending}>
-              Crear
+              {nuevoEsExterno ? 'Autorizar acceso externo y crear' : 'Crear'}
             </Button>
           </Stack>
         </form>

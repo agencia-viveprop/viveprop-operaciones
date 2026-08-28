@@ -21,6 +21,14 @@ class TipoCatalogo(str, enum.Enum):
     TIPO_OPERACION = "tipo_operacion"
     ESTADO_PROPIEDAD = "estado_propiedad"
     MOTIVO_PERDIDA = "motivo_perdida"
+    # Los dominios de correo de la organización. Vive acá y no en una tabla
+    # propia porque es exactamente lo que esta tabla resuelve --una lista corta,
+    # editable, con `activo` y `orden`-- y así no cuesta una migración de esquema.
+    #
+    # A diferencia de los otros, **no sale en `GET /api/catalogos`**: lo sirve el
+    # router de admin. No es secreto, pero tampoco le sirve a las pantallas que
+    # consumen el catálogo general, y esa respuesta la lee cualquier usuario.
+    DOMINIO_ORGANIZACION = "dominio_organizacion"
 
 
 class ModeloNegocio(str, enum.Enum):

@@ -18,6 +18,7 @@ from app.routers import (
     reportes,
     tipos_movimiento,
     uf,
+    dominios,
     usuarios,
 )
 from app.tareas import ciclo_uf
@@ -68,6 +69,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")
+app.include_router(dominios.router, prefix="/api")
 app.include_router(canjes.router, prefix="/api")
 app.include_router(catalogos.router, prefix="/api")
 app.include_router(negocios.router, prefix="/api")

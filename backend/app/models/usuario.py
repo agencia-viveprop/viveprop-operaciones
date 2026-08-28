@@ -41,7 +41,28 @@ class Usuario(Base):
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     ultimo_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Quién autorizó este correo como externo, y cuándo. Nulo en los dos = el
+    # correo era de un dominio de la organización cuando se creó la cuenta.
+    #
+    # **Es un hecho del pasado y por eso se guarda en vez de derivarse.** Si
+    # mañana alguien agrega `gmail.com` a la lista de dominios, sigue siendo
+    # cierto que en su momento este acceso se autorizó a mano, y quién lo hizo.
+    # Derivarlo del correo haría que el rastro cambiara solo.
+    externo_autorizado_por_id: Mapped[int | None] = mapped_column(
+        # `SET NULL` y no `CASCADE`: si algún día se borra la cuenta del admin
+        # que autorizó, el usuario externo no puede desaparecer con ella.
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+    externo_autorizado_en: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     sesiones: Mapped[list["Sesion"]] = relationship(back_populates="usuario", cascade="all, delete-orphan")
+    # `joined` porque el listado de usuarios muestra quién autorizó a cada
+    # externo: sin esto son N consultas para una pantalla de una tabla.
+    externo_autorizado_por: Mapped["Usuario | None"] = relationship(
+        remote_side="Usuario.id", foreign_keys=[externo_autorizado_por_id], lazy="joined"
+    )
 
 
 class Sesion(Base):

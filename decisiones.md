@@ -1957,3 +1957,56 @@ La primera captura salió con la pantalla en blanco y el log de Vite con un erro
 La captura del dashboard **no se pudo tomar**: Chrome dejó de escribir el archivo --dos intentos, uno con perfil limpio-- y en el camino, al matar procesos para desbloquearlo, me llevé también las ventanas normales del navegador del usuario. El filtro tenía que excluirlas y no lo hacía.
 
 Lo que se verificó sin navegador, que para un cambio de esta forma alcanza: los rótulos reales contra la base --`E4 · Documentación / EETT / Tasación` y `E5 · Escritura / Contrato / firma final`, los mismos dos negocios y montos que se ven en la captura del usuario-- y el layout leyendo `BarrasMontos`, donde la etiqueta es un `Text` con `truncate` en una fila de `space-between`: 39 caracteres entran de sobra y, en el peor caso, recorta con puntos suspensivos en vez de romper la fila. Lo que no se miró son los píxeles, y queda dicho.
+
+---
+
+## D-078 · Los dominios de la organización se administran desde la app
+
+El usuario necesitaba dar acceso a correos que no son `@viveprop.com`. La restricción vivía en la variable de entorno `DOMINIOS_EMAIL`, con el default del dominio de la empresa.
+
+### Lo que cambió mi primera recomendación
+
+Empecé proponiendo dejar la lista en el panel de Render: sin código, y una lista que cambia dos veces al año no justifica una pantalla. Esa premisa era mía y estaba mal. El usuario la corrigió: *"tambien debiera poder darle acceso a las gerencias de Dataprop y Viveprop, incluso a los directores o advisors de la empresa, que no necesariamente tienen correos de Dataprop/Viveprop"*. Si los externos son parte del diseño, dar un acceso es una operación normal y **Render no puede estar en ese camino**.
+
+También confirmé algo que cambia el peso de todo el asunto: **la app no manda correos.** No hay SMTP, ni proveedor, ni recuperación de clave por mail. La cuenta la crea un admin fijando la clave y la clave viaja por fuera, así que una dirección equivocada no le entrega nada a nadie. El comentario que estaba en el código --*"un dedazo en el correo al crear una cuenta le da acceso a un desconocido"*-- era falso para esta aplicación, y una razón falsa escrita en el código es la que hace que alguien la refuerce por el motivo equivocado. La lista protege del desorden y del tipeo; quien corta un acceso es el switch `activo`, que se chequea en cada request.
+
+### La discusión que quedó abierta y cómo se resolvió
+
+Yo argumenté que una lista de dominios es el instrumento equivocado justo para el caso que la motiva: **para dejar entrar a un advisor con gmail hay que habilitar `gmail.com` entero y para siempre**, y después de ese primer caso la lista deja de proteger algo y sigue pareciendo un control. Propuse la excepción por persona, con confirmación explícita y rastro.
+
+El usuario eligió la lista administrable de todas formas. Se hizo **las dos cosas**, que es lo que dejó el resultado mejor que cualquiera de las dos por separado:
+
+- **La lista es editable desde la app** por un admin, como pidió, y es la que define quién entra sin preguntas.
+- **Los correos de fuera no necesitan estar en la lista**: se autorizan uno por uno, con nombre y fecha. Así nunca hace falta agregar `gmail.com` para dejar entrar a una persona.
+
+### Dónde vive
+
+En `catalogos`, con el tipo `dominio_organizacion`: es exactamente lo que esa tabla resuelve --una lista corta, editable, con `activo` y `orden`-- así que no costó una migración de esquema, solo la siembra de los dos dominios. A diferencia de los otros catálogos **no sale en `GET /api/catalogos`**, que lo lee cualquier usuario: lo sirve un router de admin.
+
+El CRUD va en su propio router y no colgado de `/admin/usuarios`, para que la URL diga qué es y para no poner rutas nuevas al lado de `/{usuario_id}`, donde un `dominios` como path param es una colisión esperando.
+
+### La lista vacía cierra, no abre
+
+**Es el cambio que más importa** y el que justifica sacar la variable de entorno. `DOMINIOS_EMAIL` vacía significaba «sin restricción»: en un campo que se edita a mano, borrarlo por error habría abierto la aplicación a cualquier dominio en silencio. Ahora la lista vacía es lo más cerrado que hay --todo correo pide autorización explícita-- y no bloquea a nadie, porque autorizar siempre es posible. Un accidente tiene que cerrar.
+
+Y con la lista en la base, la variable desaparece del código, del README y de Render: si quedaran las dos, el día que discrepen nadie sabría cuál manda.
+
+### El rastro es un hecho del pasado, y por eso se guarda
+
+Dos columnas en `usuarios`: quién autorizó y cuándo. **No se deriva del correo**: si mañana alguien agrega `gmail.com` a la lista, sigue siendo cierto que ese acceso se autorizó a mano y quién lo hizo. Derivarlo haría que el rastro cambiara solo.
+
+El `ondelete` es `SET NULL` y no `CASCADE`: si algún día se borra la cuenta del admin que autorizó, el usuario externo no puede desaparecer con ella.
+
+Y el rastro **sigue al correo**: si a un externo se le cambia el correo a uno de la organización, la autorización deja de aplicar --ese correo ya no la necesita-- y si pasa a otro externo, queda quién lo autorizó esta vez. Editarle el rol o el nombre no vuelve a preguntar nada.
+
+### Lo que esta lista no hace
+
+**No re-valida hacia atrás.** Se aplica al crear un usuario o al cambiarle el correo. Quitar un dominio no le saca el acceso a nadie que ya lo tenga, y el botón de quitar lo dice en su tooltip, porque parece hacer más de lo que hace. Para cortar un acceso está el switch `activo`, que se chequea en cada request --una pestaña ya abierta muere en el siguiente clic--.
+
+Con eso, dar acceso a un director de Dataprop es: crear el usuario con rol `gerencia` --solo lectura en las pantallas de edición-- y autorizar el correo externo. Las dos cosas desde la app.
+
+### Verificado
+
+40 tests nuevos, la migración corrida contra `dev` y el flujo completo probado contra Postgres por HTTP: sin autorizar da 400 con su mensaje, autorizando da 201 con `externo_autorizado_por: "Felipe Donoso"`. Capturas de la sección de dominios, de la insignia «Externo» en el listado y del aviso en el alta.
+
+**Dos tests fallan y no es por este cambio:** `test_la_bandeja_devuelve_el_compromiso` y `test_el_rastro_no_agenda_seguimiento_ni_borra_el_que_habia` comparan una fecha local contra una UTC, así que fallan entre las 20:00 y la medianoche de Chile, cuando las dos fechas dejan de coincidir. Se comprobó apartando los cambios con `git stash`: fallan igual sin ellos. Queda anotado como pendiente aparte.
