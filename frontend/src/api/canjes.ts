@@ -7,7 +7,7 @@
  *  La **etapa** `CERRADO` y este estado son cosas distintas: la etapa dice hasta
  *  dónde llegó el proceso, el estado en qué terminó. */
 export type CanjeEstado = 'ACTIVO' | 'CERRADO' | 'CANCELADO'
-export type CanjeEtapa = 'RECEPCION' | 'EN_REVISION' | 'PROCESO_DE_ACUERDO' | 'EN_OFERTA' | 'EN_NEGOCIO' | 'CERRADO'
+export type CanjeEtapa = 'EN_REVISION' | 'PROCESO_DE_ACUERDO' | 'EN_OFERTA' | 'EN_NEGOCIO' | 'CERRADO'
 export type OperacionTipo = 'VENTA' | 'ARRIENDO' | 'OTRO'
 export type MonedaTipo = 'CLP' | 'UF' | 'OTRA'
 

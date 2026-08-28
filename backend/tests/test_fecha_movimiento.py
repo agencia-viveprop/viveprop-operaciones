@@ -42,7 +42,7 @@ def canje(db):
         id=500,
         fecha_solicitud=SOLICITUD,
         estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.RECEPCION,
+        etapa=CanjeEtapa.EN_REVISION,
         comuna="Santiago",
     ))
     db.commit()
@@ -160,7 +160,7 @@ def test_nada_se_guarda_cuando_la_fecha_se_rechaza(canje):
     assert canje.query(Movimiento).count() == 0
     c = canje.get(Canje, 500)
     assert c.gestionado_en_app is False
-    assert c.etapa == CanjeEtapa.RECEPCION
+    assert c.etapa == CanjeEtapa.EN_REVISION
 
 
 # ------------------------------------------------------------------ negocios
@@ -450,7 +450,7 @@ def test_no_se_puede_borrar_un_movimiento_de_otro_canje(canje):
 
     canje.add(Canje(
         id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.RECEPCION, comuna="Santiago",
+        etapa=CanjeEtapa.EN_REVISION, comuna="Santiago",
     ))
     canje.commit()
     m = crear_movimiento_canje(canje, 500, "GESTION_INICIAL", autor_id=None)
@@ -480,7 +480,7 @@ def test_el_endpoint_rechaza_un_movimiento_de_otro_canje(cliente, canje):
     porque el canje no exista --que es otro error y otro camino."""
     canje.add(Canje(
         id=501, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
-        etapa=CanjeEtapa.RECEPCION, comuna="Santiago",
+        etapa=CanjeEtapa.EN_REVISION, comuna="Santiago",
     ))
     canje.commit()
     creado = cliente.post(

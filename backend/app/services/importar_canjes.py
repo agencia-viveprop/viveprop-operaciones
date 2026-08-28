@@ -31,7 +31,11 @@ COLUMNAS_REQUERIDAS = [
 
 ESTADO_MAP = {"Activo": CanjeEstado.ACTIVO, "Cancelado": CanjeEstado.CANCELADO}
 ETAPA_MAP = {
-    "Sin etapa": CanjeEtapa.RECEPCION,
+    # Dataprop exporta «Sin etapa» cuando todavía no clasificó el canje. Entra
+    # como **En revisión** y no como una etapa propia: que el canje esté en esta
+    # app significa que ViveProp lo tomó, y tomarlo es el inicio de la revisión.
+    # Antes esto creaba una etapa «Recepción» donde nadie pasaba tiempo (`D-081`).
+    "Sin etapa": CanjeEtapa.EN_REVISION,
     "En revisión": CanjeEtapa.EN_REVISION,
     "Proceso de acuerdo": CanjeEtapa.PROCESO_DE_ACUERDO,
     "En oferta": CanjeEtapa.EN_OFERTA,
@@ -122,7 +126,7 @@ def _parsear_fila(headers: dict[str, int], fila: tuple) -> _FilaParseada:
         fecha_solicitud=fecha_solicitud,
         fecha_cierre=_fecha(val("FECHA_CIERRE")),
         estado=estado,
-        etapa=_mapear(val("ETAPA"), ETAPA_MAP, "ETAPA") or CanjeEtapa.RECEPCION,
+        etapa=_mapear(val("ETAPA"), ETAPA_MAP, "ETAPA") or CanjeEtapa.EN_REVISION,
         corredor_solicitante_nombre=_texto(val("NOMBRE_CORREDOR_SOLICITANTE")),
         corredor_propietario_nombre=_texto(val("NOMBRE_CORREDOR_PROPIETARIO")),
         corredor_solicitante_email=_texto(val("EMAIL_CORREDOR_SOLICITANTE")),

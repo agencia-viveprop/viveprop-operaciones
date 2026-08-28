@@ -32,12 +32,12 @@ def cartera(db):
 
     `EN_REVISION` queda sin ningún canje a propósito: una etapa sin datos tiene
     que aparecer en cero, no desaparecer de la lista, o la pantalla mostraría
-    cinco tiles un día y seis al siguiente.
+    cuatro tiles un día y cinco al siguiente.
     """
     _canje(db, 1, CanjeEtapa.EN_OFERTA, CanjeEstado.ACTIVO)
     _canje(db, 2, CanjeEtapa.EN_OFERTA, CanjeEstado.CANCELADO)
     _canje(db, 3, CanjeEtapa.EN_OFERTA, CanjeEstado.CANCELADO)
-    _canje(db, 4, CanjeEtapa.RECEPCION, CanjeEstado.CANCELADO)
+    _canje(db, 4, CanjeEtapa.PROCESO_DE_ACUERDO, CanjeEstado.CANCELADO)
     _canje(db, 5, CanjeEtapa.EN_NEGOCIO, CanjeEstado.ACTIVO)
     _canje(db, 6, CanjeEtapa.CERRADO, CanjeEstado.CANCELADO)
     db.commit()
@@ -54,11 +54,11 @@ def test_cada_etapa_trae_su_total_y_su_desglose(cartera):
     negocio = por_etiqueta["En negocio"]
     assert (negocio.cantidad, negocio.activos, negocio.cancelados) == (1, 1, 0)
 
-    recepcion = por_etiqueta["Recepción"]
-    assert (recepcion.cantidad, recepcion.activos, recepcion.cancelados) == (1, 0, 1)
+    acuerdo = por_etiqueta["Proceso de acuerdo"]
+    assert (acuerdo.cantidad, acuerdo.activos, acuerdo.cancelados) == (1, 0, 1)
 
 
-def test_las_seis_etapas_aparecen_siempre_aunque_esten_en_cero(cartera):
+def test_las_cinco_etapas_aparecen_siempre_aunque_esten_en_cero(cartera):
     r = obtener_resumen_canjes(cartera)
 
     assert [e.etiqueta for e in r.por_etapa] == list(ETAPA_LABELS.values())
@@ -108,8 +108,8 @@ def test_sin_canjes_el_resumen_no_se_cae(db):
     assert (r.total, r.activos, r.cancelados) == (0, 0, 0)
     assert r.tasa_activos_pct == 0.0
     assert r.activos_con_etapa_cerrada == 0
-    # Las seis etapas siguen estando, en cero.
-    assert len(r.por_etapa) == 6
+    # Las cinco etapas siguen estando, en cero. Eran seis hasta `D-081`.
+    assert len(r.por_etapa) == 5
     assert all(e.cantidad == 0 for e in r.por_etapa)
 
 

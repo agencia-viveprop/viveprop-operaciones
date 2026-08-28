@@ -54,7 +54,7 @@ def base(db):
                        sla_es_habil=False, activo=False),
     ])
     db.add(Canje(id=1, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
-                 etapa=CanjeEtapa.RECEPCION, comuna="Santiago"))
+                 etapa=CanjeEtapa.EN_REVISION, comuna="Santiago"))
     db.commit()
     return db
 
@@ -141,7 +141,7 @@ def test_sin_etapa_indicada_manda_la_del_tipo(base):
 def test_sin_etapa_y_con_un_tipo_que_no_la_impone_el_canje_no_se_mueve(base):
     crear_movimiento_canje(base, 1, "SEG_LLAMADO", autor_id=None)
 
-    assert base.get(Canje, 1).etapa == CanjeEtapa.RECEPCION
+    assert base.get(Canje, 1).etapa == CanjeEtapa.EN_REVISION
 
 
 def test_la_cancelacion_sigue_cancelando(base):
@@ -180,15 +180,31 @@ def test_borrar_un_movimiento_devuelve_la_etapa_que_habia(base):
 # ---------------------------------------------------------------- el catálogo
 
 
-def test_la_etapa_de_entrada_se_llama_recepcion():
-    """Se llamaba `SIN_ETAPA`, que describía la falta de dato en el export de
-    Dataprop y no un estado del negocio."""
-    assert CanjeEtapa.RECEPCION.value == "RECEPCION"
+def test_el_ciclo_tiene_cinco_etapas_y_arranca_en_revision():
+    """`RECEPCION` se fue, y con ella la etapa que nadie usaba (`D-081`).
+
+    Nacio como `SIN_ETAPA` --describia que el export de Dataprop no traia etapa--
+    y `b8f3a71c904e` la renombro suponiendo que un canje que entro y no avanzo
+    esta "en recepcion". Medido en produccion: los tramos daban 0 dias y los 75
+    canjes que la tenian estaban todos cancelados.
+
+    El valor sigue en el tipo de Postgres porque un enum no admite quitarlo; lo
+    que se fija aca es que la app no lo conoce mas.
+    """
+    assert not hasattr(CanjeEtapa, "RECEPCION")
     assert not hasattr(CanjeEtapa, "SIN_ETAPA")
     assert [e.value for e in CanjeEtapa] == [
-        "RECEPCION", "EN_REVISION", "PROCESO_DE_ACUERDO",
-        "EN_OFERTA", "EN_NEGOCIO", "CERRADO",
+        "EN_REVISION", "PROCESO_DE_ACUERDO", "EN_OFERTA", "EN_NEGOCIO", "CERRADO",
     ]
+
+
+def test_un_canje_nuevo_arranca_en_revision(db):
+    """La primera etapa en la que alguien hace algo."""
+    canje = Canje(id=900, fecha_solicitud=SOLICITUD)
+    db.add(canje)
+    db.commit()
+
+    assert db.get(Canje, 900).etapa == CanjeEtapa.EN_REVISION
 
 
 def test_los_tipos_viejos_siguen_existiendo_para_el_historial(base):
@@ -252,7 +268,7 @@ def test_cambiar_la_etapa_en_la_ficha_deja_rastro(cliente, base):
     distintas y el cambio no tenia fecha ni autor.
     """
     ficha = cliente.get("/api/canjes/1").json()
-    assert ficha["etapa"] == "RECEPCION"
+    assert ficha["etapa"] == "EN_REVISION"
 
     r = cliente.patch("/api/canjes/1", json={"etapa": "EN_OFERTA"})
 
@@ -265,7 +281,7 @@ def test_cambiar_la_etapa_en_la_ficha_deja_rastro(cliente, base):
     assert movs[0]["etapa_resultante"] == "EN_OFERTA"
     # El comentario dice de donde a donde, con los rotulos y no los codigos: lo
     # lee una persona en la linea de tiempo, y "EN_OFERTA" ahi es ruido.
-    assert "Recepción" in movs[0]["comentario"]
+    assert "En revisión" in movs[0]["comentario"]
     assert "En oferta" in movs[0]["comentario"]
     assert "ficha del canje" in movs[0]["comentario"]
 
@@ -280,7 +296,7 @@ def test_editar_la_ficha_sin_tocar_la_etapa_no_registra_nada(cliente, base):
 
 def test_guardar_la_misma_etapa_no_registra_nada(cliente, base):
     """Apretar Guardar sin cambiar la etapa no puede ensuciar la bitacora."""
-    cliente.patch("/api/canjes/1", json={"etapa": "RECEPCION"})
+    cliente.patch("/api/canjes/1", json={"etapa": "EN_REVISION"})
 
     assert cliente.get("/api/canjes/1/movimientos").json() == []
 

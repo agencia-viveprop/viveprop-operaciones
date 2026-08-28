@@ -32,10 +32,21 @@ class CanjeEstado(str, enum.Enum):
 
 
 class CanjeEtapa(str, enum.Enum):
-    # Un canje que entró y no avanzó. Se llamaba `SIN_ETAPA` --que describía la
-    # ausencia de dato en el export de Dataprop, no un estado del negocio-- y la
-    # migración `b8f3a71c904e` lo renombró.
-    RECEPCION = "RECEPCION"
+    """Las cinco etapas del ciclo de un canje.
+
+    **Hubo una sexta, `RECEPCION`, y ya no está** (`D-081`). Nació como
+    `SIN_ETAPA` --describía que el export de Dataprop no traía etapa-- y la
+    migración `b8f3a71c904e` la renombró razonando que «la etapa que corresponde a
+    un canje que entró y no avanzó es Recepción». Eso fue el error: le puso nombre
+    de etapa a una ausencia. Medido sobre producción, ningún canje pasaba tiempo
+    en ella --los tramos daban 0 días-- y los 75 que la tenían estaban todos
+    cancelados. Ahora un canje arranca en `EN_REVISION`, que es la primera etapa en
+    la que alguien hace algo.
+
+    El valor sigue existiendo en el tipo `canje_etapa` de Postgres, porque un enum
+    no admite quitar valores. No hay ninguna fila que lo use.
+    """
+
     EN_REVISION = "EN_REVISION"
     PROCESO_DE_ACUERDO = "PROCESO_DE_ACUERDO"
     EN_OFERTA = "EN_OFERTA"
@@ -78,7 +89,6 @@ CORREDOR_LABELS = {
 # `movimientos.etapa_resultante`, así que renombrarlo pediría actualizar filas
 # para ganar nada. Ver `b8f3a71c904e`.
 ETAPA_LABELS = {
-    CanjeEtapa.RECEPCION: "Recepción",
     CanjeEtapa.EN_REVISION: "En revisión",
     CanjeEtapa.PROCESO_DE_ACUERDO: "Proceso de acuerdo",
     CanjeEtapa.EN_OFERTA: "En oferta",
@@ -118,7 +128,7 @@ class Canje(Base):
     fecha_cierre: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     estado: Mapped[CanjeEstado] = mapped_column(Enum(CanjeEstado, name="canje_estado"), nullable=False, default=CanjeEstado.ACTIVO)
-    etapa: Mapped[CanjeEtapa] = mapped_column(Enum(CanjeEtapa, name="canje_etapa"), nullable=False, default=CanjeEtapa.RECEPCION)
+    etapa: Mapped[CanjeEtapa] = mapped_column(Enum(CanjeEtapa, name="canje_etapa"), nullable=False, default=CanjeEtapa.EN_REVISION)
 
     corredor_solicitante_nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     corredor_solicitante_email: Mapped[str | None] = mapped_column(String(255), nullable=True)

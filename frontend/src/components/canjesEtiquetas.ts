@@ -13,7 +13,6 @@ import type { CanjeEtapa } from '../api/canjes'
  * al lado del enum. Acá está la traducción para mostrar.
  */
 export const ETAPA_LABELS: Record<CanjeEtapa, string> = {
-  RECEPCION: 'Recepción',
   EN_REVISION: 'En revisión',
   PROCESO_DE_ACUERDO: 'Proceso de acuerdo',
   EN_OFERTA: 'En oferta',
@@ -26,6 +25,17 @@ export const ETAPA_LABELS: Record<CanjeEtapa, string> = {
  *  Sale de las claves del mapa y no de una segunda lista: dos listas del mismo
  *  conjunto se desincronizan en cuanto alguien agrega una etapa en una sola. */
 export const ETAPAS = Object.keys(ETAPA_LABELS) as CanjeEtapa[]
+
+/** Etapas que ya no son parte del ciclo, para que un dato viejo no salga crudo.
+ *
+ *  Van aparte de `ETAPA_LABELS` a propósito: ese mapa es el que define el
+ *  selector y el orden del pipeline, así que dejar acá una etapa retirada la
+ *  volvería a ofrecer para elegir. La migración de `D-081` no dejó ninguna fila
+ *  con `RECEPCION`, pero un rótulo que no cuesta nada es mejor que un código
+ *  crudo si alguna vez aparece una. */
+const ETAPAS_RETIRADAS: Record<string, string> = {
+  RECEPCION: 'Recepción',
+}
 
 export const CORREDOR_LABELS: Record<string, string> = {
   SOLICITANTE: 'Corredor solicitante',
@@ -44,7 +54,7 @@ export const CORREDOR_LABELS: Record<string, string> = {
  * `EN_OFERTA` que una celda vacía.
  */
 export function rotuloEtapa(codigo: string): string {
-  return ETAPA_LABELS[codigo as CanjeEtapa] ?? codigo
+  return ETAPA_LABELS[codigo as CanjeEtapa] ?? ETAPAS_RETIRADAS[codigo] ?? codigo
 }
 
 /** Lo mismo para el corredor sobre el que se hizo la gestión. */

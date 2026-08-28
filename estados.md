@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - «Recepcion» deja de ser una etapa
+
+Salio de medir para el recuadro que pediste: «Recepcion» daba 0 dias, y de ahi tu observacion de que no tiene sentido como etapa. Tenias razon, y la historia del valor lo explica -- nacio como `SIN_ETAPA` (Dataprop no mandaba etapa) y una migracion vieja lo renombro suponiendo que un canje que entro y no avanzo esta "en recepcion". Le puso nombre de etapa a una ausencia.
+
+**Lo que medi en produccion antes de tocar nada:** los 75 canjes que la tenian estaban **todos cancelados**, ninguno activo; ningun tipo de movimiento la asigna; y los dos movimientos que la traian salieron del selector manual del modal.
+
+**Ahora:** esos 75 pasaron a «En revision» como pediste --el dashboard muestra 99 ahi, los 75 mas los 24 que ya venian marcados-- y un canje nuevo arranca en «En revision», sea creado a mano o importado sin etapa. El ciclo queda con cinco etapas y el dashboard con cinco recuadros.
+
+**Lo que se pierde, dicho una vez mas porque no tiene vuelta:** los 75 ya no se distinguen de los que Dataprop si habia marcado «En revision». Si algun dia hace falta, la vuelta es el historial de Neon.
+
+**Y el recuadro que originó todo esto sigue pendiente**, porque el dato todavia no existe: 5 tramos cerrados en total, tres de 0 dias, y tres etapas sin un solo caso. Deje `app/scripts/medir_duracion_etapas.py` para volver a medirlo cuando quieras.
+
+**Verificado:** 773 tests, la migracion corrida contra `dev` --75 movidos, cero quedaron en Recepcion--, `alembic check` limpio, build y lint sin hallazgos, y captura del dashboard con las cinco etapas. Ver `D-081`.
+
 ### 2026-08-28 - El historial desplegado empieza por lo ultimo que paso
 
 Me pediste el orden inverso al que habiamos hecho en su momento, y tenias razon: tus canjes abiertos tienen 5, 8, 13 y 14 registros, y con esos largos lo que uno abre a mirar es **en que quedo**, no de donde viene. Con orden ascendente habia que recorrer la lista completa para llegar a lo ultimo.

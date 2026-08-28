@@ -68,7 +68,7 @@ class CanjeCreate(BaseModel):
     id: int
     fecha_solicitud: datetime
     estado: CanjeEstado = CanjeEstado.ACTIVO
-    etapa: CanjeEtapa = CanjeEtapa.RECEPCION
+    etapa: CanjeEtapa = CanjeEtapa.EN_REVISION
     corredor_solicitante_nombre: str | None = None
     corredor_solicitante_email: str | None = None
     corredor_propietario_nombre: str | None = None

@@ -100,13 +100,20 @@ def test_una_fila_invalida_no_frena_a_las_demas(db, fila, construir_xlsx):
     assert db.get(Canje, 602) is not None
 
 
-def test_etapa_vacia_cae_en_sin_etapa(db, fila, construir_xlsx):
+def test_etapa_vacia_entra_en_revision(db, fila, construir_xlsx):
+    """Dataprop manda «Sin etapa» cuando todavia no lo clasifico.
+
+    Entra como **En revision** y no como una etapa propia: que el canje este en
+    esta app significa que ViveProp lo tomo, y tomarlo es el inicio de la
+    revision. Antes esto creaba una etapa «Recepcion» donde nadie pasaba tiempo
+    (`D-081`).
+    """
     f = fila(701)
     f["ETAPA"] = None
 
     importar_canjes(db, construir_xlsx([f]))
 
-    assert db.get(Canje, 701).etapa == CanjeEtapa.RECEPCION
+    assert db.get(Canje, 701).etapa == CanjeEtapa.EN_REVISION
 
 
 def test_una_consulta_y_un_commit_para_todo_el_archivo(db, fila, construir_xlsx, monkeypatch):

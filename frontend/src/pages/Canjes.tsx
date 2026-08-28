@@ -63,7 +63,7 @@ function vacio() {
     comision_dataprop_moneda: '',
     notas: '',
     estado: 'ACTIVO' as CanjeEstado,
-    etapa: 'RECEPCION' as CanjeEtapa,
+    etapa: 'EN_REVISION' as CanjeEtapa,
   }
 }
 

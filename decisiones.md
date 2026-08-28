@@ -2047,3 +2047,40 @@ Así que la lista interna del servicio se queda ascendente y lo que se invierte 
 ### Lo que no cambió
 
 El rótulo de arriba del historial ahora dice «del más reciente al más antiguo», porque un orden que no se anuncia obliga a deducirlo de las fechas. Y la ficha del canje ya venía así: esta pestaña era la que iba al revés.
+
+---
+
+## D-081 · «Recepción» deja de ser una etapa
+
+Revierte `b8f3a71c904e`, y la revierte por medición. El usuario pidió un recuadro con la duración promedio por etapa; al medir para saber si el dato existía, apareció que **«Recepción» daba 0 días** y de ahí salió su observación: *"no tiene ningún sentido la etapa Recepción"*.
+
+Tenía razón, y la historia del valor explica por qué. Nació como `SIN_ETAPA` --describía que el export de Dataprop no traía etapa-- y `b8f3a71c904e` lo renombró razonando que *«la etapa que corresponde a un canje que entró y no avanzó es Recepción»*. Ese fue el error: **le puso nombre de etapa a una ausencia de dato.** Nadie trabaja «en Recepción», y por eso ningún canje pasaba tiempo ahí.
+
+### Lo que se midió antes de decidir
+
+Sobre producción, no sobre supuestos:
+
+- La etapa quedaba registrada en **32 de 631** movimientos de canje, todos de los últimos diez días. Los tramos cerrados de «Recepción» daban **0 días**.
+- Los **75 canjes** que la tenían estaban **todos cancelados**. Ninguno activo.
+- **Ningún `tipos_movimiento` la asigna.** Los dos movimientos que la traían se registraron eligiéndola a mano en el selector del modal, que este cambio saca.
+
+### La decisión, y la que se descartó
+
+Propuse renombrarla «Sin etapa» --que es lo que dice la fuente-- y sacarla del pipeline, dejando los 75 como estaban. El usuario prefirió que esos 75 pasen a «En revisión» *"y así quedan todos con una etapa real"*. Se hizo eso.
+
+**Lo que se pierde, y queda escrito acá porque una migración no lo puede devolver:** los 75 que Dataprop mandó sin etapa ya no se distinguen de los 24 que sí venían marcados «En revisión». La vuelta atrás es el historial de Neon, no un `downgrade` --que por eso está vacío y lo dice--.
+
+### El criterio que queda escrito
+
+Un canje **arranca en «En revisión»**, tanto creado a mano como importado sin etapa. Es una afirmación, no una conveniencia: que el canje esté en esta app significa que ViveProp lo tomó, y tomarlo es el inicio de la revisión. El ciclo queda con cinco etapas de verdad: En revisión → Proceso de acuerdo → En oferta → En negocio → Cierre.
+
+### Detalles que no se ven pero importan
+
+- **El valor sigue en el tipo `canje_etapa` de Postgres.** Un enum no admite quitar valores, y recrear el tipo para borrar uno que ninguna fila usa sería mucho riesgo por nada. Queda huérfano; la app no lo conoce.
+- **La migración toca tres tablas**: `canjes.etapa`, `movimientos.etapa_resultante` --si no, la insignia del historial de dos canjes mostraría un código que la pantalla ya no rotula-- y `tipos_movimiento.etapa_resultante`, por si algún día se configura uno.
+- **El rótulo «Recepción» sobrevive en el frontend**, pero en un mapa aparte de `ETAPA_LABELS`. Ese mapa define el selector y el orden del pipeline, así que dejarlo ahí lo habría vuelto a ofrecer para elegir. En el mapa de retiradas solo sirve para que un dato viejo no salga como código crudo.
+- **La rampa de colores del dashboard arranca un paso más oscuro.** Los colores se asignan por posición, así que al pasar de seis etapas a cinco cada una habría cambiado de color sin motivo. Empezando en `brand.3`, las cinco conservan el que tenían.
+
+### Y el recuadro que originó todo sigue pendiente
+
+Con «Recepción» fuera, el futuro panel de duración por etapa arranca en la primera etapa real y se le van los tramos de 0 días. Pero sigue faltando el dato: al momento de este cambio hay **5 tramos cerrados en total**, tres de ellos de 0 días, y tres de las cinco etapas sin un solo caso. `app/scripts/medir_duracion_etapas.py` es el diagnóstico que dice cuándo ya se puede.

@@ -8,7 +8,13 @@ import BarList from './BarList'
 import EstadoConsulta from './EstadoConsulta'
 import PlataDeCanjes from './PlataDeCanjes'
 
-const ETAPA_COLORS = ['brand.2', 'brand.3', 'brand.4', 'brand.5', 'brand.6', 'brand.7']
+/** La rampa del pipeline: cuanto mas avanzado, mas oscuro.
+ *
+ *  Arranca en `brand.3` y no en `brand.2` porque las etapas pasaron de seis a
+ *  cinco (`D-081`) y los colores se asignan por posicion: empezando un paso mas
+ *  claro, cada etapa que sobrevivio habria cambiado de color sin motivo. Asi las
+ *  cinco conservan el que ya tenian. */
+const ETAPA_COLORS = ['brand.3', 'brand.4', 'brand.5', 'brand.6', 'brand.7']
 
 /** Qué se cuenta en los tiles de etapa, y de qué campo sale cada opción. */
 const VISTAS = [
@@ -81,7 +87,7 @@ export default function DashboardCanjes() {
           </Group>
         </Group>
 
-        <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }}>
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }}>
           {resumen.por_etapa.map((e, i) => (
             <StatCard
               key={e.etiqueta}
