@@ -237,13 +237,30 @@ def test_lo_cerrado_sale_de_la_fecha_de_cierre_y_suma_la_comision(db):
 
 def test_los_canjes_cerrados_no_traen_monto(db):
     """Un canje no lleva comision propia: sumar cero seria inventar plata."""
-    _canje(db, 1, etapa=CanjeEtapa.CERRADO, cierre=_hace(2))
+    _canje(db, 1, estado=CanjeEstado.CERRADO, etapa=CanjeEtapa.CERRADO, cierre=_hace(2))
     db.commit()
 
     seccion = _reporte(db).canjes
     assert seccion.total_cerrados == 1
     assert seccion.monto_cerrado == D("0")
     assert seccion.cerrados[0].detalle == "Ana Solicitante"
+
+
+def test_un_cancelado_con_la_etapa_en_cierre_no_es_un_cierre(db):
+    """**Los 31 del desalineamiento de Dataprop.**
+
+    Llegaron a la etapa de firma y se cayeron igual: la etapa dice hasta donde
+    llego el proceso y el estado en que termino (`D-071`). El reporte preguntaba
+    por la etapa, asi que uno de esos con fecha de cierre en la ventana habria
+    aparecido como un canje cerrado.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO, etapa=CanjeEtapa.CERRADO, cierre=_hace(2))
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_cerrados == 0, "se cayo, no se cerro"
+    # Y aparece donde corresponde: en las caidas, por su fecha de cancelacion.
+    assert seccion.total_caidos == 1
 
 
 # -------------------------------------------------------------- estancados
@@ -608,3 +625,56 @@ def test_los_negocios_usan_la_misma_regla(db, tipos):
     seccion = _reporte(db).negocios
     assert seccion.total_avanzados == 1, "solo el de fecha real"
     assert seccion.movimientos_con_fecha_de_carga == 2
+
+
+# ------------------ las cancelaciones que solo existen como fecha de cierre
+
+
+def test_una_cancelacion_sin_movimiento_se_cuenta_por_su_fecha_de_cierre(db):
+    """**El defecto que el usuario encontro.**
+
+    Dataprop manda la fecha de cancelacion de los canjes recientes --47 de 293, y
+    nueve en agosto-- y esos canjes no tienen movimiento de cancelacion: no se
+    cancelaron en la app. Mirando solo los movimientos, «Se cayo» daba cero en
+    todas las ventanas y el usuario sabia que en agosto si hubo cancelaciones.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=_hace(2))
+    _canje(db, 2, estado=CanjeEstado.CANCELADO, cierre=_hace(30))
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_caidos == 1, "solo el de la ventana"
+    item = seccion.caidos[0]
+    assert (item.referencia, item.fecha) == ("#1", _hace(2).date())
+    # La fila no tiene autor ni comentario, asi que dice de donde viene la fecha.
+    assert item.tipo == "Cancelado"
+    assert "export de Dataprop" in item.comentario
+    assert item.registros == 0
+
+
+def test_el_movimiento_le_gana_a_la_fecha_de_cierre(db, tipos):
+    """Si la app registro la cancelacion, esa es la version con autor y comentario.
+
+    Sin esta preferencia el canje saldria dos veces: una por el movimiento y otra
+    por la fecha del export.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=_hace(2))
+    _mov(db, EntityType.canje, 1, "CANCELACION", _hace(3), comentario="se arrepintio")
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_caidos == 1, "un canje, una caida"
+    assert seccion.caidos[0].comentario == "se arrepintio"
+    assert seccion.caidos[0].registros == 1
+
+
+def test_un_cancelado_sin_fecha_de_cierre_no_cae_en_ninguna_ventana(db):
+    """Los 246 viejos: la fecha no existe, y no se puede inventar.
+
+    Aparecen en el dashboard como cancelados --eso es estado, no fecha-- pero
+    ninguna ventana puede reclamarlos.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=None)
+    db.commit()
+
+    assert _reporte(db).canjes.total_caidos == 0

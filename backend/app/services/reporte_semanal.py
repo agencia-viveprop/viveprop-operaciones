@@ -8,8 +8,18 @@ vamos"; esto responde "qué pasó esta semana". Por eso casi todo se calcula des
 `movimientos` y no desde el estado actual de las filas: el estado dice dónde
 estamos, el movimiento dice qué cambió.
 
-La excepción es lo cerrado, que se toma de `fecha_cierre`. Es la fecha en que
-entró la plata y es más confiable que buscar el movimiento que la marcó.
+**Las excepciones son lo cerrado y lo caído de canjes, que salen de
+`fecha_cierre`.** En lo cerrado es la fecha en que entró la plata y es más
+confiable que buscar el movimiento que la marcó. En lo caído de canjes es la
+**única** fecha que existe: Dataprop manda la fecha de cancelación de los canjes
+recientes --47 de 293, todos de los últimos cuatro meses-- y cancelar en la app no
+escribe ese campo, así que hay que mirar los dos lados. Antes se miraban solo los
+movimientos y las nueve cancelaciones de agosto no aparecían en ninguna ventana
+(`D-086`).
+
+Y se filtra por **estado** y no por etapa: los 31 canjes con la etapa en «Cierre»
+están todos cancelados --llegaron a la firma y se cayeron-- así que preguntar por
+la etapa contaría una caída como un cierre.
 
 **"Avanzó" es toda actividad registrada, no solo un cambio de etapa.** En un
 reporte semanal lo que importa es donde hubo progreso, y registrar una
@@ -427,11 +437,15 @@ def _operacion(tipo) -> str | None:
 def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: datetime) -> Seccion:
     inicio, fin = _rango_utc(desde, hasta)
 
+    # **Por estado y no por etapa.** La etapa dice hasta dónde llegó el proceso y
+    # el estado en qué terminó: los 31 canjes con la etapa en «Cierre» están todos
+    # cancelados (`D-071`), así que preguntar por la etapa cuenta una caída como un
+    # cierre en cuanto uno de esos traiga fecha de cierre en la ventana.
     filas_cerradas = db.execute(
         select(Canje.id, Canje.corredor_solicitante_nombre, Canje.fecha_cierre,
                Canje.tipo_operacion, Canje.direccion, Canje.comuna)
         .where(
-            Canje.etapa == CanjeEtapa.CERRADO,
+            Canje.estado == CanjeEstado.CERRADO,
             Canje.fecha_cierre >= inicio,
             Canje.fecha_cierre <= fin,
         )
@@ -486,6 +500,42 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
         for f in movidos
         if f[4] in CAIDA_CANJE
     ])
+
+    # **Y las cancelaciones que solo existen como fecha.** Dataprop manda la fecha
+    # de cancelación de los canjes recientes y cancelar en la app no escribe ese
+    # campo, así que las dos fuentes son parciales y hay que sumarlas: mirando solo
+    # los movimientos, las nueve cancelaciones de agosto no aparecían en ninguna
+    # ventana.
+    #
+    # Se prefiere el movimiento cuando existe: trae el comentario y el autor, y esa
+    # es la versión de la app. El `fecha_cierre` completa lo que la app no vio.
+    con_movimiento = {c.referencia for c in caidos}
+    solo_fecha = db.execute(
+        select(Canje.id, Canje.fecha_cierre, Canje.tipo_operacion,
+               Canje.direccion, Canje.comuna)
+        .where(
+            Canje.estado == CanjeEstado.CANCELADO,
+            Canje.fecha_cierre >= inicio,
+            Canje.fecha_cierre <= fin,
+        )
+    ).all()
+    caidos = caidos + [
+        ItemMovido(
+            referencia=f"#{cid}",
+            fecha=f.date(),
+            tipo="Cancelado",
+            # Se dice de dónde viene la fecha, porque la fila no tiene autor ni
+            # comentario y la columna de registros va a mostrar cero.
+            comentario="sin movimiento registrado; la fecha viene del export de Dataprop",
+            registros=0,
+            operacion=_operacion(op),
+            direccion=calle,
+            comuna=comuna,
+        )
+        for cid, f, op, calle, comuna in solo_fecha
+        if f"#{cid}" not in con_movimiento
+    ]
+    caidos.sort(key=lambda i: i.fecha, reverse=True)
 
     # Abierto es lo mismo que en la bandeja: activo y con etapa distinta de
     # cerrada, para no contar como pendientes los 31 que arrastran el

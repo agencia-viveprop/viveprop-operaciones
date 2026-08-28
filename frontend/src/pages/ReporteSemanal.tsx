@@ -212,10 +212,15 @@ function TablaMovidos({
   items,
   columnaEtapa,
   dominio,
+  /** Qué es la fecha de la fila. En «Avanzó» es la última actualización; en «Se
+   *  cayó» es cuándo se cayó, y muchas de esas filas no tienen movimiento --su
+   *  fecha viene del export-- así que llamarla "actualización" seria falso. */
+  rotuloFecha = 'Última actualización',
 }: {
   items: Seccion['avanzados']
   columnaEtapa: boolean
   dominio: Dominio
+  rotuloFecha?: string
 }) {
   return (
     <Table striped withTableBorder fz="xs" className="tabla-una-linea">
@@ -223,7 +228,7 @@ function TablaMovidos({
         <Table.Tr>
           <Table.Th>Referencia</Table.Th>
           <CabecerasUbicacion dominio={dominio} />
-          <Table.Th>Última actualización</Table.Th>
+          <Table.Th>{rotuloFecha}</Table.Th>
           <Table.Th ta="right">Registros</Table.Th>
           <Table.Th>Qué pasó</Table.Th>
           {columnaEtapa && <Table.Th>Quedó en</Table.Th>}
@@ -364,7 +369,14 @@ function SeccionDominio({
     caidos: {
       largo: seccion.caidos.length,
       total: seccion.total_caidos,
-      nodo: <TablaMovidos items={seccion.caidos} columnaEtapa={false} dominio={dominio} />,
+      nodo: (
+        <TablaMovidos
+          items={seccion.caidos}
+          columnaEtapa={false}
+          dominio={dominio}
+          rotuloFecha="Cuándo se cayó"
+        />
+      ),
     },
     estancados: {
       largo: seccion.estancados.length,

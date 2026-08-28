@@ -2199,3 +2199,33 @@ Sin esa línea, la pantalla mostraría **0** donde el usuario sabe que hay 215 r
 ### Verificado
 
 Contra los datos reales de `dev`, que tiene la misma limpieza con 221 movimientos: «Se cayó» pasó de **221 a 0**, «Avanzó» quedó igual --15 canjes y 86 registros, o sea que las migradas con fecha real no se tocaron-- y el contador informó los 221. Más cinco tests que fijan los cuatro casos: la limpieza, la carga con fechas reales, la cancelación registrada en la app, y que la regla no es solo para cancelaciones.
+
+---
+
+## D-086 · La fecha de cancelación existe, y el reporte no la miraba
+
+El usuario avisó que después de `D-085` «Se cayó» quedó en cero en todas las ventanas, y que en agosto sí hubo cancelaciones. Su hipótesis: *"o no estamos [guardando] la fecha de cancelación, o bien existe pero no se utiliza"*. **La segunda, exactamente.**
+
+### Lo que muestran los datos
+
+- **47 de los 293 cancelados tienen `fecha_cierre`**, y son los recientes: 9 en agosto de 2026, 12 en julio, 13 en junio, 13 en mayo. Dataprop manda la fecha de cancelación de los últimos meses.
+- De los 8 cancelados con solicitud en agosto, **6 tienen esa fecha y ninguno tiene movimiento de cancelación**: no se cancelaron en la app, así que no había ningún movimiento que mirar.
+- Los 246 restantes no tienen fecha. Son los viejos, y ahí la fecha no existe en ninguna parte.
+
+Así que las dos fuentes son **parciales y complementarias**: `fecha_cierre` cubre lo que informa Dataprop, el movimiento cubre lo que se cancela en la app --que no escribe ese campo--. `D-085` sacó las 215 falsas y dejó el recuadro honesto pero vacío, porque miraba solo una de las dos.
+
+Ahora se suman, prefiriendo el movimiento cuando existe: trae comentario y autor, que es la versión de la app. Verificado contra `dev`: la ventana de cuatro semanas pasó de 0 a **9 caídas**, la semana del 3 al 9 muestra 7 y la del 10 al 16 muestra 2, cada una con su fecha real.
+
+### Las filas que no tienen movimiento lo dicen
+
+Una caída que solo existe como fecha no tiene autor ni comentario, y su columna «Registros» muestra **0**. Un cero sin explicación se lee como un error, así que la fila dice de dónde viene: *«Cancelado · sin movimiento registrado; la fecha viene del export de Dataprop»*.
+
+Y la columna de fecha cambia de rótulo según la casilla: en «Avanzó» es «Última actualización», en «Se cayó» es **«Cuándo se cayó»**. Para una fila sin movimiento, llamar «actualización» a la fecha de cancelación sería falso.
+
+### El defecto espejo, encontrado mirando
+
+«Se cerró» de canjes filtraba por `etapa == CERRADO`. **Los 31 canjes con la etapa en «Cierre» están todos cancelados** --llegaron a la firma y se cayeron, que es el hecho que motivó `D-071`--, así que en cuanto uno de esos traiga fecha de cierre en la ventana, el reporte diría que un canje cancelado se cerró. Ahora filtra por `estado == CERRADO`, que es el campo que dice en qué terminó. Hoy da cero igual --no hay canjes cerrados-- pero deja de poder mentir. Tiene test.
+
+### Negocios no tiene este problema
+
+Se midió antes de generalizar: los 10 hitos en estado PERDIDO **no tienen `fecha_cierre`** --ninguno-- así que ahí el movimiento es la única señal y no hay una segunda fuente que sumar. La regla de canjes no se copió a negocios porque no tendría de dónde leer.

@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - La fecha de cancelacion existia y el reporte no la miraba
+
+Tenias razon en la sospecha, y era la segunda opcion: **existe y no se usaba.**
+
+**Lo que encontre.** 47 de los 293 cancelados tienen `fecha_cierre`, y son los recientes: **9 en agosto**, 12 en julio, 13 en junio, 13 en mayo. Dataprop manda la fecha de cancelacion de los ultimos meses. De los 8 cancelados con solicitud en agosto, 6 tienen esa fecha y **ninguno tiene movimiento de cancelacion**: no se cancelaron en la app, asi que no habia movimiento que mirar. Los otros 246 son los viejos y ahi la fecha no existe en ninguna parte.
+
+O sea que las dos fuentes son parciales: el export cubre lo que informa Dataprop y el movimiento cubre lo que se cancela en la app --que no escribe ese campo--. El cambio de anoche saco las 215 falsas y dejo el recuadro honesto pero vacio, porque miraba solo una de las dos. Ahora suma las dos, y cuando hay movimiento le da prioridad porque trae comentario y autor.
+
+**Resultado contra los datos de dev:** la ventana de cuatro semanas paso de 0 a **9 caidas**, la semana del 3 al 9 muestra 7 y la del 10 al 16 muestra 2, cada una con su fecha real.
+
+**Las filas sin movimiento lo dicen:** su columna de registros marca 0 y el texto explica «Cancelado · sin movimiento registrado; la fecha viene del export de Dataprop». Y la columna de fecha, en «Se cayo», pasa a llamarse «Cuando se cayo»: para esas filas, «ultima actualizacion» era falso.
+
+**Y encontre un defecto espejo mirando esto:** «Se cerro» filtraba por la *etapa* en Cierre, y los 31 canjes con esa etapa estan todos cancelados. En cuanto uno traiga fecha de cierre en la ventana, el reporte habria dicho que un canje cancelado se cerro. Ahora filtra por estado. Hoy da cero igual, pero deja de poder mentir.
+
+**Negocios no tiene este problema** -- lo medi antes de copiar la regla: los 10 hitos perdidos no tienen fecha de cierre, ninguno, asi que ahi el movimiento es la unica señal.
+
+**Verificado:** 796 tests --4 nuevos-- y captura del listado con las nueve caidas. Ver `D-086`.
+
 ### 2026-08-28 - «Se cayo» ya no cuenta la limpieza masiva
 
 Me marcaste que «Se cayo» mostraba 215 en una ventana de cuatro semanas, sobre 303 canjes. Tenias razon: la cifra era cierta sobre los movimientos y falsa sobre el negocio.
