@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Alert,
+  Autocomplete,
   Badge,
   Button,
   FileButton,
@@ -26,6 +27,7 @@ import {
   descargarPlantillaCanjes,
   importarCanjes,
   listarCanjes,
+  listarCorredores,
   type Canje,
   type CanjeEstado,
   type CanjeEtapa,
@@ -69,11 +71,27 @@ function vacio() {
 
 export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const queryClient = useQueryClient()
-  const [filtros, setFiltros] = useState<{ estado: string; etapa: string; comuna: string; numero: string }>({
+  const [filtros, setFiltros] = useState<{
+    estado: string
+    etapa: string
+    comuna: string
+    numero: string
+    solicitante: string
+    propietario: string
+  }>({
     estado: '',
     etapa: '',
     comuna: '',
     numero: '',
+    solicitante: '',
+    propietario: '',
+  })
+  // Las sugerencias de los dos filtros de corredor. Se consulta una vez y se
+  // cachea: no depende de los filtros, justamente para que elegir uno no vacie
+  // las opciones de los demas.
+  const { data: corredores } = useQuery({
+    queryKey: ['canjes-corredores'],
+    queryFn: listarCorredores,
   })
   const { data: canjes, isLoading } = useQuery({
     queryKey: ['canjes', filtros],
@@ -244,6 +262,31 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 })
               }
               w={160}
+            />
+            {/* Autocomplete y no Select: es un filtro, no un formulario. El
+                Select obligaria a elegir una opcion exacta, y acá escribir
+                «vicente» y ver los canjes de Vicente Farías tiene que funcionar
+                aunque no se termine de elegir de la lista. Las sugerencias son
+                una ayuda, no un corsé.
+                La lista viene del universo completo --no del listado filtrado--
+                para que elegir un corredor no haga desaparecer a los demas. */}
+            <Autocomplete
+              placeholder="Corredor solicitante"
+              data={corredores?.solicitantes ?? []}
+              value={filtros.solicitante}
+              onChange={(v) => setFiltros({ ...filtros, solicitante: v })}
+              limit={10}
+              clearable
+              w={260}
+            />
+            <Autocomplete
+              placeholder="Corredor propietario"
+              data={corredores?.propietarios ?? []}
+              value={filtros.propietario}
+              onChange={(v) => setFiltros({ ...filtros, propietario: v })}
+              limit={10}
+              clearable
+              w={260}
             />
           </Group>
 

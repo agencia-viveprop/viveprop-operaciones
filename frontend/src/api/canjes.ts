@@ -51,7 +51,14 @@ async function parseOrThrow(res: Response) {
 }
 
 export function listarCanjes(
-  filtros: { estado?: string; etapa?: string; comuna?: string; numero?: string } = {},
+  filtros: {
+    estado?: string
+    etapa?: string
+    comuna?: string
+    numero?: string
+    solicitante?: string
+    propietario?: string
+  } = {},
 ): Promise<Canje[]> {
   const params = new URLSearchParams()
   Object.entries(filtros).forEach(([k, v]) => v && params.set(k, v))
@@ -299,4 +306,19 @@ export type PlataCanjes = {
 
 export function obtenerPlataCanjes(): Promise<PlataCanjes> {
   return fetch('/api/canjes/reportes/plata', { credentials: 'include' }).then(parseOrThrow)
+}
+
+
+/** Los corredores que existen, por rol, para las sugerencias de los filtros.
+ *
+ *  Es el universo completo y no depende de los filtros aplicados: si saliera del
+ *  listado ya filtrado, elegir un corredor haria desaparecer al resto de las
+ *  opciones y para cambiar de corredor habria que limpiar primero. */
+export type CorredoresDisponibles = {
+  solicitantes: string[]
+  propietarios: string[]
+}
+
+export function listarCorredores(): Promise<CorredoresDisponibles> {
+  return fetch('/api/canjes/corredores', { credentials: 'include' }).then(parseOrThrow)
 }

@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Filtros por corredor solicitante y propietario, con sugerencias
+
+Los dos filtros que pediste, cada uno con un campo que va ofreciendo alternativas mientras escribes.
+
+**Son dos y no uno porque son dos preguntas:** con quien estoy trabajando y de quien es la propiedad. El mismo corredor cumple los dos roles --Jorge Roman pide el 360 y Databrokers es propietario del 361-- asi que un filtro unico los mezclaria. Hay un test que arma ese cruce a proposito.
+
+**Las sugerencias no te encierran:** el campo acepta lo que escribas aunque no elijas de la lista, asi que «vicente» te trae los 33 canjes de Vicente Farias sin tener que completar el nombre.
+
+**Y la lista de opciones es la completa, no la del listado ya filtrado.** Esto importa: si saliera de lo que se ve, al elegir un corredor las opciones se reducirian a el, y para cambiar de corredor tendrias que limpiar el filtro primero. Un test compara la lista con y sin filtros y exige que sean iguales.
+
+Un detalle de los datos: seis canjes no tienen corredor propietario cargado. No aparecen como una opcion en blanco, y con ese filtro puesto no van a salir nunca -- que es correcto, no se sabe de quien es.
+
+**Verificado:** 787 tests --7 nuevos--, probado contra Postgres (106 solicitantes, 134 propietarios, sin vacios; «vicente» filtro 33 canjes) y capturas de la fila de filtros y del desplegable de sugerencias abierto. Ver `D-084`.
+
 ### 2026-08-28 - Filtro por N de solicitud en el listado de canjes
 
 El cuarto filtro, al lado de Comuna. Busca por el numero de la primera columna, que es el ID_CANJE de Dataprop.

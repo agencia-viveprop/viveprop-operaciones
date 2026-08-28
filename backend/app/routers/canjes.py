@@ -178,6 +178,12 @@ def listar(
     estado: CanjeEstado | None = None,
     etapa: CanjeEtapa | None = None,
     comuna: str | None = None,
+    # **Cada rol filtra su propia columna.** Un corredor puede ser solicitante en
+    # un canje y propietario en otro --Jorge Román pide el 360 y Databrokers tiene
+    # el 361-- asi que un filtro unico sobre "el corredor" mezclaria dos preguntas
+    # distintas: con quien estoy trabajando y de quien es la propiedad.
+    solicitante: str | None = None,
+    propietario: str | None = None,
     numero: str | None = Query(
         None,
         description=(
@@ -195,6 +201,10 @@ def listar(
         query = query.where(Canje.etapa == etapa)
     if comuna:
         query = query.where(Canje.comuna.ilike(f"%{comuna}%"))
+    if solicitante:
+        query = query.where(Canje.corredor_solicitante_nombre.ilike(f"%{solicitante}%"))
+    if propietario:
+        query = query.where(Canje.corredor_propietario_nombre.ilike(f"%{propietario}%"))
     if numero:
         # **Por prefijo y no por igualdad.** Teclear un número incompleto no puede
         # devolver una lista vacía: mientras se escribe «364», el «3» y el «36»
@@ -211,6 +221,45 @@ def listar(
             query = query.where(cast(Canje.id, String).like(f"{digitos}%"))
     query = query.order_by(Canje.fecha_solicitud.desc())
     return db.scalars(query).all()
+
+
+class CorredoresDisponibles(BaseModel):
+    """Los nombres que existen, para que el filtro sugiera en vez de adivinar.
+
+    Van **separados por rol** porque los filtros son dos: ofrecer en «solicitante»
+    a alguien que solo aparece como propietario daria una sugerencia que no
+    devuelve nada.
+    """
+
+    solicitantes: list[str]
+    propietarios: list[str]
+
+
+@router.get("/corredores", response_model=CorredoresDisponibles)
+def corredores(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    """Los corredores distintos de cada rol, ordenados.
+
+    **La lista es el universo completo y no depende de los filtros aplicados.**
+    Si saliera del listado ya filtrado, elegir un corredor haria desaparecer al
+    resto de las opciones y el filtro se volveria un callejon: para cambiar de
+    corredor habria que limpiar primero.
+
+    Son 106 y 134 nombres en produccion, asi que se manda la lista completa y el
+    campo filtra en el navegador mientras se escribe. Paginar esto seria resolver
+    un problema que no existe.
+    """
+    def _nombres(columna):
+        return [
+            n for (n,) in db.execute(
+                select(columna).where(columna.is_not(None), columna != "")
+                .distinct().order_by(columna)
+            ).all()
+        ]
+
+    return CorredoresDisponibles(
+        solicitantes=_nombres(Canje.corredor_solicitante_nombre),
+        propietarios=_nombres(Canje.corredor_propietario_nombre),
+    )
 
 
 @router.get("/{canje_id}", response_model=CanjeOut)

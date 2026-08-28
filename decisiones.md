@@ -2135,3 +2135,31 @@ Cuarto filtro del listado de canjes, al lado de Estado, Etapa y Comuna. El núme
 Es un `TextInput` y no un `NumberInput`: no es una cantidad --no se suma ni se incrementa-- y los separadores de miles que pondría un campo numérico romperían la búsqueda por prefijo.
 
 **Detalle de motor:** `id` es `bigint`, así que el `like` necesita un `cast` a texto. Eso descarta el índice, y con 303 filas no cambia nada medible. Se probó contra Postgres además de los tests en SQLite, porque un `cast` es de las cosas que se comportan distinto según el motor: «36» devolvió 360 y 361, y «64» devolvió el canje 64 y ningún 36x.
+
+---
+
+## D-084 · Filtros por corredor, con sugerencias
+
+Quinto y sexto filtro del listado de canjes: **Corredor solicitante** y **Corredor propietario**, cada uno con un campo que sugiere mientras se escribe.
+
+### Dos filtros y no uno
+
+Son dos preguntas distintas --con quién estoy trabajando, y de quién es la propiedad-- y el mismo corredor cumple los dos roles: en producción, Jorge Román pide el canje 360 y Databrokers es el propietario del 361. Un filtro único sobre «el corredor» las mezclaría sin avisar. El test que lo fija arma justamente ese cruce: un corredor que es solicitante en dos canjes y propietario en un tercero.
+
+### `Autocomplete` y no `Select`
+
+Es un filtro, no un formulario. Un `Select` obligaría a elegir una opción exacta de la lista, y escribir «vicente» y ver los 33 canjes de Vicente Farías tiene que funcionar sin terminar de elegir. Las sugerencias son una ayuda, no un corsé: el filtro que viaja al backend es el texto tal cual, con `ilike` de coincidencia parcial, así que la lista y el campo se comportan igual --las dos buscan en cualquier parte del nombre--.
+
+### La lista de sugerencias es el universo, no el listado filtrado
+
+Endpoint aparte, `GET /api/canjes/corredores`, que devuelve los nombres distintos **por rol**. Se podría haber derivado del listado que la pantalla ya tiene, y habría estado mal: al elegir un corredor, el listado se reduce a sus canjes, así que las opciones se reducirían a él y para cambiar de corredor habría que limpiar el filtro primero. Un filtro que se cierra sobre sí mismo. Hay un test que compara la respuesta con y sin filtros y exige que sean iguales.
+
+Van separadas por rol porque ofrecer en «solicitante» a alguien que solo aparece como propietario sería una sugerencia que no devuelve nada.
+
+**Se manda la lista completa y el campo filtra en el navegador.** Son 106 solicitantes y 134 propietarios: paginar o buscar contra el servidor mientras se escribe sería resolver un problema que no existe, y agregaría una petición por tecla.
+
+### Detalles
+
+- **El endpoint se declara antes de `/{canje_id}`.** Si va después, FastAPI intenta leer «corredores» como el id del canje y responde 422. Es el tipo de error que aparece recién en runtime.
+- **Los nombres vacíos no son una opción.** Seis canjes no tienen corredor propietario; la lista los excluye en vez de ofrecer una opción en blanco. Esos seis nunca van a aparecer con el filtro de propietario puesto, que es correcto: no se sabe de quién es.
+- Se verificó contra Postgres además de los tests: el endpoint devolvió 106 y 134 nombres sin vacíos, y «vicente» filtró 33 canjes.
