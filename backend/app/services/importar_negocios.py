@@ -103,7 +103,7 @@ def _fecha(valor, campo: str) -> date | None:
             return datetime.strptime(texto, formato).date()
         except ValueError:
             continue
-    raise ValueError(f"{campo}: fecha inválida ({valor!r}). Usá 2026-08-21 o 21-08-2026.")
+    raise ValueError(f"{campo}: fecha inválida ({valor!r}). Usa 2026-08-21 o 21-08-2026.")
 
 
 def _decimal(valor, campo: str) -> Decimal | None:
@@ -238,7 +238,7 @@ def _validar_fila(fila: _Fila, catalogos: dict, etapas: set[str]) -> dict:
         arriba = codigo.upper()
         if arriba not in catalogos[tipo]:
             errores.append(
-                f"{col}: '{codigo}' no existe. Mirá la hoja «Valores válidos» de la plantilla."
+                f"{col}: '{codigo}' no existe. Mira la hoja «Valores válidos» de la plantilla."
             )
             limpio[col] = None
         else:

@@ -51,10 +51,10 @@ export default function CambioForzado({ usuario }: { usuario: Usuario }) {
       <Paper withBorder shadow="sm" p="xl" radius="md" w={420}>
         <Stack gap="md">
           <div>
-            <Title order={3}>Elegí tu contraseña</Title>
+            <Title order={3}>Elige tu contraseña</Title>
             <Text size="sm" c="dimmed" mt={4}>
               Tu contraseña actual es temporal: la generó un administrador. Para entrar a la
-              app tenés que reemplazarla por una tuya.
+              app tienes que reemplazarla por una tuya.
             </Text>
           </div>
 

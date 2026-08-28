@@ -2010,3 +2010,17 @@ Con eso, dar acceso a un director de Dataprop es: crear el usuario con rol `gere
 40 tests nuevos, la migración corrida contra `dev` y el flujo completo probado contra Postgres por HTTP: sin autorizar da 400 con su mensaje, autorizando da 201 con `externo_autorizado_por: "Felipe Donoso"`. Capturas de la sección de dominios, de la insignia «Externo» en el listado y del aviso en el alta.
 
 **Dos tests fallan y no es por este cambio:** `test_la_bandeja_devuelve_el_compromiso` y `test_el_rastro_no_agenda_seguimiento_ni_borra_el_que_habia` comparan una fecha local contra una UTC, así que fallan entre las 20:00 y la medianoche de Chile, cuando las dos fechas dejan de coincidir. Se comprobó apartando los cambios con `git stash`: fallan igual sin ellos. Queda anotado como pendiente aparte.
+
+---
+
+## D-079 · Los textos de la app hablan en español de Chile
+
+El usuario lo pidió sin rodeos: *"por favor no escribas como argentino o uruguayo, nada personal pero estamos en Chile"*. Tenía razón y el problema no era solo mío: la app venía con **9 textos escritos en voseo rioplatense** --«No podés», «Usá», «Elegí», «llená», «Borralas»-- porque los escribí así desde el principio.
+
+No es una cuestión estética. Estas pantallas las van a leer las gerencias de ViveProp y de Dataprop, y directores externos: una voz que suena de otro país resta credibilidad, y en una app que muestra comisiones la credibilidad es parte del producto.
+
+Pasaron a **tú con conjugación estándar**: «No puedes… Usa», «Elige otra», «si quieres», «llena esas dos y deja el resto», «Bórralas». De paso se corrigió «si se salteó alguna» por «si se saltó alguna» y «Pasale» por «Pásale», que era la misma cosa disfrazada de acento faltante.
+
+**Alcance: solo copy que lee un usuario** --mensajes de la API, rótulos de pantalla y las notas que van dentro de las plantillas de Excel--. Los comentarios del código quedaron en voseo: no los lee un usuario y normalizarlos sería un diff enorme sin valor. Si algún día se hace, es un trabajo aparte.
+
+Quedó anotado en la memoria del proyecto para que los textos nuevos salgan bien de entrada, que es más barato que barrer de nuevo.

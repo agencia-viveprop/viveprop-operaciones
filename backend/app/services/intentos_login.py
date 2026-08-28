@@ -78,7 +78,7 @@ def validar_clave(clave: str) -> None:
         )
     if clave.strip().lower().replace(" ", "") in PROHIBIDAS:
         raise ClaveDebil(
-            "Esa contraseña es de las más usadas del mundo. Elegí otra."
+            "Esa contraseña es de las más usadas del mundo. Elige otra."
         )
 
 

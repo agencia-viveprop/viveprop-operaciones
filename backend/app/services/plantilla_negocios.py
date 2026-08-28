@@ -280,7 +280,7 @@ def estructura_plantilla(db: Session) -> EstructuraArchivo:
             "así que no hay que adivinar si la alianza se escribe ASSETPLAN o Assetplan."
         ),
         fila=(
-            "Una fila es un hito, no un negocio. Si repetís el CODIGO, agregás otro "
+            "Una fila es un hito, no un negocio. Si repites el CODIGO, agregas otro "
             "hito al mismo negocio, y los datos del negocio --propiedad, modelo, "
             "alianza-- tienen que ser iguales en esas filas."
         ),

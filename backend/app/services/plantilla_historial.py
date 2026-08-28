@@ -201,9 +201,9 @@ def _escribir_guia(hoja, columnas_por_hoja) -> None:
     fila = 1
     for titulo, texto in (
         ("Para qué es", "Cargar cuándo cada negocio pasó por cada etapa, y corregir las fechas de inicio que el Excel de origen dejó iguales a la de cierre."),
-        ("Qué hay que llenar", "Solo la columna Fecha --y la Descripción si querés-- en la hoja HISTORIAL, y la columna Inicio real en la hoja LIQUIDACIONES. El resto ya viene puesto."),
-        ("Las filas sin fecha", "Se ignoran. Si de un negocio solo sabés dos fechas, llená esas dos y dejá el resto vacío."),
-        ("Las filas que no aplican", "Borralas. Las etapas vienen pre-generadas suponiendo que un negocio en E5 pasó por E1 a E4; si se salteó alguna, esa fila no corresponde."),
+        ("Qué hay que llenar", "Solo la columna Fecha --y la Descripción si quieres-- en la hoja HISTORIAL, y la columna Inicio real en la hoja LIQUIDACIONES. El resto ya viene puesto."),
+        ("Las filas sin fecha", "Se ignoran. Si de un negocio solo sabes dos fechas, llena esas dos y deja el resto vacío."),
+        ("Las filas que no aplican", "Bórralas. Las etapas vienen pre-generadas suponiendo que un negocio en E5 pasó por E1 a E4; si se saltó alguna, esa fila no corresponde."),
         ("Recargar el archivo", "No duplica. La clave es negocio + etapa: si corregís una fecha y volvés a subir, se actualiza esa fila."),
         ("No agenda nada", "Estos movimientos no generan próxima acción, así que cargar historia no llena «Qué me toca hoy» de vencidos."),
         ("Las columnas grises", "Son lo que el sistema tiene hoy, para que te orientes. No se leen al cargar."),
@@ -277,10 +277,10 @@ def estructura_importacion(db: Session) -> EstructuraArchivo:
         ],
         valores=[],
         notas=[
-            "Las filas sin fecha se ignoran: si de un negocio solo sabés dos fechas, llená "
-            "esas dos y dejá el resto vacío.",
+            "Las filas sin fecha se ignoran: si de un negocio solo sabes dos fechas, llena "
+            "esas dos y deja el resto vacío.",
             "Las etapas vienen pre-generadas suponiendo que un negocio en E5 pasó por E1 a "
-            "E4. Si se salteó alguna, borrá esa fila.",
+            "E4. Si se saltó alguna, borra esa fila.",
             "Recargar el archivo no duplica. La clave es negocio + etapa: corregir una fecha "
             "y volver a subir actualiza esa fila.",
             "Estos movimientos no agendan próxima acción, así que cargar historia no llena "

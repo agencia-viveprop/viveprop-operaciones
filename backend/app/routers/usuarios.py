@@ -224,7 +224,7 @@ def resetear_clave(
     if usuario_id == admin.id:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "No podés resetear tu propia contraseña. Usá «Cambiar contraseña».",
+            "No puedes resetear tu propia contraseña. Usa «Cambiar contraseña».",
         )
 
     usuario = db.get(Usuario, usuario_id)

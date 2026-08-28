@@ -126,6 +126,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Los textos de la app hablan en espanol de Chile
+
+Me pediste que no escriba como argentino o uruguayo. Tenias razon, y el problema no era solo en mis respuestas: la app tenia **9 textos en voseo** porque los escribi asi desde el principio -- «No podes», «Usa», «Elegi», «llena», «Borralas».
+
+Pasaron a tu con conjugacion estandar: «No puedes... Usa «Cambiar contrasena»», «Elige otra», «si quieres», «llena esas dos y deja el resto vacio», «Borralas» -> «Borralas» con tilde. De paso corregi «si se salteo alguna» por «si se salto alguna».
+
+Toque **solo lo que lee un usuario**: mensajes de la API, rotulos de pantalla y las notas dentro de las plantillas de Excel. Los comentarios del codigo quedaron en voseo -- no los lee nadie desde la app y seria un diff enorme sin valor. Si lo quieres igual, es un trabajo aparte.
+
+Lo guarde en mi memoria del proyecto para que los textos nuevos salgan bien de entrada.
+
+**Verificado:** 770 tests, typecheck, build y lint sin hallazgos, y un barrido con un patron mas ancho que no encuentra nada mas. Ver `D-079`.
+
 ### 2026-08-28 - Los dominios de la organizacion se administran desde la app
 
 Necesitabas dar acceso a correos que no son `@viveprop.com`. Quedo asi:

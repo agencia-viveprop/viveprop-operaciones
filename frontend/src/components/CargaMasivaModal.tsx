@@ -81,7 +81,7 @@ export default function CargaMasivaModal({
     <Modal opened={abierto} onClose={cerrar} title="Carga masiva de negocios" size="lg">
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Una fila es un hito. Si repetís el código, agregás otro hito al mismo negocio. Las
+          Una fila es un hito. Si repites el código, agregas otro hito al mismo negocio. Las
           comisiones no se escriben: las calcula el sistema con el valor y las tasas.
         </Text>
 

@@ -202,7 +202,7 @@ export default function AdminUsuarios() {
         {claveNueva && (
           <Stack gap="sm">
             <Text size="sm">
-              Pasale esta contraseña a <strong>{claveNueva.email}</strong>. Al entrar, la app
+              Pásale esta contraseña a <strong>{claveNueva.email}</strong>. Al entrar, la app
               le va a pedir que elija una propia; hasta que lo haga no puede hacer nada más.
             </Text>
             <Group>
