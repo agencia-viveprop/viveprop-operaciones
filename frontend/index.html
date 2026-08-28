@@ -2,7 +2,20 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- El icono de la pestaña, recortado del mismo `logo.png` que la app muestra
+         en la barra lateral: la pestaña y el sidebar no pueden divergir.
+
+         Van cuatro tamaños en vez de uno grande porque la pestaña se dibuja a 16
+         o 32 px: dejando que el navegador achique el de 512 a 16, el resultado
+         depende de su filtro. Con los chicos hechos aparte, el reescalado se hizo
+         una vez y bien.
+
+         Antes acá había un `favicon.svg` que **no era un SVG**: era un `.ico` con
+         PNGs adentro y la extensión equivocada, declarado como `image/svg+xml`. -->
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ViveProp Operaciones</title>
     <meta name="description" content="Gestión de negocios y canjes de ViveProp." />

@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - El icono de la pestaña ahora es el logo de ViveProp
+
+Recorte el chevron del `logo.png` que la app ya muestra en la barra lateral, asi que la pestaña y el sidebar salen de la misma imagen y no pueden divergir.
+
+**Sobre lo nitido, que era tu pedido:** el chevron mide 1200 px en el original, asi que todo es reduccion y nunca ampliacion. Y deje **cuatro tamanos** en vez de uno grande --16, 32, 180 y 512-- porque la pestaña se dibuja a 16 o 32 px: con un solo archivo de 512, la nitidez a ese tamano depende del filtro del navegador. Asi el reescalado se hizo una vez y con bicubica de alta calidad.
+
+**Lo que ningun formato arregla:** a 16 px la marca son 14 x 11 pixeles, y ahi el ala celeste, la fucsia y las separaciones blancas colapsan. Queda la silueta del chevron, que es lo que se reconoce a ese tamano. Si tienes el SVG oficial de la marca, reemplazamos el grande y los bordes quedan vectoriales.
+
+**Y encontre por que se veia un icono ajeno:** `public/favicon.svg` **no era un SVG** -- era un `.ico` con PNGs adentro y la extension equivocada, declarado en el HTML como SVG. Lo saque.
+
+**Un aviso practico:** los navegadores cachean el icono con ganas. Si despues del deploy sigues viendo el viejo, recarga con Ctrl+Shift+R o cierra y abre la pestaña.
+
+**Verificado:** los cuatro PNG mirados uno por uno, el build los copia a `dist`, y 796 tests, typecheck y lint sin hallazgos. Ver `D-087`.
+
 ### 2026-08-28 - La fecha de cancelacion existia y el reporte no la miraba
 
 Tenias razon en la sospecha, y era la segunda opcion: **existe y no se usaba.**

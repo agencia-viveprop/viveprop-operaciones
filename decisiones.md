@@ -2229,3 +2229,23 @@ Y la columna de fecha cambia de rótulo según la casilla: en «Avanzó» es «�
 ### Negocios no tiene este problema
 
 Se midió antes de generalizar: los 10 hitos en estado PERDIDO **no tienen `fecha_cierre`** --ninguno-- así que ahí el movimiento es la única señal y no hay una segunda fuente que sumar. La regla de canjes no se copió a negocios porque no tendría de dónde leer.
+
+---
+
+## D-087 · El icono de la pestaña sale del logo del repo
+
+La pestaña mostraba un icono que no era de ViveProp. Dos cosas explicaban por qué.
+
+**`public/favicon.svg` no era un SVG.** Era un `.ico` --con PNGs de 16, 32, 48 y 64 adentro-- con la extensión equivocada, y el `index.html` lo declaraba como `image/svg+xml`. Los navegadores lo toleran, así que nada fallaba y el archivo llevaba ahí desde el arranque del proyecto.
+
+**Y el logo ya estaba en el repo.** `public/logo.png` es el lockup horizontal --6341 × 1178-- que la app muestra en la barra lateral. El icono se recortó de ahí en vez de pedir un archivo nuevo: **la pestaña y el sidebar no pueden divergir si salen de la misma imagen.** El chevron ocupa las primeras 1200 columnas; los límites verticales se midieron *dentro de esas columnas*, para que la altura de las letras no estirara el recorte, y dieron `y 9..915`.
+
+### Cuatro tamaños y no uno
+
+La pestaña se dibuja a 16 o 32 px. Dejando un solo PNG de 512, el resultado a ese tamaño depende del filtro de reescalado del navegador. Con `favicon-16`, `favicon-32`, `favicon.png` (512) y `apple-touch-icon` (180), el reescalado se hizo **una vez y con bicúbica de alta calidad**, desde una fuente de 1200 px: todo es reducción, nunca ampliación.
+
+El margen es del 6% y no el del icono oficial, que es más generoso: en 16 px cada pixel cuenta, y el navegador ya deja aire alrededor de la pestaña.
+
+**Lo que no se puede arreglar con formato:** a 16 px la marca son 14 × 11 px, y ahí las dos alas --la celeste y la fucsia-- y las separaciones blancas colapsan. Queda la silueta del chevron indigo, que es lo que se reconoce a ese tamaño. Un SVG haría los bordes vectoriales pero no agregaría detalle donde no hay pixeles; si aparece el SVG oficial de la marca, vale reemplazar el de 512 y dejar los chicos como están.
+
+Se hizo con `System.Drawing` de .NET, que ya está en la máquina: sin instalar Pillow ni agregar una dependencia al proyecto por un icono. El script quedó en el scratchpad y no en el repo --es de una sola vez-- y lo que se versiona son los cuatro PNG.
