@@ -126,6 +126,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Comuna tambien sugiere mientras escribes
+
+El campo de comuna **ya filtraba** con lo que escribieras --coincidencia parcial, con test-- asi que entendi que lo que faltaba eran las sugerencias, como las que acababan de recibir los dos filtros de corredor. Si lo que viste fue que no filtraba, avisame, porque eso seria otra cosa.
+
+Con 43 comunas en los datos, escribir de memoria obliga a acertar como esta escrita cada una. Y sigue aceptando texto libre: «flor» filtra sin que tengas que elegir «La Florida» de la lista.
+
+**De paso junte las tres listas de sugerencias en una sola respuesta.** El endpoint que servia los corredores ahora sirve tambien las comunas y se llama `/api/canjes/filtros`: se piden las tres al abrir la pantalla, asi que tres endpoints eran tres viajes para el mismo momento.
+
+**Verificado:** 797 tests --uno nuevo para las comunas--, y captura del desplegable: escribiendo «la» ofrece Calama, La Cisterna, La Florida, La Reina, La Serena, Lampa y Las Condes, con la tabla ya filtrada. Ver `D-088`.
+
 ### 2026-08-28 - El icono de la pestaña ahora es el logo de ViveProp
 
 Recorte el chevron del `logo.png` que la app ya muestra en la barra lateral, asi que la pestaña y el sidebar salen de la misma imagen y no pueden divergir.

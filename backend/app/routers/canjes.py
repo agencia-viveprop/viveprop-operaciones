@@ -223,32 +223,37 @@ def listar(
     return db.scalars(query).all()
 
 
-class CorredoresDisponibles(BaseModel):
-    """Los nombres que existen, para que el filtro sugiera en vez de adivinar.
+class OpcionesDeFiltro(BaseModel):
+    """Los valores que existen, para que los filtros sugieran en vez de adivinar.
 
-    Van **separados por rol** porque los filtros son dos: ofrecer en «solicitante»
-    a alguien que solo aparece como propietario daria una sugerencia que no
-    devuelve nada.
+    Los corredores van **separados por rol** porque los filtros son dos: ofrecer
+    en «solicitante» a alguien que solo aparece como propietario daria una
+    sugerencia que no devuelve nada.
+
+    Las tres listas viajan juntas en una sola respuesta. Son listas cortas del
+    mismo origen y se piden todas al abrir la pantalla: tres endpoints serian tres
+    viajes para el mismo momento.
     """
 
     solicitantes: list[str]
     propietarios: list[str]
+    comunas: list[str]
 
 
-@router.get("/corredores", response_model=CorredoresDisponibles)
-def corredores(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
-    """Los corredores distintos de cada rol, ordenados.
+@router.get("/filtros", response_model=OpcionesDeFiltro)
+def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    """Los valores distintos de cada filtro, ordenados.
 
-    **La lista es el universo completo y no depende de los filtros aplicados.**
-    Si saliera del listado ya filtrado, elegir un corredor haria desaparecer al
-    resto de las opciones y el filtro se volveria un callejon: para cambiar de
-    corredor habria que limpiar primero.
+    **Las listas son el universo completo y no dependen de los filtros
+    aplicados.** Si salieran del listado ya filtrado, elegir un corredor haria
+    desaparecer al resto de las opciones y el filtro se volveria un callejon: para
+    cambiar de corredor habria que limpiar primero.
 
-    Son 106 y 134 nombres en produccion, asi que se manda la lista completa y el
-    campo filtra en el navegador mientras se escribe. Paginar esto seria resolver
-    un problema que no existe.
+    Son 106 solicitantes, 134 propietarios y 43 comunas en produccion, asi que se
+    manda todo y el campo filtra en el navegador mientras se escribe. Paginar o
+    consultar por tecla seria resolver un problema que no existe.
     """
-    def _nombres(columna):
+    def _distintos(columna):
         return [
             n for (n,) in db.execute(
                 select(columna).where(columna.is_not(None), columna != "")
@@ -256,9 +261,10 @@ def corredores(db: Session = Depends(get_db), usuario: Usuario = Depends(get_cur
             ).all()
         ]
 
-    return CorredoresDisponibles(
-        solicitantes=_nombres(Canje.corredor_solicitante_nombre),
-        propietarios=_nombres(Canje.corredor_propietario_nombre),
+    return OpcionesDeFiltro(
+        solicitantes=_distintos(Canje.corredor_solicitante_nombre),
+        propietarios=_distintos(Canje.corredor_propietario_nombre),
+        comunas=_distintos(Canje.comuna),
     )
 
 

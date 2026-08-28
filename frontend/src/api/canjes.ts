@@ -309,16 +309,20 @@ export function obtenerPlataCanjes(): Promise<PlataCanjes> {
 }
 
 
-/** Los corredores que existen, por rol, para las sugerencias de los filtros.
+/** Los valores que existen para cada filtro, para poder sugerir en vez de adivinar.
  *
  *  Es el universo completo y no depende de los filtros aplicados: si saliera del
- *  listado ya filtrado, elegir un corredor haria desaparecer al resto de las
- *  opciones y para cambiar de corredor habria que limpiar primero. */
-export type CorredoresDisponibles = {
+ *  listado ya filtrado, elegir un valor haria desaparecer al resto de las
+ *  opciones y para cambiarlo habria que limpiar primero.
+ *
+ *  Las tres listas vienen juntas porque se piden en el mismo momento --al abrir
+ *  la pantalla-- y son cortas: 106, 134 y 43 valores. */
+export type OpcionesDeFiltro = {
   solicitantes: string[]
   propietarios: string[]
+  comunas: string[]
 }
 
-export function listarCorredores(): Promise<CorredoresDisponibles> {
-  return fetch('/api/canjes/corredores', { credentials: 'include' }).then(parseOrThrow)
+export function listarOpcionesDeFiltro(): Promise<OpcionesDeFiltro> {
+  return fetch('/api/canjes/filtros', { credentials: 'include' }).then(parseOrThrow)
 }

@@ -2249,3 +2249,19 @@ El margen es del 6% y no el del icono oficial, que es más generoso: en 16 px ca
 **Lo que no se puede arreglar con formato:** a 16 px la marca son 14 × 11 px, y ahí las dos alas --la celeste y la fucsia-- y las separaciones blancas colapsan. Queda la silueta del chevron indigo, que es lo que se reconoce a ese tamaño. Un SVG haría los bordes vectoriales pero no agregaría detalle donde no hay pixeles; si aparece el SVG oficial de la marca, vale reemplazar el de 512 y dejar los chicos como están.
 
 Se hizo con `System.Drawing` de .NET, que ya está en la máquina: sin instalar Pillow ni agregar una dependencia al proyecto por un icono. El script quedó en el scratchpad y no en el repo --es de una sola vez-- y lo que se versiona son los cuatro PNG.
+
+---
+
+## D-088 · Comuna también sugiere, y las tres listas viajan juntas
+
+El usuario pidió que el filtro de comuna *"permita escribir e ir filtrando según el texto ingresado"*. **Filtrar ya lo hacía** --es coincidencia parcial en el backend, con test-- así que se leyó como lo que le faltaba: las sugerencias, iguales a las que acababan de recibir los dos filtros de corredor (`D-084`).
+
+Con **43 comunas** en los datos, escribir de memoria obliga a acertar cómo está escrita cada una. Y sigue aceptando texto libre: «flor» filtra sin necesidad de elegir «La Florida» de la lista, que es la razón por la que es un `Autocomplete` y no un `Select`.
+
+### El endpoint pasó a ser uno de opciones y no de corredores
+
+`GET /api/canjes/corredores` se convirtió en `GET /api/canjes/filtros`, y devuelve las tres listas: solicitantes, propietarios y comunas. Tres endpoints serían tres viajes para el mismo momento --se piden todos al abrir la pantalla-- y las tres listas son cortas: 106, 134 y 43 valores.
+
+Renombrarlo costó nada porque el único consumidor es esta pantalla y tenía un commit de vida. Si hubiera esperado, el nombre «corredores» habría quedado describiendo una respuesta que trae comunas.
+
+**El orden de las rutas sigue importando**, y esta vez lo confirmó un test: quedó un `cliente.get("/api/canjes/corredores")` sin actualizar y respondió **422**, porque FastAPI intentó leer «corredores» como el id del canje de `/{canje_id}`. El error apareció en el test y no en producción.

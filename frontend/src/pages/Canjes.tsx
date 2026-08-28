@@ -27,7 +27,7 @@ import {
   descargarPlantillaCanjes,
   importarCanjes,
   listarCanjes,
-  listarCorredores,
+  listarOpcionesDeFiltro,
   type Canje,
   type CanjeEstado,
   type CanjeEtapa,
@@ -86,12 +86,12 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
     solicitante: '',
     propietario: '',
   })
-  // Las sugerencias de los dos filtros de corredor. Se consulta una vez y se
-  // cachea: no depende de los filtros, justamente para que elegir uno no vacie
+  // Las sugerencias de los filtros. Se consultan una vez y se cachean: no
+  // dependen de los filtros aplicados, justamente para que elegir uno no vacie
   // las opciones de los demas.
-  const { data: corredores } = useQuery({
-    queryKey: ['canjes-corredores'],
-    queryFn: listarCorredores,
+  const { data: opciones } = useQuery({
+    queryKey: ['canjes-opciones-filtro'],
+    queryFn: listarOpcionesDeFiltro,
   })
   const { data: canjes, isLoading } = useQuery({
     queryKey: ['canjes', filtros],
@@ -236,11 +236,19 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               clearable
               w={200}
             />
-            <TextInput
+            {/* Comuna tambien sugiere, igual que los dos de corredor. Ya filtraba
+                con lo que se escribiera --el backend hace coincidencia parcial--
+                pero sin la lista habia que recordar como esta escrita cada una, y
+                en los datos hay 43. Sigue aceptando texto libre: escribir «flor»
+                filtra sin necesidad de elegir «La Florida» de la lista. */}
+            <Autocomplete
               placeholder="Comuna"
+              data={opciones?.comunas ?? []}
               value={filtros.comuna}
-              onChange={(e) => setFiltros({ ...filtros, comuna: e.currentTarget.value })}
-              w={160}
+              onChange={(v) => setFiltros({ ...filtros, comuna: v })}
+              limit={10}
+              clearable
+              w={200}
             />
             {/* El N° de solicitud es el ID_CANJE de Dataprop, el mismo que se ve
                 en la primera columna. Busca **por prefijo**: mientras se escribe
@@ -272,7 +280,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 para que elegir un corredor no haga desaparecer a los demas. */}
             <Autocomplete
               placeholder="Corredor solicitante"
-              data={corredores?.solicitantes ?? []}
+              data={opciones?.solicitantes ?? []}
               value={filtros.solicitante}
               onChange={(v) => setFiltros({ ...filtros, solicitante: v })}
               limit={10}
@@ -281,7 +289,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
             />
             <Autocomplete
               placeholder="Corredor propietario"
-              data={corredores?.propietarios ?? []}
+              data={opciones?.propietarios ?? []}
               value={filtros.propietario}
               onChange={(v) => setFiltros({ ...filtros, propietario: v })}
               limit={10}

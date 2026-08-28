@@ -114,8 +114,8 @@ def test_un_corredor_que_no_existe_no_trae_nada(cliente, cartera):
 # --------------------------------------------- las sugerencias de los filtros
 
 
-def test_los_corredores_vienen_por_rol_distintos_y_ordenados(cliente, cartera):
-    r = cliente.get("/api/canjes/corredores")
+def test_las_opciones_vienen_por_filtro_distintas_y_ordenadas(cliente, cartera):
+    r = cliente.get("/api/canjes/filtros")
 
     assert r.status_code == 200, r.text
     cuerpo = r.json()
@@ -127,10 +127,21 @@ def test_los_corredores_vienen_por_rol_distintos_y_ordenados(cliente, cartera):
 
 def test_las_sugerencias_no_traen_vacios(cliente, cartera):
     """El canje 401 no tiene propietario: eso no puede aparecer como una opcion."""
-    propietarios = cliente.get("/api/canjes/corredores").json()["propietarios"]
+    propietarios = cliente.get("/api/canjes/filtros").json()["propietarios"]
 
     assert all(p for p in propietarios)
     assert len(propietarios) == 3
+
+
+def test_las_comunas_tambien_se_sugieren(cliente, cartera):
+    """El filtro de comuna ya aceptaba texto libre; lo que le faltaba era la lista.
+
+    Con 43 comunas en los datos, escribir de memoria obliga a acertar como esta
+    escrita cada una.
+    """
+    comunas = cliente.get("/api/canjes/filtros").json()["comunas"]
+
+    assert comunas == ["La Florida", "Las Condes", "Nunoa", "Vitacura"]
 
 
 def test_las_sugerencias_no_dependen_de_los_filtros(cliente, cartera):
@@ -140,8 +151,8 @@ def test_las_sugerencias_no_dependen_de_los_filtros(cliente, cartera):
     desaparecer al resto de las opciones y para cambiar de corredor habria que
     limpiar el filtro primero.
     """
-    entero = cliente.get("/api/canjes/corredores").json()
+    entero = cliente.get("/api/canjes/filtros").json()
 
-    filtrado = cliente.get("/api/canjes/corredores", params={"solicitante": "jorge"}).json()
+    filtrado = cliente.get("/api/canjes/filtros", params={"solicitante": "jorge"}).json()
 
     assert filtrado == entero
