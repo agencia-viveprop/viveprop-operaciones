@@ -98,6 +98,11 @@ export type Seccion = {
   /** Movimientos, no entidades: `total_avanzados` cuenta negocios o canjes con
    * actividad y este cuenta los registros que hicieron. */
   movimientos_avanzados: number
+  /** Movimientos de la ventana cuya fecha la puso un proceso masivo y no la
+   *  gestion. Se descuentan de las cuatro cifras y **se informan**: si se
+   *  descartaran en silencio, la pantalla diria 0 donde el usuario sabe que hay
+   *  215 registros, y eso se lee como que el reporte no funciona. */
+  movimientos_con_fecha_de_carga: number
 }
 
 export type ReporteSemanal = {

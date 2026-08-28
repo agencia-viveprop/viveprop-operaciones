@@ -2163,3 +2163,39 @@ Van separadas por rol porque ofrecer en «solicitante» a alguien que solo apare
 - **El endpoint se declara antes de `/{canje_id}`.** Si va después, FastAPI intenta leer «corredores» como el id del canje y responde 422. Es el tipo de error que aparece recién en runtime.
 - **Los nombres vacíos no son una opción.** Seis canjes no tienen corredor propietario; la lista los excluye en vez de ofrecer una opción en blanco. Esos seis nunca van a aparecer con el filtro de propietario puesto, que es correcto: no se sabe de quién es.
 - Se verificó contra Postgres además de los tests: el endpoint devolvió 106 y 134 nombres sin vacíos, y «vicente» filtró 33 canjes.
+
+---
+
+## D-085 · Un movimiento con fecha de carga no es actividad de la ventana
+
+El usuario marcó que «Se cayó» en canjes mostraba **215 en una ventana de cuatro semanas**, sobre 303 canjes en total. La cifra era cierta sobre los movimientos y falsa sobre el negocio.
+
+### De dónde salía
+
+Una limpieza marcó como cancelados los canjes que Dataprop dejó de exportar, y les creó el movimiento de cancelación **con la fecha del día en que corrió** --el 21-08--. Cualquier ventana que incluya ese día ve 215 cancelaciones juntas. Esos canjes se cayeron en algún momento desconocido de los últimos años; lo que pasó el 21-08 fue que alguien corrió un script.
+
+Y `fecha_cierre` no ayuda: cancelar en la app no la escribe, y solo 47 de los 293 cancelados la traen del import. **La fecha del movimiento es la única señal que existe** -- el problema es que en esos 215 no es un dato, es un subproducto.
+
+### La regla, y por qué necesita dos condiciones
+
+Un movimiento se descuenta de la ventana cuando **las dos** cosas son ciertas:
+
+1. Su `creado_en` lo comparte otro movimiento **al microsegundo**: entró en una transacción con más filas, o sea un proceso masivo. Es el mismo criterio con el que el reporte de canjes activos distingue lo cargado de lo registrado a mano.
+2. Su `fecha` cae **el mismo día** en que se creó: el script estampó «hoy».
+
+Ninguna de las dos alcanza sola, y los datos lo demuestran:
+
+- **Solo la primera** descartaría las 11 cancelaciones migradas del Excel, que entraron todas juntas pero con fechas reales de 2024 a 2026 porque el archivo las traía. Esas pertenecen a la ventana donde caen.
+- **Solo la segunda** descartaría una cancelación que alguien registra hoy en la app, que también tiene fecha de hoy y sí es una gestión. Lo que la distingue es que su `creado_en` no lo comparte nadie.
+
+La regla se aplica a **todos los tipos de movimiento**, no solo a las cancelaciones: lo que se descarta es una fecha inventada, y el próximo proceso masivo puede cargar cualquier tipo.
+
+### Y se dice, no se descarta en silencio
+
+`movimientos_con_fecha_de_carga` viaja en la respuesta y la pantalla lo muestra bajo los recuadros: *«221 registros de esta ventana tienen la fecha de una carga masiva, no de la gestión, así que no cuentan en las cifras de arriba: cuándo pasó de verdad no se sabe»*.
+
+Sin esa línea, la pantalla mostraría **0** donde el usuario sabe que hay 215 registros, y eso se lee como que el reporte está roto. Es la misma regla que ya venía de la bandeja: una cifra que oculta algo tiene que decir qué oculta.
+
+### Verificado
+
+Contra los datos reales de `dev`, que tiene la misma limpieza con 221 movimientos: «Se cayó» pasó de **221 a 0**, «Avanzó» quedó igual --15 canjes y 86 registros, o sea que las migradas con fecha real no se tocaron-- y el contador informó los 221. Más cinco tests que fijan los cuatro casos: la limpieza, la carga con fechas reales, la cancelación registrada en la app, y que la regla no es solo para cancelaciones.

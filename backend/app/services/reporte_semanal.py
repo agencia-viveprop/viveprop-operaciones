@@ -26,6 +26,14 @@ sección cuentan **entidades** y los movimientos van en un campo aparte: una lis
 de doce renglones bajo una cifra que dice 23 es el desajuste que se arregló en la
 bandeja, y no vale repetirlo acá.
 
+**Los movimientos con fecha de carga no cuentan como actividad de la ventana.**
+Una limpieza marcó como cancelados 215 canjes que Dataprop dejó de exportar y les
+creó el movimiento con la fecha del día en que corrió: en una ventana que incluye
+ese día, «Se cayó» mostraba 215 sobre 303 canjes. Se descuentan y se informan
+aparte --nunca en silencio--. El criterio está en `_fecha_puesta_por_la_carga`, y
+lo importante es que **no descarta todo lo cargado**: las 11 cancelaciones
+migradas del Excel traen fechas reales y siguen contando.
+
 **Estancado** no es un estado guardado, es una ausencia: algo abierto sin
 movimiento en más de N días.
 
@@ -143,6 +151,11 @@ class Seccion(BaseModel):
     # actividad y este cuenta los registros que hicieron. Los dos números
     # importan y no son el mismo.
     movimientos_avanzados: int
+    # Movimientos de la ventana cuya fecha la puso un proceso masivo y no la
+    # gestión: se descuentan de todas las cifras y se informan acá. Si se
+    # descartaran en silencio, la pantalla diría 0 donde el usuario sabe que hay
+    # 215 registros, y eso se lee como que el reporte no funciona.
+    movimientos_con_fecha_de_carga: int = 0
 
 
 class ReporteSemanal(BaseModel):
@@ -185,6 +198,53 @@ def _dias(corte: datetime, fecha) -> int | None:
     if fecha.tzinfo is None:
         fecha = fecha.replace(tzinfo=timezone.utc)
     return (corte - fecha).days
+
+
+def _instantes_de_carga(db: Session, tipo: EntityType) -> set[datetime]:
+    """Los `creado_en` que comparte más de un movimiento: una carga masiva.
+
+    Dos movimientos con el mismo timestamp **al microsegundo** entraron en la
+    misma transacción. No hace falta ninguna marca ni ninguna constante: esa
+    coincidencia exacta no pasa por casualidad. Es el mismo criterio con el que el
+    reporte de canjes activos distingue lo cargado de lo registrado a mano.
+    """
+    return {
+        instante
+        for (instante,) in db.execute(
+            select(Movimiento.creado_en)
+            .where(Movimiento.entity_type == tipo)
+            .group_by(Movimiento.creado_en)
+            .having(func.count() > 1)
+        ).all()
+    }
+
+
+def _fecha_puesta_por_la_carga(fecha, creado_en, cargas: set[datetime]) -> bool:
+    """Si la fecha de ese movimiento la inventó el proceso que lo cargó.
+
+    **El caso que esto resuelve.** Una limpieza marcó como cancelados 215 canjes
+    que Dataprop dejó de exportar, y les creó el movimiento de cancelación con la
+    fecha del día en que corrió. En una ventana que incluye ese día, «Se cayó»
+    mostraba 215 --sobre 303 canjes-- cuando en realidad esos canjes se cayeron en
+    algún momento desconocido de los últimos años. La cifra era cierta sobre los
+    movimientos y falsa sobre el negocio.
+
+    **No alcanza con "vino de una carga".** El otro grupo cargado --11
+    cancelaciones migradas del Excel-- trae fechas reales, de 2024 a 2026, porque
+    el archivo las tenía. Esas sí pertenecen a la ventana donde caen y tienen que
+    contar. La diferencia no es cómo entraron, es si la fecha es un dato o un
+    subproducto: **el script estampó "hoy"**.
+
+    Por eso hacen falta las dos condiciones. Y por eso tampoco alcanza con mirar
+    solo la coincidencia de fechas: una cancelación que alguien registra hoy en la
+    app también tiene `fecha` de hoy, y esa es una gestión real. Lo que la
+    distingue es que su `creado_en` no lo comparte nadie.
+    """
+    if creado_en is None or creado_en not in cargas:
+        return False
+    if creado_en.tzinfo is None:
+        creado_en = creado_en.replace(tzinfo=timezone.utc)
+    return fecha.date() == creado_en.date()
 
 
 def _direccion(calle: str | None, unidad: str | None) -> str | None:
@@ -248,11 +308,12 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
     ]
     monto_cerrado = sum((c.monto or CERO for c in cerrados), CERO)
 
+    cargas = _instantes_de_carga(db, EntityType.negocio)
     movidos = db.execute(
         select(Negocio.codigo, Movimiento.fecha, Movimiento.etapa_resultante,
                Movimiento.comentario, Movimiento.tipo_movimiento, Negocio.etapa,
                Propiedad.direccion, Propiedad.unidad, Propiedad.comuna, Catalogo.nombre,
-               TipoMovimiento.nombre)
+               TipoMovimiento.nombre, Movimiento.creado_en)
         .join(Negocio, Negocio.id == Movimiento.entity_id)
         .join(Propiedad, Propiedad.id == Negocio.propiedad_id)
         .join(TipoMovimiento, TipoMovimiento.codigo == Movimiento.tipo_movimiento)
@@ -267,9 +328,14 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
         .order_by(Movimiento.fecha, Movimiento.id)
     ).all()
 
+    # La fecha de estos movimientos la puso el proceso que los cargó, así que no
+    # dicen nada sobre la ventana. Se cuentan aparte y la pantalla los informa.
+    descartados = [f for f in movidos if _fecha_puesta_por_la_carga(f[1], f[11], cargas)]
+    movidos = [f for f in movidos if not _fecha_puesta_por_la_carga(f[1], f[11], cargas)]
+
     def _item(fila) -> ItemMovido:
         (cod, f, etapa_mov, com, _tipo, etapa_actual, calle, unidad, comuna,
-         alianza, nombre_tipo) = fila
+         alianza, nombre_tipo, _creado) = fila
         etapa = etapa_mov or etapa_actual
         return ItemMovido(
             referencia=cod,
@@ -347,6 +413,7 @@ def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: d
         total_caidos=len(caidos),
         total_estancados=len(estancados),
         movimientos_avanzados=len(planos),
+        movimientos_con_fecha_de_carga=len(descartados),
     )
 
 
@@ -376,10 +443,12 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
         for cid, corredor, f, op, calle, comuna in filas_cerradas
     ]
 
+    cargas = _instantes_de_carga(db, EntityType.canje)
     movidos = db.execute(
         select(Movimiento.entity_id, Movimiento.fecha, Movimiento.etapa_resultante,
                Movimiento.comentario, Movimiento.tipo_movimiento, TipoMovimiento.nombre,
-               Canje.etapa, Canje.tipo_operacion, Canje.direccion, Canje.comuna)
+               Canje.etapa, Canje.tipo_operacion, Canje.direccion, Canje.comuna,
+               Movimiento.creado_en)
         .join(Canje, Canje.id == Movimiento.entity_id)
         .join(TipoMovimiento, TipoMovimiento.codigo == Movimiento.tipo_movimiento)
         .where(
@@ -390,8 +459,12 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
         .order_by(Movimiento.fecha, Movimiento.id)
     ).all()
 
+    # Los 215 de la limpieza del 21-08 caen acá: su fecha es la del script.
+    descartados = [f for f in movidos if _fecha_puesta_por_la_carga(f[1], f[10], cargas)]
+    movidos = [f for f in movidos if not _fecha_puesta_por_la_carga(f[1], f[10], cargas)]
+
     def _item(fila) -> ItemMovido:
-        cid, f, etapa_mov, com, _tipo, nombre_tipo, etapa_actual, op, calle, comuna = fila
+        cid, f, etapa_mov, com, _tipo, nombre_tipo, etapa_actual, op, calle, comuna, _creado = fila
         etapa = etapa_mov or (etapa_actual.value if etapa_actual else None)
         return ItemMovido(
             referencia=f"#{cid}",
@@ -455,6 +528,7 @@ def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: dat
         total_caidos=len(caidos),
         total_estancados=len(estancados),
         movimientos_avanzados=len(planos),
+        movimientos_con_fecha_de_carga=len(descartados),
     )
 
 

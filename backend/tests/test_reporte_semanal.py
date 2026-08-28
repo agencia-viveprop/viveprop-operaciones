@@ -91,7 +91,13 @@ def _canje(db, id_, etapa=CanjeEtapa.EN_REVISION, estado=CanjeEstado.ACTIVO,
     ))
 
 
-def _mov(db, entity_type, entity_id, tipo, cuando, etapa=None, comentario="x"):
+def _mov(db, entity_type, entity_id, tipo, cuando, etapa=None, comentario="x",
+         creado_en=None):
+    """Un movimiento. `creado_en` se pasa para simular una carga masiva.
+
+    Dos movimientos con el **mismo** `creado_en` al microsegundo entraron en la
+    misma transaccion, que es como el reporte reconoce una carga.
+    """
     db.add(Movimiento(
         entity_type=entity_type,
         entity_id=entity_id,
@@ -99,6 +105,7 @@ def _mov(db, entity_type, entity_id, tipo, cuando, etapa=None, comentario="x"):
         fecha=cuando,
         etapa_resultante=etapa,
         comentario=comentario,
+        **({"creado_en": creado_en} if creado_en is not None else {}),
     ))
 
 
@@ -506,3 +513,98 @@ def test_el_umbral_de_estancado_se_puede_cambiar_desde_la_query(cliente, db, tip
                        params={"dias_estancado": 14}).json()["canjes"]["total_estancados"] == 1
     assert cliente.get("/api/reportes/semanal",
                        params={"dias_estancado": 30}).json()["canjes"]["total_estancados"] == 0
+
+
+# ------------------------- los movimientos con fecha de carga no son actividad
+
+
+# El instante exacto en que "corrio el script": dos o mas movimientos que lo
+# comparten entraron juntos.
+CARGA = AHORA - timedelta(hours=3)
+
+
+def test_una_limpieza_masiva_no_llena_se_cayo(db, tipos):
+    """**El caso que el usuario vio.**
+
+    Una limpieza marco como cancelados los canjes que Dataprop dejo de exportar y
+    les creo el movimiento con la fecha del dia en que corrio. En una ventana que
+    incluye ese dia, «Se cayo» mostraba 215 sobre 303 canjes: cierto sobre los
+    movimientos y falso sobre el negocio, porque esos canjes se cayeron en algun
+    momento desconocido de los ultimos anos.
+    """
+    for id_ in (1, 2, 3):
+        _canje(db, id_, estado=CanjeEstado.CANCELADO)
+        _mov(db, EntityType.canje, id_, "CANCELACION", CARGA,
+             comentario="Cancelado en la limpieza", creado_en=CARGA)
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_caidos == 0, "la fecha la puso el script, no la gestion"
+    # Pero no en silencio: la pantalla tiene que poder decir que existen.
+    assert seccion.movimientos_con_fecha_de_carga == 3
+
+
+def test_una_carga_con_fechas_reales_si_cuenta(db, tipos):
+    """**No alcanza con "vino de una carga".**
+
+    Las 11 cancelaciones migradas del Excel entraron todas juntas, pero con las
+    fechas que traia el archivo. Esas pertenecen a la ventana donde caen.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO)
+    _canje(db, 2, estado=CanjeEstado.CANCELADO)
+    # Las dos comparten el instante de creacion --misma transaccion-- pero sus
+    # fechas son de dias distintos y anteriores.
+    _mov(db, EntityType.canje, 1, "CANCELACION", _hace(2), creado_en=CARGA)
+    _mov(db, EntityType.canje, 2, "CANCELACION", _hace(3), creado_en=CARGA)
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_caidos == 2
+    assert seccion.movimientos_con_fecha_de_carga == 0
+
+
+def test_una_cancelacion_registrada_hoy_en_la_app_cuenta(db, tipos):
+    """Tambien tiene fecha de hoy, y esa **si** es una gestion.
+
+    Lo que la distingue de la limpieza es que su `creado_en` no lo comparte nadie:
+    entro sola.
+    """
+    _canje(db, 1, estado=CanjeEstado.CANCELADO)
+    _mov(db, EntityType.canje, 1, "CANCELACION", AHORA, creado_en=AHORA)
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert seccion.total_caidos == 1
+    assert seccion.movimientos_con_fecha_de_carga == 0
+
+
+def test_la_regla_no_es_solo_para_las_cancelaciones(db, tipos):
+    """Vale para cualquier tipo: lo que se descarta es una fecha inventada."""
+    _canje(db, 1)
+    _canje(db, 2)
+    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", CARGA, creado_en=CARGA)
+    _mov(db, EntityType.canje, 2, "WA_SOLICITANTE", CARGA, creado_en=CARGA)
+    db.commit()
+
+    seccion = _reporte(db).canjes
+    assert (seccion.total_avanzados, seccion.movimientos_avanzados) == (0, 0)
+    assert seccion.movimientos_con_fecha_de_carga == 2
+
+
+def test_los_negocios_usan_la_misma_regla(db, tipos):
+    """El historial de negocios se cargo con fechas reales, asi que no cambia.
+
+    Pero la regla esta puesta igual: una carga futura que estampe "hoy" no puede
+    aparecer como actividad de la ventana.
+    """
+    n1 = _negocio(db, "VVP-1")
+    n2 = _negocio(db, "VVP-2")
+    _mov(db, EntityType.negocio, n1.id, "NEG_LLAMADA", CARGA, creado_en=CARGA)
+    _mov(db, EntityType.negocio, n2.id, "NEG_LLAMADA", CARGA, creado_en=CARGA)
+    # Y uno con fecha real cargado en la misma transaccion.
+    _mov(db, EntityType.negocio, n1.id, "NEG_LLAMADA", _hace(2), creado_en=CARGA)
+    db.commit()
+
+    seccion = _reporte(db).negocios
+    assert seccion.total_avanzados == 1, "solo el de fecha real"
+    assert seccion.movimientos_con_fecha_de_carga == 2

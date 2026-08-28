@@ -439,6 +439,26 @@ function SeccionDominio({
           />
         </SimpleGrid>
 
+        {/* **Lo descartado se dice.** Una limpieza marco como cancelados 215
+            canjes que Dataprop dejo de exportar, y les creo el movimiento con la
+            fecha del dia en que corrio: en una ventana que incluye ese dia, «Se
+            cayo» mostraba 215 sobre 303 canjes. Ahora no cuentan, porque su fecha
+            es del script y no de la gestion -- pero callarlo dejaria una cifra en
+            cero al lado de registros que el usuario sabe que existen. */}
+        {seccion.movimientos_con_fecha_de_carga > 0 && (
+          <Text size="xs" c="dimmed">
+            {seccion.movimientos_con_fecha_de_carga}{' '}
+            {plural(seccion.movimientos_con_fecha_de_carga, 'registro', 'registros')} de esta
+            ventana {plural(seccion.movimientos_con_fecha_de_carga, 'tiene', 'tienen')} la fecha de
+            una carga masiva, no de la gestión, así que no {plural(
+              seccion.movimientos_con_fecha_de_carga,
+              'cuenta',
+              'cuentan',
+            )}{' '}
+            en las cifras de arriba: cuándo pasó de verdad no se sabe.
+          </Text>
+        )}
+
         {elegido.largo === 0 ? (
           // **El vacío nombra la casilla y dice dónde sí hay algo.** Decía "nada
           // que mostrar acá" debajo de una fila de recuadros donde uno podía

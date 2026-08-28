@@ -126,6 +126,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - «Se cayo» ya no cuenta la limpieza masiva
+
+Me marcaste que «Se cayo» mostraba 215 en una ventana de cuatro semanas, sobre 303 canjes. Tenias razon: la cifra era cierta sobre los movimientos y falsa sobre el negocio.
+
+**De donde salia.** La limpieza que marco como cancelados los canjes que Dataprop dejo de exportar les creo el movimiento con la fecha del dia en que corrio, el 21-08. Cualquier ventana que incluya ese dia ve las 215 juntas. Esos canjes se cayeron en algun momento desconocido; lo que paso el 21-08 fue que corrio un script.
+
+**La regla que puse necesita dos condiciones**, y los datos explican por que ninguna alcanza sola: el movimiento entro en una transaccion con otros --o sea, en una carga-- **y** su fecha es el mismo dia en que se creo. Sin la segunda, se descartarian las 11 cancelaciones migradas del Excel, que entraron juntas pero con fechas reales de 2024 a 2026. Sin la primera, se descartaria una cancelacion que registres hoy en la app, que tambien tiene fecha de hoy y si es una gestion.
+
+**Y no se descarta en silencio:** debajo de los recuadros aparece «221 registros de esta ventana tienen la fecha de una carga masiva, no de la gestion, asi que no cuentan en las cifras de arriba: cuando paso de verdad no se sabe». Sin esa linea, verias 0 donde sabes que hay 215 registros, y eso se lee como que el reporte esta roto.
+
+**Verificado:** 792 tests --5 nuevos-- y contra los datos de `dev`, que tiene la misma limpieza con 221: «Se cayo» paso de 221 a 0, «Avanzo» quedo igual en 15 canjes y 86 registros, y el contador informo los 221. Captura del aviso. Ver `D-085`.
+
 ### 2026-08-28 - Filtros por corredor solicitante y propietario, con sugerencias
 
 Los dos filtros que pediste, cada uno con un campo que va ofreciendo alternativas mientras escribes.
