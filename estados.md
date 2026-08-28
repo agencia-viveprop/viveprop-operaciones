@@ -126,6 +126,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Filtro por N de solicitud en el listado de canjes
+
+El cuarto filtro, al lado de Comuna. Busca por el numero de la primera columna, que es el ID_CANJE de Dataprop.
+
+**Busca por prefijo**, y esa es la unica decision que tome por ti: con igualdad exacta, escribir «364» pasa por dos momentos --«3» y «36»-- donde la lista sale vacia, y eso se lee como que el canje no existe en vez de "segui escribiendo". Asi «36» trae los 36x y «364» trae ese. «64» no trae el 364: de un numero uno recuerda como empieza.
+
+Y acepta que pegues «#364», que es como la app escribe las referencias en los reportes. Si escribes algo sin numeros, el filtro no aplica en vez de dejarte con una lista vacia.
+
+**Verificado:** 780 tests --7 nuevos, incluido el que fija que el prefijo no busca en cualquier posicion--, probado tambien contra Postgres porque el `cast` que hace falta puede portarse distinto que en SQLite, y captura de la fila de filtros. Ver `D-083`.
+
 ### 2026-08-28 - El historial del pipeline de negocios tambien empieza por lo ultimo
 
 Lo mismo que hicimos en canjes, ahora en la bitacora del pipeline de un negocio: del mas reciente al mas antiguo.

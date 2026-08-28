@@ -50,7 +50,9 @@ async function parseOrThrow(res: Response) {
   return res.json()
 }
 
-export function listarCanjes(filtros: { estado?: string; etapa?: string; comuna?: string } = {}): Promise<Canje[]> {
+export function listarCanjes(
+  filtros: { estado?: string; etapa?: string; comuna?: string; numero?: string } = {},
+): Promise<Canje[]> {
   const params = new URLSearchParams()
   Object.entries(filtros).forEach(([k, v]) => v && params.set(k, v))
   const qs = params.toString()

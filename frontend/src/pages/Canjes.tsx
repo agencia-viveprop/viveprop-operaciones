@@ -69,10 +69,11 @@ function vacio() {
 
 export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   const queryClient = useQueryClient()
-  const [filtros, setFiltros] = useState<{ estado: string; etapa: string; comuna: string }>({
+  const [filtros, setFiltros] = useState<{ estado: string; etapa: string; comuna: string; numero: string }>({
     estado: '',
     etapa: '',
     comuna: '',
+    numero: '',
   })
   const { data: canjes, isLoading } = useQuery({
     queryKey: ['canjes', filtros],
@@ -221,6 +222,27 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               placeholder="Comuna"
               value={filtros.comuna}
               onChange={(e) => setFiltros({ ...filtros, comuna: e.currentTarget.value })}
+              w={160}
+            />
+            {/* El N° de solicitud es el ID_CANJE de Dataprop, el mismo que se ve
+                en la primera columna. Busca **por prefijo**: mientras se escribe
+                «364», el «3» y el «36» ya muestran algo, en vez de parpadear en
+                vacío y leerse como que el canje no existe.
+                Es `TextInput` y no `NumberInput` a propósito: no es una cantidad
+                --no se suma ni se incrementa-- y los separadores de miles que
+                pondría un campo numérico romperían la búsqueda por prefijo. Se
+                filtran los dígitos acá para que pegar «#364» funcione, que es
+                como la app escribe las referencias en los reportes. */}
+            <TextInput
+              placeholder="N° de solicitud"
+              inputMode="numeric"
+              value={filtros.numero}
+              onChange={(e) =>
+                setFiltros({
+                  ...filtros,
+                  numero: e.currentTarget.value.replace(/[^0-9]/g, ''),
+                })
+              }
               w={160}
             />
           </Group>

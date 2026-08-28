@@ -1,8 +1,8 @@
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import String, cast, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user, require_role
@@ -178,6 +178,13 @@ def listar(
     estado: CanjeEstado | None = None,
     etapa: CanjeEtapa | None = None,
     comuna: str | None = None,
+    numero: str | None = Query(
+        None,
+        description=(
+            "N° de solicitud, el mismo ID_CANJE de Dataprop. Busca por prefijo: "
+            "«36» trae los 36x y «364» trae ese. Acepta que venga con «#»."
+        ),
+    ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
@@ -188,6 +195,20 @@ def listar(
         query = query.where(Canje.etapa == etapa)
     if comuna:
         query = query.where(Canje.comuna.ilike(f"%{comuna}%"))
+    if numero:
+        # **Por prefijo y no por igualdad.** Teclear un número incompleto no puede
+        # devolver una lista vacía: mientras se escribe «364», el «3» y el «36»
+        # tienen que mostrar algo o la pantalla parpadea en vacío y se lee como
+        # que el canje no existe.
+        #
+        # Se filtra la entrada a dígitos en vez de rechazarla: la app muestra las
+        # referencias como «#364» --así salen en los reportes-- así que pegar eso
+        # tiene que funcionar. Si no queda ningún dígito, el filtro no aplica.
+        digitos = "".join(c for c in numero if c.isdigit())
+        if digitos:
+            # `cast` porque `id` es `bigint`: sin él no hay `like`. Con 303 filas
+            # el índice que se pierde no cambia nada medible.
+            query = query.where(cast(Canje.id, String).like(f"{digitos}%"))
     query = query.order_by(Canje.fecha_solicitud.desc())
     return db.scalars(query).all()
 

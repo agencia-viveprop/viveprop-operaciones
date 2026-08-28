@@ -88,6 +88,8 @@ Variables de entorno en Render:
 
 **La comision de Dataprop.** Canjes tiene eje de plata, y es **de Dataprop, no de ViveProp**: la app lo dice en texto para que nadie la sume con la de Negocios. Tres cifras -- cobrada (registrada al cerrar), potencial y no concretada (calculadas con la regla: 2% por corredor en venta o medio mes cada uno en arriendo, y sobre eso el 6/5/4% por tramo en UF o el 8%). Todo neto. Mas los plazos, con las dos poblaciones que si se pueden medir (`D-072`).
 
+**Buscar un canje por su número.** El listado filtra por **N° de solicitud** --el `ID_CANJE` de Dataprop, el de la primera columna-- y lo hace **por prefijo**: «36» trae los 36x y «364» trae ese. Con igualdad exacta, escribir un número pasaría por estados intermedios con la lista vacía, que se leen como «no existe». Acepta pegar «#364» (`D-083`).
+
 **Un canje arranca «En revisión».** El ciclo tiene **cinco** etapas --En revisión → Proceso de acuerdo → En oferta → En negocio → Cierre-- y ninguna es «Recepción»: existía para nombrar los canjes que Dataprop exportaba sin etapa, nadie pasaba tiempo en ella (los tramos daban 0 días) y los 75 que la tenían estaban todos cancelados. Se fueron a «En revisión», que es la primera etapa en la que alguien hace algo (`D-081`).
 
 **Un canje puede estar cerrado.** El estado admite **Activo**, **Cerrado** y **Cancelado**. La etapa dice hasta dónde llegó el proceso y el estado en qué terminó: un canje puede llegar a la etapa de cierre y caerse igual, y eso pasó 31 veces en el histórico. El gráfico de solicitudes reparte el total del mes en los tres estados (`D-071`).

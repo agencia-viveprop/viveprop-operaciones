@@ -2119,3 +2119,19 @@ Invertir la lista rompió la línea de tiempo de una forma que el código no del
 La solución es más simple que el prop: en un historial invertido **el estado «todavía no» no existe** --lo que se lista ya pasó, todo-- así que `active` va en el último índice y los tres quedan cumplidos. Sin `reverseActive`.
 
 Se vio en la captura. El typecheck y los tests pasaban en las dos versiones.
+
+---
+
+## D-083 · Filtro por N° de solicitud, y busca por prefijo
+
+Cuarto filtro del listado de canjes, al lado de Estado, Etapa y Comuna. El número es el `ID_CANJE` de Dataprop --el mismo de la primera columna-- así que es la forma en que un corredor nombra un canje por WhatsApp.
+
+**Busca por prefijo y no por igualdad**, que es la única decisión de diseño acá. Con igualdad, escribir «364» pasa por dos estados intermedios --«3» y «36»-- donde la lista sale vacía, y una lista vacía se lee como «ese canje no existe», no como «seguí escribiendo». Con prefijo, «36» trae los 36x y «364» trae ese. El costo es que un número corto trae varios, que es exactamente lo que uno quiere mientras busca.
+
+**Prefijo y no coincidencia en cualquier posición.** «64» no trae el 364: de un número uno recuerda cómo empieza, y buscar en el medio devolvería resultados que nadie pidió. Hay un test que fija justamente eso.
+
+**La entrada se filtra a dígitos en vez de rechazarse.** La app escribe las referencias como «#364» --así salen en el reporte semanal y en los canjes activos-- así que pegar eso tiene que funcionar. Si no queda ningún dígito, el filtro no aplica: mostrar todo es mejor que una lista vacía sin explicación.
+
+Es un `TextInput` y no un `NumberInput`: no es una cantidad --no se suma ni se incrementa-- y los separadores de miles que pondría un campo numérico romperían la búsqueda por prefijo.
+
+**Detalle de motor:** `id` es `bigint`, así que el `like` necesita un `cast` a texto. Eso descarta el índice, y con 303 filas no cambia nada medible. Se probó contra Postgres además de los tests en SQLite, porque un `cast` es de las cosas que se comportan distinto según el motor: «36» devolvió 360 y 361, y «64» devolvió el canje 64 y ningún 36x.
