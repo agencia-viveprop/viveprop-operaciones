@@ -2024,3 +2024,26 @@ Pasaron a **tú con conjugación estándar**: «No puedes… Usa», «Elige otra
 **Alcance: solo copy que lee un usuario** --mensajes de la API, rótulos de pantalla y las notas que van dentro de las plantillas de Excel--. Los comentarios del código quedaron en voseo: no los lee un usuario y normalizarlos sería un diff enorme sin valor. Si algún día se hace, es un trabajo aparte.
 
 Quedó anotado en la memoria del proyecto para que los textos nuevos salgan bien de entrada, que es más barato que barrer de nuevo.
+
+---
+
+## D-080 · El historial desplegado va del más reciente al más antiguo
+
+Invierte una decisión mía de `D-065`. El usuario había pedido *"que despliegue los registros que existen en orden cronologico"*, y lo hice ascendente para que se leyera como una historia: de dónde viene el canje hasta dónde está hoy.
+
+Después lo usó con sus datos y pidió lo contrario. Tiene razón, y el motivo se ve en su propia pantalla: los canjes abiertos tienen **5, 8, 13 y 14 registros**. Con esos largos, lo que uno abre a mirar no es de dónde viene, es **en qué quedó** -- y con orden ascendente había que recorrer la lista entera para llegar a lo último, que es justamente el dato por el que se abrió la fila.
+
+La historia completa sigue estando; lo que cambia es por dónde empieza a leerse.
+
+### Se invierte la respuesta, no la consulta
+
+La tentación era dar vuelta el `order_by`. Habría roto dos cosas **en silencio**:
+
+- `movimientos[-1].fecha` es la **última gestión**, con un comentario que decía «al venir ordenado es el último de la lista». Invertido, la cifra de la columna «Última gestión» habría pasado a ser la más vieja.
+- Las cargas masivas se detectan y cuentan recorriendo la lista en orden.
+
+Así que la lista interna del servicio se queda ascendente y lo que se invierte es el campo que sale en la respuesta, con el comentario que explica por qué justo ahí. El test que fija el orden nuevo verifica también que `ultima_gestion` no se movió: es la línea que habría cazado el error si hubiera tomado el atajo.
+
+### Lo que no cambió
+
+El rótulo de arriba del historial ahora dice «del más reciente al más antiguo», porque un orden que no se anuncia obliga a deducirlo de las fechas. Y la ficha del canje ya venía así: esta pestaña era la que iba al revés.

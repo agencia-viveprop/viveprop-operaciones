@@ -142,18 +142,32 @@ def test_el_registro_tardio_se_informa_sin_cambiar_el_estado(db):
 
     assert fila.estado == AL_DIA, "el estado no lo decide el registro"
     tardios = [m.dias_hasta_el_registro for m in fila.movimientos]
-    assert tardios == [9, None], "el orden es cronologico: primero el de las 3 horas"
+    assert tardios == [None, 9], "el mas reciente primero: el de las 2 horas"
 
 
-def test_el_historial_va_del_mas_viejo_al_mas_nuevo(db):
-    """Al reves que la ficha, y a proposito: para leer una historia."""
+def test_el_historial_va_del_mas_nuevo_al_mas_viejo(db):
+    """Lo primero que se lee es lo ultimo que paso.
+
+    Se desplego al reves --cronologico, para leerlo como una historia-- hasta que
+    el usuario lo uso con sus datos: en un canje con catorce registros, lo que uno
+    abre a mirar es en que quedo, y con orden ascendente habia que recorrer la
+    lista entera para llegar. El cambio de criterio es de `D-080`.
+
+    **La lista interna del servicio sigue siendo ascendente**: `movimientos[-1]`
+    es la ultima gestion y las cargas se cuentan recorriendo en orden. Lo que se
+    invierte es la respuesta.
+    """
     _canje(db, 1)
     for dia, texto in ((3, "primero"), (2, "segundo"), (1, "tercero")):
         _mov(db, 1, AHORA - timedelta(days=dia), comentario=texto)
 
     fila = obtener_listado(db, ahora=AHORA).filas[0]
 
-    assert [m.comentario for m in fila.movimientos] == ["primero", "segundo", "tercero"]
+    assert [m.comentario for m in fila.movimientos] == ["tercero", "segundo", "primero"]
+    # Y la cifra de la fila no se movio con el orden: sigue siendo la mas nueva.
+    # Se compara la fecha y no el instante porque SQLite --la base de los tests--
+    # devuelve el timestamp sin zona y Postgres con ella.
+    assert fila.ultima_gestion.date() == (AHORA - timedelta(days=1)).date()
 
 
 def test_un_movimiento_sin_seguimiento_no_borra_el_compromiso(db):
@@ -245,10 +259,10 @@ def test_los_registros_de_una_carga_no_llevan_el_aviso_de_atraso(db):
     fila = obtener_listado(db, ahora=AHORA).filas[0]
 
     de_carga = [m.de_carga_masiva for m in fila.movimientos]
-    assert de_carga == [True, True, True, False]
+    assert de_carga == [False, True, True, True], "el de la app es el mas reciente"
     # Los tres de la carga, sin aviso; el de la app, con el suyo.
     avisos = [m.dias_hasta_el_registro for m in fila.movimientos]
-    assert avisos == [None, None, None, 9]
+    assert avisos == [9, None, None, None]
 
     assert fila.registros_de_carga == 3
     assert fila.fecha_de_carga == carga.date()

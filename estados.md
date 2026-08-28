@@ -126,6 +126,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - El historial desplegado empieza por lo ultimo que paso
+
+Me pediste el orden inverso al que habiamos hecho en su momento, y tenias razon: tus canjes abiertos tienen 5, 8, 13 y 14 registros, y con esos largos lo que uno abre a mirar es **en que quedo**, no de donde viene. Con orden ascendente habia que recorrer la lista completa para llegar a lo ultimo.
+
+Ahora va del mas reciente al mas antiguo, y el rotulo de arriba lo dice.
+
+**Un detalle de como lo hice, porque el atajo era una trampa:** invertir el `order_by` de la consulta habria dado vuelta tambien la columna «Ultima gestion» --que sale del ultimo elemento de esa misma lista-- y el conteo de las cargas masivas, las dos en silencio. La lista interna se queda ascendente; lo que se invierte es la respuesta. El test nuevo verifica el orden **y** que «Ultima gestion» no se movio.
+
+**Verificado:** 772 tests --y esta vez ninguno falla: los dos del reloj que te mencione anoche vuelven a pasar pasada la medianoche UTC, que confirma el diagnostico--, typecheck y build sin hallazgos. Ver `D-080`.
+
 ### 2026-08-28 - Los textos de la app hablan en espanol de Chile
 
 Me pediste que no escriba como argentino o uruguayo. Tenias razon, y el problema no era solo en mis respuestas: la app tenia **9 textos en voseo** porque los escribi asi desde el principio -- «No podes», «Usa», «Elegi», «llena», «Borralas».
@@ -355,7 +365,7 @@ Aparte, arreglé el contador de «requieren atención» para que se derive de lo
 
 Pedido tuyo: bajo Canjes, un listado de los activos con su estado --Al día o Pendiente-- y que al pinchar una fila se desplieguen sus registros en orden cronológico.
 
-Está en **Canjes → pestaña «Activos y su gestión»**. Cada fila se abre en el lugar y muestra su bitácora completa, del registro más antiguo al más reciente --al revés de la ficha, y a propósito: para leer una historia el orden cronológico es el correcto--.
+Está en **Canjes → pestaña «Activos y su gestión»**. Cada fila se abre en el lugar y muestra su bitácora completa, del registro más reciente al más antiguo --al revés de la ficha, y a propósito: para leer una historia el orden cronológico es el correcto--.
 
 **Dos correcciones antes de escribirlo, las dos por tu observación.**
 

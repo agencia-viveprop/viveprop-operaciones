@@ -106,7 +106,10 @@ class FilaCanjeActivo(BaseModel):
     # carga. Se dice una vez arriba del historial en vez de repetirlo por línea.
     registros_de_carga: int
     fecha_de_carga: date | None
-    # El historial completo, en orden cronológico: del más viejo al más nuevo.
+    # El historial completo, **del más reciente al más antiguo**. Se desplegó al
+    # revés hasta que el usuario lo usó: en una lista de catorce registros, lo que
+    # se abre a mirar es qué pasó último, y con orden ascendente había que
+    # recorrerla entera para llegar. La fecha de cada línea deja claro el orden.
     movimientos: list[MovimientoDelListado]
 
 
@@ -265,7 +268,12 @@ def obtener_listado(db: Session, ahora: datetime | None = None) -> ListadoCanjes
                 ultima_gestion=ultima,
                 proximo_seguimiento=seguimiento,
                 dias_de_atraso=atraso,
-                movimientos=movimientos,
+                # Se invierte acá y no en la consulta: `movimientos[-1]` es la
+                # última gestión y `cargas` se arma recorriendo en orden, así que
+                # dar vuelta el `order_by` habría cambiado esas dos cosas en
+                # silencio. La lista interna se queda ascendente; lo que sale
+                # ordenado al revés es la respuesta.
+                movimientos=list(reversed(movimientos)),
             )
         )
 

@@ -131,7 +131,7 @@ function Historial({ fila }: { fila: FilaCanjeActivo }) {
     <Stack gap={4} p="sm">
       <Text size="xs" c="dimmed">
         {movimientos.length} {movimientos.length === 1 ? 'registro' : 'registros'}, del más
-        antiguo al más reciente
+        reciente al más antiguo
         {/* Una vez acá y no en cada línea: los 605 movimientos migrados del Excel
             decían todos «registrado N días después», porque una carga masiva es
             por definición un registro posterior a la gestión. Repetido en las 35
