@@ -194,8 +194,15 @@ export default function NegocioPipeline({
         </Stack>
       )}
 
-      {/* La lista llega de más viejo a más nuevo, así que el paso actual es el
-          último: `active` marca hasta dónde llegó el proceso. */}
+      {/* **La lista llega del más reciente al más antiguo**, y `active` cubre a
+          todos los ítems a propósito.
+          En una línea de tiempo Mantine pinta dos estados: cumplido y todavía no.
+          Acá el segundo **no existe** --lo que se lista ya pasó, todo-- así que
+          `active` va en el último índice y quedan los tres cumplidos.
+          Se probó con `reverseActive`, que es para cuando el ítem activo es el
+          final: con la lista invertida dejaba el más antiguo destacado y los dos
+          recientes en gris, o sea la historia dibujada como pendiente. Se vio en
+          la captura, no en el código. */}
       {movimientos && movimientos.length > 0 ? (
         <Timeline active={movimientos.length - 1} bulletSize={20} lineWidth={2}>
           {movimientos.map((m) => (

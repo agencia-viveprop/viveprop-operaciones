@@ -103,15 +103,21 @@ def test_el_movimiento_queda_en_el_historial_con_su_autor(cliente, pipeline):
     assert historial[0]["autor_nombre"] == "Test"
 
 
-def test_el_historial_viene_en_orden_cronologico(cliente, pipeline):
-    """De mas viejo a mas nuevo, y con desempate determinista.
+def test_el_historial_viene_del_mas_reciente_al_mas_antiguo(cliente, pipeline):
+    """Lo primero que se lee es lo ultimo que paso, y el desempate se mantiene.
 
-    **Cambio deliberado.** Antes venia descendente, como una bitacora que se mira
-    para ver que paso ultimo. Pero el pipeline es una secuencia y su historia se
-    lee de E1 hacia adelante, igual que el historial del reporte de canjes activos
-    (`D-065`). Y el orden viejo tenia un problema peor: ordenaba solo por `fecha`,
-    asi que dos etapas registradas el mismo dia salian en orden arbitrario --en los
-    datos reales aparecio E2 arriba de E1--. El `id` desempata.
+    **Este orden fue y volvio, asi que vale dejar la historia completa.** Al
+    principio era descendente. Se paso a ascendente porque el pipeline es una
+    secuencia que se lee de E1 hacia adelante (`D-065`), y de paso se arreglo algo
+    peor: ordenaba solo por `fecha`, asi que dos etapas registradas el mismo dia
+    salian en orden arbitrario --en los datos reales aparecio E2 arriba de E1--.
+    Ahora vuelve a ser descendente porque el usuario lo pidio despues de usarlo
+    con negocios de seis y siete registros (`D-082`), igual que en canjes
+    (`D-080`).
+
+    **Lo que no vuelve es el defecto:** el `id` sigue desempatando, ahora tambien
+    descendente, asi que dentro del mismo dia la ultima etapa cargada queda arriba
+    y el orden es determinista.
     """
     negocio = _crear(cliente)
     for tipo in ("NEG_E3_PROMESA", "NEG_E7_TERMINADO"):
@@ -119,8 +125,15 @@ def test_el_historial_viene_en_orden_cronologico(cliente, pipeline):
 
     historial = cliente.get(f"/api/negocios/{negocio['id']}/movimientos").json()
 
-    assert [m["tipo_movimiento"] for m in historial] == ["NEG_E3_PROMESA", "NEG_E7_TERMINADO"]
-    assert [m["fecha"] for m in historial] == sorted(m["fecha"] for m in historial)
+    assert [m["tipo_movimiento"] for m in historial] == ["NEG_E7_TERMINADO", "NEG_E3_PROMESA"]
+    # Los dos entran el mismo dia: si el `id` no desempatara, este orden seria
+    # el que decida el plan de la consulta.
+    assert [m["fecha"] for m in historial] == sorted(
+        (m["fecha"] for m in historial), reverse=True
+    )
+    assert [m["id"] for m in historial] == sorted(
+        (m["id"] for m in historial), reverse=True
+    )
 
 
 def test_un_comentario_no_mueve_la_etapa(cliente, pipeline):

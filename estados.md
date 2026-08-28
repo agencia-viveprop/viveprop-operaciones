@@ -126,6 +126,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - El historial del pipeline de negocios tambien empieza por lo ultimo
+
+Lo mismo que hicimos en canjes, ahora en la bitacora del pipeline de un negocio: del mas reciente al mas antiguo.
+
+**Un detalle que solo se vio mirando la pantalla.** Al invertir la lista, la linea de tiempo de Mantine quedo dibujando la historia como pendiente: el registro mas antiguo destacado y los dos recientes en gris. Probe el prop que parecia hecho para esto (`reverseActive`) y hacia justo lo contrario. La solucion resulto mas simple: en un historial invertido el estado "todavia no" no existe --todo lo que se lista ya paso-- asi que los tres quedan como cumplidos. El typecheck y los tests pasaban en las dos versiones; la diferencia estaba en la captura.
+
+**Y el orden dentro del mismo dia sigue siendo determinista**, que era el defecto que se habia arreglado cuando este orden se invirtio la primera vez: dos etapas cargadas el mismo dia se desempatan por `id`, ahora tambien descendente.
+
+**Verificado:** 773 tests, typecheck, build y lint sin hallazgos, y capturas del historial con tres movimientos creados por la API contra Postgres --que despues borre, junto con devolver a VVP-15 su etapa--. Ver `D-082`.
+
 ### 2026-08-28 - «Recepcion» deja de ser una etapa
 
 Salio de medir para el recuadro que pediste: «Recepcion» daba 0 dias, y de ahi tu observacion de que no tiene sentido como etapa. Tenias razon, y la historia del valor lo explica -- nacio como `SIN_ETAPA` (Dataprop no mandaba etapa) y una migracion vieja lo renombro suponiendo que un canje que entro y no avanzo esta "en recepcion". Le puso nombre de etapa a una ausencia.

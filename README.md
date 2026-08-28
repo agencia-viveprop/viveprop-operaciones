@@ -94,6 +94,8 @@ Variables de entorno en Render:
 
 **Carga del historial de etapas.** Negocios → «Historial de etapas»: una plantilla **pre-llenada** con una fila por cada etapa desde E1 hasta donde está hoy cada negocio, para cargar hacia atrás cuándo pasó por cada una y desbloquear la proyección de plazos. No agenda seguimientos, no hace retroceder la etapa actual, recargar no duplica, y se niega a corregir una fecha de inicio si eso movería la valorización (`D-067`).
 
+**La bitácora del pipeline va del más reciente al más antiguo**, igual que el historial de canjes activos: lo que se abre a mirar es en qué quedó el negocio. Dentro del mismo día desempata el orden de carga, así que E2 no puede aparecer sobre E1 por azar (`D-082`).
+
 **Las dos fechas del avance de negocio.** El pipeline de la ficha registra cuándo pasó la actividad y cuándo es la próxima acción. La segunda es optativa: vacía se agenda a **3 días** de la fecha de la actividad, corridos al lunes si caen fin de semana. «Qué me toca hoy» lee ese compromiso y le gana al semáforo de días sin gestión; lo agendado a futuro no se lista, se cuenta (`D-066`).
 
 **Canjes activos y su gestión.** Pestaña dentro de Canjes: los canjes abiertos con su estado --Al día o Pendiente-- y el historial completo que se despliega en la fila, **del registro más reciente al más antiguo** --lo que se abre a mirar es en qué quedó, y hay canjes con catorce registros (`D-080`)--. El estado se calcula sobre **cuándo se hizo la gestión**, no sobre cuándo quedó registrada, y el compromiso agendado manda sobre el tiempo cuando existe. A diferencia de «Qué me toca hoy», muestra **todos** los abiertos (`D-065`).

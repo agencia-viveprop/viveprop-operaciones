@@ -2084,3 +2084,23 @@ Un canje **arranca en «En revisión»**, tanto creado a mano como importado sin
 ### Y el recuadro que originó todo sigue pendiente
 
 Con «Recepción» fuera, el futuro panel de duración por etapa arranca en la primera etapa real y se le van los tramos de 0 días. Pero sigue faltando el dato: al momento de este cambio hay **5 tramos cerrados en total**, tres de ellos de 0 días, y tres de las cinco etapas sin un solo caso. `app/scripts/medir_duracion_etapas.py` es el diagnóstico que dice cuándo ya se puede.
+
+---
+
+## D-082 · El historial del pipeline de negocios también va del más reciente al más antiguo
+
+Lo mismo que `D-080` hizo con el historial de canjes activos, ahora en la bitácora del pipeline de un negocio. El usuario lo pidió después de usarla con VVP-15, que tiene seis registros.
+
+**Este orden fue y volvió, así que vale dejar la historia completa.** Al principio era descendente. Se pasó a ascendente porque el pipeline es una secuencia que se lee de E1 hacia adelante, y de paso se arregló algo peor: ordenaba solo por `fecha`, así que dos etapas cargadas el mismo día salían en orden arbitrario y en los datos reales apareció E2 sobre E1. Ahora vuelve a descendente, y **lo que no vuelve es el defecto**: el `id` sigue desempatando, ahora también descendente, así que dentro del mismo día la última etapa cargada queda arriba y el orden es determinista. El test lo fija con las dos aserciones.
+
+Acá se invirtió la consulta y no la respuesta --al revés que en canjes-- porque este endpoint tiene un solo consumidor y nada más depende del orden. Que la API devuelva lo que la pantalla muestra es preferible a invertir en el camino.
+
+### Lo que se vio mirando y no leyendo
+
+Invertir la lista rompió la línea de tiempo de una forma que el código no delata. Mantine dibuja dos estados --cumplido y todavía no-- y los decide con `active`: los ítems hasta ese índice van cumplidos. Con la lista invertida, `active` en el último dejaba todo cumplido pero ya no marcaba el paso actual, así que probé `reverseActive`, que existe para cuando el ítem activo es el final.
+
+**Salió al revés:** dejó el registro más antiguo destacado y los dos recientes en gris, o sea la historia dibujada como pendiente. La regla de Mantine es `active >= children.length - index - 1`, así que `active={0}` con `reverseActive` apunta al último ítem, no al primero.
+
+La solución es más simple que el prop: en un historial invertido **el estado «todavía no» no existe** --lo que se lista ya pasó, todo-- así que `active` va en el último índice y los tres quedan cumplidos. Sin `reverseActive`.
+
+Se vio en la captura. El typecheck y los tests pasaban en las dos versiones.
