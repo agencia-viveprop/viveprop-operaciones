@@ -226,12 +226,24 @@ export type Variacion = {
 export type Tendencia = {
   metrica: string
   dominio: Dominio
+  /** Sobre cuántos meses se trazó. La pantalla lo dice: una tendencia de tres
+   *  meses y una de doce no merecen la misma confianza. */
   puntos: number
+  /** El grado del polinomio: 1 es una recta. Crece con los puntos --2 desde 5
+   *  meses, 3 desde 10, 4 desde 24-- así que la ventana elegida decide cuántas
+   *  inflexiones puede mostrar la curva (`D-089`). */
+  grado: number
+  /** Cuánto cambia por mes **al final de la ventana**, no en promedio. */
   pendiente: string
   pct_por_mes: string | null
   direccion: 'sube' | 'baja' | 'plana'
-  desde: string
-  hasta: string
+  /** El valor ajustado mes a mes, ya recortado en cero. Tiene `puntos` entradas y
+   *  corresponde a los **últimos** meses de la serie: el ajuste arranca donde
+   *  arranca el dominio, no donde arranca la ventana. */
+  curva: string[]
+  /** Si vale dibujarla. Lo decide el backend --pendiente al final o forma-- para
+   *  que las dos secciones que la usan no lo interpreten distinto. */
+  mostrar: boolean
 }
 
 /** El promedio de la ventana. Todos sus campos llegan como texto: son decimales. */

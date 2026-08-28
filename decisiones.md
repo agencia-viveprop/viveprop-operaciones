@@ -2265,3 +2265,58 @@ Con **43 comunas** en los datos, escribir de memoria obliga a acertar cómo est�
 Renombrarlo costó nada porque el único consumidor es esta pantalla y tenía un commit de vida. Si hubiera esperado, el nombre «corredores» habría quedado describiendo una respuesta que trae comunas.
 
 **El orden de las rutas sigue importando**, y esta vez lo confirmó un test: quedó un `cliente.get("/api/canjes/corredores")` sin actualizar y respondió **422**, porque FastAPI intentó leer «corredores» como el id del canje de `/{canje_id}`. El error apareció en el test y no en producción.
+
+---
+
+## D-089 · La tendencia es una curva, y el grado lo decide la ventana
+
+El usuario pidió que las líneas de tendencia dejen de ser rectas --*"que vayan mostrando las curvas y no la línea recta que tiende a inducir a error de interpretación"*-- y después precisó lo que buscaba: *"que vaya mostrando las variaciones y oscilaciones según la ventana de tiempo que se está mirando"*.
+
+Tiene razón sobre el problema. Sobre doce meses de comisión real, la recta trazaba una diagonal de $0,9M a $0,1M --una sola dirección-- cuando lo que pasó fue que **subió hasta diciembre, hizo techo y desde ahí viene cayendo**. Esa recta no es un resumen de eso: es otra afirmación.
+
+### La propuesta que descarté, y por qué
+
+Primero sugerí una **media móvil de 3 meses** en vez de un polinomio, con este argumento: la serie de plata tiene 39 de 46 meses en cero, alternando `0 · 1.768.077 · 0`, y esos picos no son el negocio subiendo y bajando --son un cierre que cae en marzo y ninguno en abril--. Un polinomio ajustado a eso ondularía.
+
+El usuario respondió que quiere **ver** las oscilaciones, no que se absorban. Y al revisar, **mi objeción estaba exagerada**: una cúbica tiene como máximo dos inflexiones, así que no puede perseguir cada pico. La ondulación descontrolada aparece con grados altos, no con grado 3. Con el techo puesto, lo que pidió es lo correcto.
+
+### El grado crece con los puntos, con piso y techo
+
+| Puntos | Grado | Por qué |
+|---|---|---|
+| menos de 5 | 1 | con tres puntos un grado 2 pasa exactamente por los tres: deja de ser tendencia y es el dato redibujado |
+| 5 a 9 | 2 | una inflexión |
+| 10 a 23 | 3 | dos |
+| 24 o más | 4 | tres. Es la ventana histórica: 46 meses de canjes |
+
+El grado sale de los **puntos que sostienen el ajuste**, no de la ventana nominal: la comisión se ajusta desde que arrancó su dominio --trece meses-- aunque el gráfico muestre cuarenta y seis.
+
+### Dos decisiones numéricas que no se ven
+
+**El eje `x` va normalizado a [-1, 1] antes de ajustar.** Sin eso, con 46 meses y grado 4 las ecuaciones normales llegan a `x**8`, del orden de 1e13, y el sistema se vuelve inestable justo en la ventana más larga, que es donde el grado alto se usa.
+
+**El ajuste se hace en `float` y no en `Decimal`.** La curva es un artefacto visual: no se suma con nada ni reconcilia con el motor de comisiones, y el resultado se cuantiza a centavos al salir. `Decimal` en una inversión de matriz solo agregaría ruido de precisión.
+
+### La mejora que no se pidió y es la más útil
+
+**La pendiente ahora se lee al final de la curva**, no como promedio de la ventana: es la derivada en el último punto.
+
+Sobre una serie en V --`500 · 300 · 100 · 100 · 300 · 500`-- la recta daba pendiente casi cero y decía «plana»; la curva dice **«sube»**, porque al final la serie va para arriba. Hay un test con esos números. Y en los datos reales cambió una lectura: con ventana de seis meses la comisión decía «baja» --arrastrada por un cierre de enero-- y ahora dice «sube», que es lo que hacen los últimos meses.
+
+### `mostrar`, y el error que cometí en la primera versión
+
+La recta plana no se dibujaba, porque se superpone con la línea del promedio. Con curvas esa regla no alcanza: una parábola puede terminar horizontal en su vértice y tener toda la forma que mostrar.
+
+Mi primera versión fue `grado >= 2 or direccion != "plana"`, y **un test la tiró abajo**: con seis meses en cero el grado es 2, así que dibujaba una curva plana pegada al eje. La regla correcta mira si tiene **algo que decir**: pendiente al final, o amplitud de punta a punta mayor al 3% del promedio.
+
+### Lo que no se hizo
+
+**No se extrapola.** La curva cubre solo los meses que la sostienen. Extrapolar una cúbica dos meses es donde una curva engaña más que una recta, porque acelera. Si hace falta proyección, va aparte y como rango con el `n` visible, que es lo que ya hace la vista directorio con la tasa de conversión.
+
+Y **el texto dejó de contradecir al dibujo**: sobre una curva con forma que termina horizontal decía «viene plana» --al lado de una curva que claramente subió-- y ahora dice «se aplanó al final».
+
+### Verificado
+
+801 tests, incluidos el que reproduce una parábola exacta con nueve puntos y el de la serie en V. Y mirado en pantalla en los tres casos que importan: seis meses --donde la curva sale casi recta, porque el dato no da más forma--, doce meses --el arco que sube y hace techo-- e histórico de canjes con 46 puntos y grado 4, donde la curva se queda pegada al cero durante 2022-2024 y arranca en 2025, que es lo que la recta escondía.
+
+Va en un commit solo: el usuario dijo *"si no me gusta como se ve reversamos"*, así que la vuelta es un `git revert`.

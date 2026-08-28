@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - La tendencia de los graficos es una curva, no una recta
+
+Lo que pediste: que la linea muestre las variaciones de la ventana en vez de una sola direccion.
+
+**Como quedo.** El grado del polinomio crece con los puntos: menos de 5 meses da una recta --con tres puntos una curva pasa por los tres y deja de ser tendencia--, de 5 a 9 una inflexion, de 10 a 23 dos, y de 24 en adelante tres. Asi la ventana que elijas decide cuanta forma puede mostrar la curva.
+
+**Donde mas se nota**, mirando tus datos: con 12 meses la comision **sube hasta diciembre, hace techo y viene cayendo**; la recta trazaba una sola diagonal y escondia que los primeros meses subian. Y en el historico de canjes la curva se queda pegada al cero durante 2022-2024 y arranca en 2025, que es la historia real. Con 6 meses sale casi recta, y eso es honesto: el dato no da mas forma ahi.
+
+**Una mejora que no pediste y creo que es la mas util:** la direccion --«viene al alza» o «a la baja»-- ahora se lee **al final de la curva** y no como promedio de la ventana. En tus datos ya cambio una lectura: la comision a 6 meses decia «baja», arrastrada por un cierre de enero, y ahora dice «sube», que es lo que hacen los ultimos meses.
+
+**Lo que no hice:** proyectar hacia adelante. La curva cubre solo los meses que la sostienen. Extrapolar una cubica dos meses es donde una curva engaña mas que una recta. Si quieres proyeccion, la hacemos aparte y como rango.
+
+**Verificado:** 801 tests --uno reproduce una parabola exacta y otro fija que una serie en V ahora dice «sube»-- y capturas de las tres ventanas. Va en un solo commit, asi que si no te gusta como se ve, la vuelta es un `git revert` limpio. Ver `D-089`.
+
 ### 2026-08-28 - Comuna tambien sugiere mientras escribes
 
 El campo de comuna **ya filtraba** con lo que escribieras --coincidencia parcial, con test-- asi que entendi que lo que faltaba eran las sugerencias, como las que acababan de recibir los dos filtros de corredor. Si lo que viste fue que no filtraba, avisame, porque eso seria otra cosa.

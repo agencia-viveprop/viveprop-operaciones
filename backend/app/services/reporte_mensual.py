@@ -175,34 +175,50 @@ class Variacion(BaseModel):
 
 
 class Tendencia(BaseModel):
-    """La recta que mejor ajusta la serie, por mínimos cuadrados.
+    """La curva que mejor ajusta la serie, por mínimos cuadrados.
 
     **Qué agrega sobre el promedio.** El promedio dice si el mes está por encima o
     por debajo de lo normal; la tendencia dice **hacia dónde va la ventana**. Son
     preguntas distintas y las dos hacen falta: una ventana puede estar toda sobre
     su promedio y venir cayendo.
 
-    `desde` y `hasta` son el valor ajustado en el primer y el último mes. Van
-    calculados acá para que la pantalla dibuje la recta con dos puntos y no tenga
-    que repetir el ajuste --y para que el ajuste tenga tests, que es donde este
-    proyecto los tiene.
+    **Era una recta y ahora es una curva** (`D-089`). Una recta impone una forma
+    que la serie no tiene: sobre seis meses que suben y después caen, dibuja una
+    sola dirección promedio y se lee como que el negocio va parejo hacia allá. El
+    grado crece con los puntos --ver `_grado_de_tendencia`-- así que la ventana
+    elegida decide cuántas inflexiones puede mostrar.
 
-    **Con tres meses una tendencia es casi una anécdota.** Se calcula igual porque
-    la ventana la elige quien lee, pero `puntos` viaja con el resto para que la
-    pantalla pueda decir sobre cuántos meses se trazó.
+    `curva` trae el valor ajustado de cada mes que entró en el ajuste, ya recortado
+    en cero. Va calculado acá y no en la pantalla para que el ajuste tenga tests,
+    que es donde este proyecto los tiene.
+
+    **Con tres o cuatro meses la curva vuelve a ser una recta**, porque con esos
+    puntos una curva pasa por todos y deja de ser una tendencia: es el dato
+    redibujado. `puntos` viaja con el resto para que la pantalla pueda decir sobre
+    cuántos meses se trazó.
     """
 
     metrica: str
     dominio: str
     puntos: int
-    # Cuánto cambia por mes, en las unidades de la métrica.
+    # El grado del polinomio ajustado: 1 es una recta.
+    grado: int
+    # **Cuánto cambia por mes al final de la ventana**, en las unidades de la
+    # métrica: la derivada de la curva en su último punto. Antes era la pendiente
+    # global de la recta, que sobre una serie con forma de V daba casi cero y
+    # decía "plana" cuando los últimos meses subían con fuerza.
     pendiente: Decimal
     # La pendiente como porcentaje del promedio de la serie. Nulo si el promedio
     # es cero: ahí no hay porcentaje que calcular, igual que en `Variacion`.
     pct_por_mes: Decimal | None
     direccion: str  # 'sube' | 'baja' | 'plana'
-    desde: Decimal
-    hasta: Decimal
+    # El valor ajustado mes a mes, recortado en cero.
+    curva: list[Decimal]
+    # Si vale dibujarla. Una recta plana no se dibuja --es ruido, y además se
+    # superpone con la línea del promedio-- pero una curva de grado 2 o más sí,
+    # porque tiene forma aunque termine horizontal. La regla vive acá y no en la
+    # pantalla para que las dos secciones que la usan no la interpreten distinto.
+    mostrar: bool
 
 
 class Comparacion(BaseModel):
@@ -698,17 +714,77 @@ ES_PLATA = {campo: plata for campo, _, plata in METRICAS}
 UMBRAL_PLANA = Decimal("3")
 
 
+def _grado_de_tendencia(n: int) -> int:
+    """Cuántas inflexiones puede mostrar la curva, según cuántos meses la sostienen.
+
+    El grado crece con la ventana **con techo**, y las dos cosas importan:
+
+    - **Piso en 1.** Con tres puntos, un polinomio de grado 2 pasa exactamente por
+      los tres: deja de describir una tendencia y se vuelve el dato redibujado.
+      Abajo de cinco meses, la recta es lo único que dice algo.
+    - **Techo en 4.** Cada grado extra es una inflexión más, y sobre trece meses
+      un grado alto empieza a seguir el ruido en vez de la forma. Cuatro alcanza
+      para la ventana histórica de 46 meses de canjes.
+    """
+    if n < 5:
+        return 1
+    if n < 10:
+        return 2
+    if n < 24:
+        return 3
+    return 4
+
+
+def _coeficientes(ys: list[float], grado: int) -> list[float]:
+    """Mínimos cuadrados por ecuaciones normales, resueltas con Gauss.
+
+    **En `float` y no en `Decimal`, a propósito.** La curva es un artefacto visual:
+    no se suma con nada ni tiene que reconciliar con el motor de comisiones, y el
+    resultado se cuantiza a centavos al salir. `Decimal` acá solo agregaría ruido
+    de precisión a una inversión de matriz.
+
+    **El eje `x` va normalizado a [-1, 1].** Sin eso, con 46 meses y grado 4 las
+    ecuaciones normales llegan a `x**8` --del orden de 1e13-- y el sistema se
+    vuelve numéricamente inestable justo en la ventana más larga, que es donde el
+    grado alto se usa.
+    """
+    n = len(ys)
+    ts = [(2 * i - (n - 1)) / (n - 1) for i in range(n)] if n > 1 else [0.0]
+    m = grado + 1
+    ata = [[sum(t ** (f + c) for t in ts) for c in range(m)] for f in range(m)]
+    aty = [sum((t ** f) * y for t, y in zip(ts, ys)) for f in range(m)]
+
+    for col in range(m):
+        pivote = max(range(col, m), key=lambda r: abs(ata[r][col]))
+        if abs(ata[pivote][col]) < 1e-12:
+            # Sistema degenerado --pasa con una serie constante y grado alto--.
+            # Sin curva es mejor que con una inventada por un residuo numérico.
+            return [0.0] * m
+        ata[col], ata[pivote] = ata[pivote], ata[col]
+        aty[col], aty[pivote] = aty[pivote], aty[col]
+        for fila in range(col + 1, m):
+            factor = ata[fila][col] / ata[col][col]
+            for c in range(col, m):
+                ata[fila][c] -= factor * ata[col][c]
+            aty[fila] -= factor * aty[col]
+
+    coef = [0.0] * m
+    for fila in reversed(range(m)):
+        resto = aty[fila] - sum(ata[fila][c] * coef[c] for c in range(fila + 1, m))
+        coef[fila] = resto / ata[fila][fila]
+    return coef
+
+
 def _tendencia(
     serie: list[MetricasMes],
     campo: str,
     nombre: str,
     inicio: tuple[int, int] | None = None,
 ) -> Tendencia:
-    """Mínimos cuadrados sobre los meses de la ventana.
+    """La curva de mínimos cuadrados sobre los meses de la ventana.
 
-    Los meses van como 0, 1, 2... así que la pendiente sale directamente en
-    unidades por mes. Con un solo punto no hay recta: se devuelve plana en su
-    propio valor, que es lo único cierto.
+    Con un solo punto no hay curva: se devuelve plana en su propio valor, que es
+    lo único cierto.
     """
     # Igual que el promedio: la recta arranca donde arranca el dominio. Ajustarla
     # sobre 34 meses en cero seguidos de 12 con datos daría una pendiente que
@@ -723,20 +799,33 @@ def _tendencia(
             metrica=nombre,
             dominio=DOMINIOS[campo],
             puntos=n,
+            grado=0,
             pendiente=CERO,
             pct_por_mes=None,
             direccion="plana",
-            desde=media_y.quantize(CENTAVO),
-            hasta=media_y.quantize(CENTAVO),
+            curva=[media_y.quantize(CENTAVO)] * n,
+            mostrar=False,
         )
 
-    media_x = Decimal(n - 1) / 2
-    numerador = sum(
-        ((Decimal(i) - media_x) * (y - media_y) for i, y in enumerate(ys)), CERO
-    )
-    denominador = sum(((Decimal(i) - media_x) ** 2 for i in range(n)), CERO)
-    pendiente = (numerador / denominador) if denominador else CERO
-    intercepto = media_y - pendiente * media_x
+    grado = _grado_de_tendencia(n)
+    coef = _coeficientes([float(y) for y in ys], grado)
+
+    # `t` recorre [-1, 1] igual que en el ajuste, así que la curva se evalúa en los
+    # mismos meses que la sostienen.
+    def _en(t: float) -> float:
+        return sum(c * t**k for k, c in enumerate(coef))
+
+    ts = [(2 * i - (n - 1)) / (n - 1) for i in range(n)]
+    # La curva se recorta en cero: una comisión o un conteo negativo no existen, y
+    # dibujarlos bajo el eje sugeriría que sí.
+    curva = [max(Decimal(str(round(_en(t), 2))), CERO).quantize(CENTAVO) for t in ts]
+
+    # **La pendiente es la del final de la ventana, no la del promedio.** Es la
+    # derivada de la curva en su último punto, pasada de "por unidad de `t`" a "por
+    # mes" con la regla de la cadena: `dt/di = 2/(n-1)`.
+    derivada_en_t = sum(k * c * 1.0 ** (k - 1) for k, c in enumerate(coef) if k >= 1)
+    por_mes = derivada_en_t * 2 / (n - 1)
+    pendiente = Decimal(str(round(por_mes, 2)))
 
     pct = None if media_y == CERO else (pendiente / media_y * 100).quantize(DECIMA)
     if pct is None or abs(pct) < UMBRAL_PLANA:
@@ -744,17 +833,26 @@ def _tendencia(
     else:
         direccion = "sube" if pendiente > CERO else "baja"
 
+    # Cuánto se mueve la curva de punta a punta, como porcentaje del promedio.
+    amplitud = max(curva) - min(curva)
+    pct_amplitud = None if media_y == CERO else (amplitud / media_y * 100)
+
     return Tendencia(
         metrica=nombre,
         dominio=DOMINIOS[campo],
         puntos=n,
+        grado=grado,
         pendiente=pendiente.quantize(CENTAVO),
         pct_por_mes=pct,
         direccion=direccion,
-        # La recta se recorta en cero: una proyección negativa de un conteo o de
-        # una comisión no existe, y dibujarla bajo el eje sugeriría que sí.
-        desde=max(intercepto, CERO).quantize(CENTAVO),
-        hasta=max(intercepto + pendiente * Decimal(n - 1), CERO).quantize(CENTAVO),
+        curva=curva,
+        # **Se dibuja si tiene algo que decir: pendiente al final o forma.** La
+        # primera versión miraba el grado --"de 2 para arriba, siempre"-- y con seis
+        # meses en cero eso dibujaba una curva plana pegada al eje. Y mirar solo la
+        # pendiente final tampoco alcanza: una parábola puede terminar horizontal en
+        # su vértice y tener toda la forma que mostrar.
+        mostrar=direccion != "plana"
+        or (pct_amplitud is not None and pct_amplitud >= UMBRAL_PLANA),
     )
 
 

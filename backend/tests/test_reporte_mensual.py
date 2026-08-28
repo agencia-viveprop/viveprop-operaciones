@@ -632,8 +632,11 @@ def test_una_serie_que_sube_da_tendencia_al_alza(db):
     assert te.direccion == "sube"
     assert te.pendiente == D("100.00")
     assert te.puntos == 3
-    # La recta ajustada pasa por los extremos de una serie perfectamente lineal.
-    assert (te.desde, te.hasta) == (D("100.00"), D("300.00"))
+    # Con tres puntos el grado es 1: una curva pasaria por los tres y dejaria de
+    # ser una tendencia (`D-089`).
+    assert te.grado == 1
+    # La recta ajustada pasa por los tres puntos de una serie perfectamente lineal.
+    assert te.curva == [D("100.00"), D("200.00"), D("300.00")]
 
 
 def test_una_serie_que_baja_da_tendencia_a_la_baja(db):
@@ -645,7 +648,7 @@ def test_una_serie_que_baja_da_tendencia_a_la_baja(db):
 
     assert te.direccion == "baja"
     assert te.pendiente == D("-100.00")
-    assert (te.desde, te.hasta) == (D("300.00"), D("100.00"))
+    assert te.curva == [D("300.00"), D("200.00"), D("100.00")]
 
 
 def test_una_serie_estable_da_tendencia_plana(db):
@@ -659,19 +662,19 @@ def test_una_serie_estable_da_tendencia_plana(db):
     assert te.direccion == "plana"
 
 
-def test_la_recta_no_baja_de_cero(db):
-    """Una proyeccion negativa de un conteo o de una comision no existe.
+def test_la_curva_no_baja_de_cero(db):
+    """Una comision negativa no existe, y dibujarla bajo el eje sugeriria que si.
 
     La serie 300 / 0 / 0 tiene pendiente tan negativa que la recta ajustada
-    cruzaria el eje. Dibujarla bajo cero sugeriria comisiones negativas.
+    cruzaria el eje.
     """
     _negocio(db, "T-10", [_hito(date(2026, 4, 1), date(2026, 4, 10), real=D("300"))])
 
     te = obtener_reporte_mensual(db, 2026, 6, ventana=3).tendencias["comision_real_vp"]
 
     assert te.direccion == "baja"
-    assert te.hasta == D("0.00")
-    assert te.desde >= D("0")
+    assert te.curva[-1] == D("0.00")
+    assert all(v >= D("0") for v in te.curva)
 
 
 def test_sin_datos_la_tendencia_es_plana_y_sin_porcentaje(db):
@@ -679,7 +682,8 @@ def test_sin_datos_la_tendencia_es_plana_y_sin_porcentaje(db):
 
     assert te.direccion == "plana"
     assert te.pct_por_mes is None, "sin base no hay porcentaje que calcular"
-    assert (te.desde, te.hasta) == (D("0.00"), D("0.00"))
+    assert te.curva == [D("0.00")] * 6
+    assert te.mostrar is False, "una recta plana se superpone con el promedio"
 
 
 def test_hay_una_tendencia_por_cada_metrica(db):
@@ -704,10 +708,17 @@ def test_la_tendencia_usa_los_meses_de_la_ventana_elegida(db):
 
     assert corta.puntos == 3
     assert larga.puntos == 6
-    # En la corta el unico cierre es el de junio, asi que sube; en la larga el de
-    # enero queda dentro y pesa mas, asi que baja.
+    # Y el grado cambia con la ventana, que es el punto de `D-089`: tres meses dan
+    # una recta y seis dan una curva con una inflexion.
+    assert (corta.grado, larga.grado) == (1, 2)
+    # En la corta el unico cierre es el de junio, asi que sube.
     assert corta.direccion == "sube"
-    assert larga.direccion == "baja"
+    # En la larga el de enero queda dentro. Con la recta vieja eso alcanzaba para
+    # que la tendencia dijera "baja"; con la curva, la pendiente se lee **al final
+    # de la ventana**, y ahi lo que hay es el cierre de junio subiendo desde cinco
+    # meses en cero. Es la lectura que se buscaba: hacia donde va, no el promedio
+    # de la ventana.
+    assert larga.direccion == "sube"
 
 
 def test_el_promedio_de_un_conteo_no_se_trunca(db):
@@ -944,3 +955,76 @@ def test_un_negocio_sin_operacion_cae_en_venta(db):
     agosto = _reporte(db).serie[-1]
     assert agosto.valor_venta == D("99000000")
     assert agosto.valor_arriendo == D("0")
+
+
+def test_el_grado_de_la_curva_crece_con_los_puntos():
+    """La ventana elegida decide cuantas inflexiones puede mostrar la curva.
+
+    Con techo en 4: cada grado extra es una inflexion mas, y sobre trece meses un
+    grado alto sigue el ruido en vez de la forma.
+    """
+    from app.services.reporte_mensual import _grado_de_tendencia
+
+    assert [_grado_de_tendencia(n) for n in (1, 3, 4)] == [1, 1, 1]
+    assert [_grado_de_tendencia(n) for n in (5, 9)] == [2, 2]
+    assert [_grado_de_tendencia(n) for n in (10, 23)] == [3, 3]
+    assert [_grado_de_tendencia(n) for n in (24, 46, 200)] == [4, 4, 4]
+
+
+def test_la_curva_reproduce_una_parabola():
+    """El ajuste tiene que recuperar la forma cuando la forma existe.
+
+    Nueve puntos de `y = (i-4)**2` y grado 2: si el ajuste esta bien, la curva
+    pasa por los nueve. Es el test que caza un error de signo o de escala en las
+    ecuaciones normales, que con datos reales pasaria desapercibido.
+    """
+    from app.services.reporte_mensual import _coeficientes
+
+    ys = [float((i - 4) ** 2) for i in range(9)]
+    coef = _coeficientes(ys, 2)
+    ts = [(2 * i - 8) / 8 for i in range(9)]
+    ajustado = [sum(c * t**k for k, c in enumerate(coef)) for t in ts]
+
+    assert [round(v, 6) for v in ajustado] == ys
+
+
+def test_una_serie_en_v_termina_subiendo(db):
+    """**La diferencia entre la recta y la curva, en un caso.**
+
+    Baja y despues sube con la misma fuerza. La recta ajustada da pendiente casi
+    cero y dice "plana"; la curva de grado 2 dice "sube", porque la pendiente se
+    lee al final de la ventana y ahi la serie va para arriba.
+    """
+    valores = (D("500"), D("300"), D("100"), D("100"), D("300"), D("500"))
+    for i, valor in enumerate(valores):
+        mes = 3 + i
+        _negocio(db, f"V-{i}", [_hito(date(2026, mes, 1), date(2026, mes, 10), real=valor)])
+
+    te = obtener_reporte_mensual(db, 2026, 8, ventana=6).tendencias["comision_real_vp"]
+
+    assert te.puntos == 6 and te.grado == 2
+    assert te.direccion == "sube"
+    assert te.pendiente > D("0")
+    # Y la curva tiene forma de V: los extremos por encima del medio.
+    assert te.curva[0] > te.curva[2] and te.curva[-1] > te.curva[3]
+
+
+def test_una_curva_con_forma_se_dibuja_aunque_termine_plana(db):
+    """`mostrar` no puede depender solo de la pendiente del final.
+
+    Esta serie sube, hace techo y vuelve al mismo valor: la curva de grado 2
+    termina casi horizontal en su vertice, asi que por pendiente diria "plana". Y
+    tiene toda la forma que mostrar. Al reves, una recta plana no aporta nada y se
+    superpone con la linea del promedio, asi que esa no se dibuja.
+    """
+    valores = (D("100"), D("300"), D("500"), D("500"), D("300"), D("100"))
+    for i, valor in enumerate(valores):
+        mes = 3 + i
+        _negocio(db, f"P-{i}", [_hito(date(2026, mes, 1), date(2026, mes, 10), real=valor)])
+
+    te = obtener_reporte_mensual(db, 2026, 8, ventana=6).tendencias["comision_real_vp"]
+
+    assert (te.puntos, te.grado) == (6, 2)
+    assert te.mostrar is True, "tiene forma de campana, aunque el final sea plano"
+    # La forma esta: el medio por encima de los dos extremos.
+    assert te.curva[2] > te.curva[0] and te.curva[3] > te.curva[-1]

@@ -1,7 +1,8 @@
 import { useComputedColorScheme } from '@mantine/core'
 import {
   Bar,
-  BarChart,
+  ComposedChart,
+  Line,
   CartesianGrid,
   LabelList,
   ReferenceLine,
@@ -150,6 +151,12 @@ const unidades = (v: number) =>
 /** El campo sintético que lleva el total de la pila. No es una serie: no se
  *  dibuja como barra, solo se lee para el globo y la etiqueta. */
 const CAMPO_TOTAL = '__total'
+/** La curva de tendencia, como una serie más de los datos del gráfico.
+ *
+ * Antes la tendencia era una recta dibujada con `ReferenceLine` y dos puntos. Una
+ * curva necesita un valor por mes, y la forma de darle uno por mes a Recharts
+ * cuando el eje X es categórico es meterla en el mismo arreglo de datos. */
+const CAMPO_CURVA = '__curva'
 
 /**
  * El globo del gráfico apilado, con el total arriba de sus partes.
@@ -313,7 +320,7 @@ export default function EvolucionMensual({
   const etiquetasVisibles = datos.length <= 12
 
   const dibujaTendencia =
-    tendencia !== undefined && tendencia.direccion !== 'plana' && datos.length > 1
+    tendencia !== undefined && tendencia.mostrar && datos.length > 1
 
   /**
    * Dónde arranca el tramo que la tendencia describe.
@@ -329,6 +336,17 @@ export default function EvolucionMensual({
   const desdeTendencia = tendencia
     ? Math.max(0, datos.length - tendencia.puntos)
     : 0
+
+  // La curva entra como una columna más de los datos, alineada al final: los meses
+  // anteriores al ajuste quedan en `null` y la línea no se dibuja ahí. Sin el
+  // `null` --con un cero, por ejemplo-- la curva bajaría al eje en los meses en que
+  // el dominio no existía y se leería como una caída.
+  if (tendencia?.mostrar) {
+    tendencia.curva.forEach((valor, i) => {
+      const fila = datos[desdeTendencia + i]
+      if (fila) fila[CAMPO_CURVA] = Number(valor)
+    })
+  }
   const formato = esPlata ? pesos : unidades
   // El eje va sin decimales: sus marcas son enteras y "2,00" solo agrega ruido.
   const ejeY = esPlata ? millones : (v: number) => String(v)
@@ -364,7 +382,7 @@ export default function EvolucionMensual({
       )}
 
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={datos} margin={{ top: 18, right: 8, left: 0, bottom: 4 }}>
+        <ComposedChart data={datos} margin={{ top: 18, right: 8, left: 0, bottom: 4 }}>
           {/* Rejilla recesiva y solo horizontal: las verticales competirían con
               las barras, que ya marcan la posición en el eje. */}
           <CartesianGrid vertical={false} stroke={estructura.rejilla} />
@@ -403,20 +421,26 @@ export default function EvolucionMensual({
             />
           )}
 
-          {/* La recta de tendencia. Va con `segment` --dos puntos-- y no como una
-              serie más: es una lectura de los datos, no un dato, así que se dibuja
-              como referencia y no compite con las barras.
-              Se omite cuando es plana: una recta horizontal ya la cuenta el
-              promedio, y dos líneas paralelas solo agregan tinta. */}
-          {tendencia && tendencia.direccion !== 'plana' && datos.length > 1 && (
-            <ReferenceLine
-              segment={[
-                { x: datos[desdeTendencia].mes as string, y: Number(tendencia.desde) },
-                { x: datos[ultimo].mes as string, y: Number(tendencia.hasta) },
-              ]}
+          {/* **La curva de tendencia** (`D-089`). Era una recta de dos puntos
+              dibujada con `ReferenceLine`; ahora es un polinomio cuyo grado crece
+              con la ventana, así que necesita un valor por mes y va como una serie.
+              Sigue siendo una lectura de los datos y no un dato: por eso no tiene
+              puntos ni entra en el globo --`tooltipType="none"`-- y su color es el
+              teal que no usa ninguna serie.
+              Se omite cuando no tiene nada que decir; la regla la decide el
+              backend (`mostrar`), no la pantalla. */}
+          {tendencia?.mostrar && datos.length > 1 && (
+            <Line
+              type="monotone"
+              dataKey={CAMPO_CURVA}
               stroke={paleta.tendencia}
               strokeWidth={2}
-              ifOverflow="extendDomain"
+              dot={false}
+              activeDot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+              tooltipType="none"
+              legendType="none"
             />
           )}
 
@@ -468,7 +492,7 @@ export default function EvolucionMensual({
             </Bar>
           ))}
 
-        </BarChart>
+        </ComposedChart>
       </ResponsiveContainer>
 
       {/* La leyenda se dibuja acá y no con el `<Legend>` de Recharts.
@@ -581,7 +605,16 @@ export function Veredicto({
         .
       </>
     ) : tendencia ? (
-      <> La tendencia sobre {tendencia.puntos} meses viene plana.</>
+      // «Plana» se mide al final de la curva, así que sobre una curva con forma
+      // --46 meses que arrancan en cero, suben y hacen techo-- decir "viene
+      // plana" contradice lo que se está viendo. Se dice que **se aplanó**, que es
+      // lo que pasó. Con una recta plana no hay tal forma y el texto de siempre
+      // sirve.
+      <>
+        {' '}
+        La tendencia sobre {tendencia.puntos} meses{' '}
+        {tendencia.mostrar && tendencia.grado >= 2 ? 'se aplanó al final' : 'viene plana'}.
+      </>
     ) : null
 
   if (promedio === 0) {
