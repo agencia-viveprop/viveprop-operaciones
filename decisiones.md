@@ -2358,3 +2358,76 @@ Los filtros de corredor y comuna de canjes tenían el problema idéntico: crear,
 ### Lo que no se pudo verificar mirando
 
 El refresco es una invalidación de React Query, y ejercitarla pide escribir en un formulario y guardar --interacción que las capturas de este entorno no hacen--. Lo que sí se verificó es el backend, con dos tests nuevos: que cualquier estado cuenta, y que cambiar el corredor saca al anterior y mete al nuevo. La invalidación en sí es la misma mecánica que ya refresca el listado cada vez que se guarda un negocio, que es visible en cada uso.
+
+---
+
+## D-092 · Facturación y pago: una tabla para los dos mundos, monto calculado y editable
+
+La pregunta que abrió esto fue concreta: *«¿dónde se registra que casos como este están cerrados y pagados?»*, mirando VVP-3, cuyas Observaciones dicen «pendiente pago a corredor, pendiente facturacion captadora inmobiliaria, pendiente pago equipo Viveprop». El diagnóstico: **la tabla existía y no estaba expuesta en ninguna parte**. `negocio_obligaciones` tenía 114 filas cargadas del Excel --las seis columnas de facturación y pago, verticalizadas-- y ningún endpoint, ninguna pantalla. Las de VVP-3 dicen «Pagado» en las seis desde la carga; el texto libre de Observaciones quedó viejo y era lo único que se veía.
+
+La respuesta del usuario: *«en la app debe existir la opción de marcar y registrar el estado de facturación y el estado de pagos para cada negocio y también para cada canje»*.
+
+### Lo que él definió
+
+- **Es Dataprop quien factura y cobra en canjes**; ViveProp solo hace las gestiones y el seguimiento.
+- **Una factura por corredor** en cada canje.
+- **Un solo campo de estado**, «pero que permita ir modificándolo y que quede registro de avance según Por Facturar → Facturado → Por Pagar → Pagado».
+- **Estado, monto y fecha «deben registrarse las 3 según vayan ocurriendo»**.
+- El monto no puede ser solo manual: *«con las reglas de cálculos de comisiones y distribución de comisiones según Modelo/alianza tienes cómo calcular este ítem»*, y lo que sí debe existir es **poder modificar lo calculado**, «ya que podrían existir ajustes o cambios por acuerdos o por características de negocios».
+- El 50/50 de canjes: *«por regla general deben ser iguales, pero sería bueno tener la opción de modificar manualmente»*.
+
+### Una tabla para los dos dominios
+
+`negocio_obligaciones` se renombró a `obligaciones` y ahora cuelga de una liquidación **o** de un canje, exactamente una de las dos, con un `CHECK` que lo exige. Se renombró en vez de crear una tabla nueva por dos razones: las 114 filas históricas se conservan sin copiarlas, y una sola tabla es lo que permite que la cobranza transversal consulte los dos mundos con una consulta en vez de dos unidas a mano.
+
+**Dos claves foráneas nulables y no el `entity_type` + `entity_id` de `movimientos`.** Ahí el patrón genérico se justifica por el volumen; acá son 114 filas y se puede pagar el lujo de tener integridad referencial real de los dos lados, que es lo que impide que quede una obligación apuntando a una liquidación borrada.
+
+Los tipos son por dominio y **no cruzan**: las seis partes de negocio no existen en un canje y las dos de canje no existen en un negocio. El `CHECK` no puede impedirlo --el enum es válido para la columna-- así que lo valida el servicio, con un test por cada dirección.
+
+### Estado vigente más historia
+
+La fila guarda el estado, el monto y la fecha vigentes, y cada cambio deja un `obligacion_avance` con **su propio monto y fecha**. Eso último es lo que hace que la historia sirva: al facturar se registran los datos de la factura y al pagar los del pago, y con un solo par de campos el segundo registro pisaría al primero y «cuánto se facturó» se perdería.
+
+**No se exige orden entre estados.** El circuito es el que él definió, pero un salto de «Por Facturar» a «Pagado» se registra igual: en la operación real pasa --se entera de la factura y del pago juntos-- y el sistema que lo prohíbe termina con la plata anotada en un campo de texto. El salto queda visible en la historia.
+
+**Las filas se crean al primer registro.** No se pre-crean vacías: con 606 canjes serían 1.212 filas que no dicen nada. La pantalla muestra siempre las partes del dominio, y las que no existen dicen «sin registrar», que es información distinta de un monto en cero.
+
+### El mapeo de los seis montos, y las dos filas que costaron
+
+| Parte | Monto calculado |
+|---|---|
+| Facturación comisión total | `comision_total` |
+| Pago partner comercial | `comision_broker` |
+| Facturación corredor ViveProp | `comision_vp_bruta − comision_tercero` |
+| Facturación captador alianza | `comision_tercero` |
+| Pago equipo ViveProp | `comision_equipo` |
+| Pago comisión real VP | `comision_real_vp` |
+
+Cuatro son columnas del motor. Las otras dos se resolvieron con los datos:
+
+- **Facturación corredor ViveProp** no es la del partner: **VVP-15 tiene `comision_broker` en cero y esta fila con estado real**, así que no puede ser la del broker. Mi primera propuesta --que fuera la VP bruta-- la rechazó: «son 2 conceptos separados». Y en efecto: lo que ViveProp factura por sí mismo no incluye lo que le corresponde al captador de la alianza, que se factura aparte en la fila siguiente. Entonces es **bruta menos tercero**. En 17 de las 19 liquidaciones da idéntico a la bruta --no hay tercero-- y solo se separa en VVP-3: $1.174.975 contra $1.211.314. Por eso el test que lo fija verifica que **las dos filas sumadas den la bruta completa**: un error acá pasaría inadvertido casi siempre.
+- **Facturación captador alianza** es `comision_tercero`: está en «Pagado» exactamente en los dos negocios con tercero mayor que cero, y en «No Aplica Captador» en los demás.
+
+**Y todos son editables.** La pantalla muestra el calculado al lado del registrado, y cuando difieren el registrado va en color con el calculado en el tooltip. La diferencia es el ajuste, y esconderla sería perderla.
+
+### Canjes: la mitad de la comisión de Dataprop, y nada para los cancelados
+
+Cada corredor espera la mitad de la comisión de Dataprop. Manda la **registrada** cuando existe --de un canje cerrado importa lo que se cobró, no lo que la regla estimaba, igual que en la vista de plata-- y el motor cubre el que todavía no la tiene.
+
+**Un canje cancelado no tiene monto que esperar**, y eso se descubrió mirando la pantalla: el canje #3 mostraba **$5.721.959.600 por corredor**. El motor estaba bien; ese canje trae el valor mal etiquetado en el Excel de origen --3.500.000 marcado en UF, en un arriendo-- y valorizarlo con la UF de hoy da miles de millones. Aun con el valor correcto el número no sería un esperado: de un canje que se cayó no hay nada que facturar. Dos arreglos salieron de ahí: no se calcula esperado para los cancelados, y **la política de qué UF usa cada canje pasó a ser una sola función pública** (`uf_del_canje`), porque duplicarla fue exactamente lo que dejó pasar el error --mi copia usaba la de hoy para todo lo que no fuera cerrado--.
+
+### La cobranza transversal no tiene un gran total
+
+Los seis conceptos de negocios son **dos niveles de la misma plata**: la comisión total se reparte entre el corredor aliado y ViveProp, y lo que le queda a ViveProp se reparte otra vez entre el captador, el equipo y la casa. En el histórico se ve directo: las tres obligaciones «Por Facturar» de un nivel suman $1.441.396 y las del otro $1.731.841. Sumar los seis contaría la misma plata dos o tres veces, así que **se totaliza por parte** y la pantalla lo dice arriba. Hay un test que verifica que la respuesta no traiga ningún campo `total*`.
+
+Y las dos mitades van separadas: la de negocios es de ViveProp y la de canjes es de Dataprop, sin ningún total que las cruce (`D-045`).
+
+La vista informa **registrado y calculado en columnas distintas**, más cuántos casos de cada estado tienen monto, para que un registrado bajo se lea como «incompleto» y no como «poca plata». Las 114 filas del Excel no traen monto ni fecha --el archivo no los tenía-- así que la columna de registrado arranca vacía y su historia empieza con el próximo cambio que alguien registre.
+
+### Lo que no se toca
+
+El texto libre de Observaciones queda como está. La ficha ahora muestra el estado real debajo de las comisiones, que es donde se lee; corregir el texto viejo es decisión de quien lo escribió.
+
+### Verificado mirando
+
+Se registró un avance real contra la base de desarrollo por la API y por la pantalla: la ficha de VVP-3 muestra sus dos liquidaciones con las seis partes cada una --y el corredor ViveProp en $2.345.028 y $1.174.975, o sea bruta menos tercero en las dos--, la historia con autor y fecha, y la cobranza reflejando el monto ajustado. Los registros de prueba se borraron después.

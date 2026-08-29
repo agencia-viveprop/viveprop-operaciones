@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel
@@ -22,6 +23,12 @@ from app.services.canjes_activos import ListadoCanjesActivos, obtener_listado
 from app.services.plata_canjes import PlataCanjes, obtener_plata_canjes
 from app.services.uf import UFNoDisponible
 from app.services.estructura_archivo import EstructuraArchivo
+from app.services.obligaciones import (
+    ObligacionError,
+    ObligacionOut,
+    obligaciones_del_canje,
+    registrar_avance,
+)
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import (
     MovimientoError,
@@ -439,3 +446,59 @@ def eliminar_movimiento(
         db.rollback()
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+class AvanceCanjeIn(BaseModel):
+    """Lo mismo que en negocios: estado, monto y fecha, los tres juntos."""
+
+    tipo: str
+    estado_id: int
+    monto: Decimal | None = None
+    fecha: date | None = None
+
+
+def _canje_de(db: Session, canje_id: int) -> Canje:
+    canje = db.get(Canje, canje_id)
+    if canje is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Canje no encontrado")
+    return canje
+
+
+@router.get("/{canje_id}/obligaciones", response_model=list[ObligacionOut])
+def listar_obligaciones(
+    canje_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Las dos facturas del canje, una por corredor.
+
+    **Es plata de Dataprop.** ViveProp opera el Centro de Canje a nombre de
+    Dataprop y no percibe nada de él; acá se registra el seguimiento, no un ingreso
+    propio.
+    """
+    return obligaciones_del_canje(db, _canje_de(db, canje_id))
+
+
+@router.post("/{canje_id}/obligaciones", response_model=list[ObligacionOut])
+def registrar_obligacion(
+    canje_id: int,
+    payload: AvanceCanjeIn,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    canje = _canje_de(db, canje_id)
+    try:
+        registrar_avance(
+            db,
+            canje=canje,
+            tipo=payload.tipo,
+            estado_id=payload.estado_id,
+            monto=payload.monto,
+            fecha=payload.fecha,
+            autor_id=usuario.id,
+        )
+        db.commit()
+    except ObligacionError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return obligaciones_del_canje(db, canje)

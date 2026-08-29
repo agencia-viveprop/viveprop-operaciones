@@ -214,17 +214,34 @@ Es 10% en las 19 filas, contra los 30–40% de los ejemplos de `REGLAS CALCULO`.
 Seis columnas del Excel con los mismos 12 estados posibles. Como tabla hija:
 
 ```
-negocio_obligaciones
+obligaciones
   id       int PK
-  hito_id  int FK
+  hito_id  int FK -> negocio_hitos.id  null
+  canje_id bigint FK -> canjes.id      null
   tipo     enum      PAGO_PARTNER_COMERCIAL | FACT_CORREDOR_VP |
                      FACT_CAPTADOR_ALIANZA | PAGO_EQUIPO_VP |
-                     FACT_COMISION_TOTAL | PAGO_COMISION_REAL_VP
+                     FACT_COMISION_TOTAL | PAGO_COMISION_REAL_VP |
+                     FACT_CORREDOR_SOLICITANTE | FACT_CORREDOR_PROPIETARIO
   estado_id  int FK -> catalogos.id  null
   monto      numeric(16,2) null
   fecha      date null
+  CHECK  exactamente uno de (hito_id, canje_id)
   UNIQUE (hito_id, tipo)
+  UNIQUE (canje_id, tipo)
+
+obligacion_avances
+  id             int PK
+  obligacion_id  int FK
+  estado_id      int FK -> catalogos.id  null
+  monto          numeric(16,2) null
+  fecha          date null
+  autor_id       int FK -> usuarios.id  null  ON DELETE SET NULL
+  creado_en      timestamptz
 ```
+
+**Segundo refinamiento, al exponerla (`D-092`).** La tabla se renombró a `obligaciones` y pasó a servir también a canjes, que agregan dos tipos --una factura por corredor--; un `CHECK` exige que cuelgue de una liquidación **o** de un canje, no de las dos ni de ninguna. Y se agregó `obligacion_avances`, la historia: cada cambio de estado guarda **su propio monto y fecha**, porque al facturar se registran los de la factura y al pagar los del pago, y con un solo par de campos el segundo registro pisaría al primero.
+
+Los tipos no cruzan de dominio, y eso lo valida el servicio: el enum es válido para la columna, así que la base no puede impedirlo.
 
 **Refinamiento al implementar.** Este documento proponía `estado varchar(40)` guardando el código del catálogo. Se implementó como `estado_id` con clave foránea a `catalogos`, y lo mismo en `propiedades.tipo_propiedad_id` / `estado_propiedad_id` y en `negocio_hitos.motivo_perdida_id`. Es el mismo diseño con integridad referencial de verdad, y deja consistente la forma de referenciar catálogos en todo el esquema: `alianza_id` ya iba a ser una clave foránea.
 
@@ -244,7 +261,9 @@ En los datos, `No Aplica - Negocio Caído` aparece en los 10 perdidos y en las 6
 | `negocio_hitos` | `(estado, fecha_cierre)` | Los tres buckets del sprint 12 |
 | `negocio_hitos` | `fecha_cierre` | Series mensuales de los sprints 13 y 17 |
 | `propiedades` | `(direccion, unidad, comuna)` UNIQUE | Detección de reintentos |
-| `negocio_obligaciones` | `(hito_id, tipo)` UNIQUE | Una obligación por tipo |
+| `obligaciones` | `(hito_id, tipo)` UNIQUE | Una obligación por tipo, en negocios |
+| `obligaciones` | `(canje_id, tipo)` UNIQUE | Una obligación por tipo, en canjes |
+| `obligacion_avances` | `obligacion_id` | Traer la historia de una obligación |
 
 ---
 

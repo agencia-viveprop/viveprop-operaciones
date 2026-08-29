@@ -22,6 +22,7 @@ import {
   listarMovimientosCanje,
   listarTiposMovimiento,
 } from '../api/movimientos'
+import Obligaciones from './Obligaciones'
 import { ETAPA_LABELS, ETAPAS, rotuloCorredor, rotuloEtapa } from './canjesEtiquetas'
 
 /**
@@ -164,7 +165,7 @@ export default function SeguimientoModal({
   }, [canjeId, etapaActual])
 
   return (
-    <Modal opened={opened} onClose={cerrar} title={`Seguimiento — Canje #${canjeId}`} size="md">
+    <Modal opened={opened} onClose={cerrar} title={`Seguimiento — Canje #${canjeId}`} size="lg">
       <Stack gap="md">
         {isLoading && <Text size="sm" c="dimmed">Cargando...</Text>}
         {borrar.isError && (
@@ -351,6 +352,29 @@ export default function SeguimientoModal({
             <Button color="accent" disabled={!tipoSeleccionado} loading={crear.isPending} onClick={() => crear.mutate()}>
               Registrar movimiento
             </Button>
+          </>
+        )}
+
+        {/* Al final porque es el paso siguiente: primero se gestiona el canje y
+            despues se cobra. **Es plata de Dataprop**: ViveProp opera el Centro
+            de Canje a nombre de Dataprop y no percibe nada, asi que aca se
+            registra el seguimiento de la cobranza, no un ingreso propio
+            (`D-092`). */}
+        {canjeId !== null && (
+          <>
+            <Divider label="Facturación y pago" />
+            <Text size="xs" c="dimmed">
+              Una factura por corredor, y la comisión de Dataprop se reparte mitad y mitad. Los
+              montos se pueden corregir a mano.
+            </Text>
+            <Obligaciones
+              dominio={{ tipo: 'canje', canjeId }}
+              puedeEditar={puedeEditar}
+              detalles={{
+                FACT_CORREDOR_SOLICITANTE: solicitante ?? undefined,
+                FACT_CORREDOR_PROPIETARIO: propietario ?? undefined,
+              }}
+            />
           </>
         )}
       </Stack>

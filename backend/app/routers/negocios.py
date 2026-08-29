@@ -15,6 +15,12 @@ from app.models.negocio import Negocio, NegocioHito, clave_de_orden, Propiedad
 from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
 from app.services.movimientos import MovimientoError, crear_movimiento_negocio
+from app.services.obligaciones import (
+    ObligacionError,
+    ObligacionOut,
+    obligaciones_del_hito,
+    registrar_avance,
+)
 from app.services.negocios import NegocioError
 from app.services.bandeja_negocios import (
     BandejaNegocios,
@@ -931,3 +937,86 @@ def crear_movimiento(
         db.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     return _a_movimiento_out(db, movimiento)
+
+
+class AvanceIn(BaseModel):
+    """Lo que se registra de una parte: estado, monto y fecha.
+
+    Los tres viajan siempre, prellenados con lo vigente: la fila de la obligación
+    espeja el último avance, así que mandar solo el estado borraría el monto. El
+    monto y la fecha admiten nulo porque «facturado, todavía sin monto conocido» es
+    una situación real y distinta de cero.
+    """
+
+    tipo: str
+    estado_id: int
+    monto: Decimal | None = None
+    fecha: date | None = None
+
+
+def _hito_de(db: Session, negocio_id: int, hito_id: int) -> NegocioHito:
+    """El hito, exigiendo que sea **de ese negocio**.
+
+    Sin la verificación, `/negocios/1/hitos/99/obligaciones` devolvería las
+    obligaciones del hito 99 aunque sea de otro negocio: la URL mentiría y la
+    pantalla mostraría plata ajena.
+    """
+    negocio = _cargar(db, negocio_id)
+    hito = next((h for h in negocio.hitos if h.id == hito_id), None)
+    if hito is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"El negocio {negocio_id} no tiene la liquidación {hito_id}.",
+        )
+    return hito
+
+
+@router.get(
+    "/{negocio_id}/hitos/{hito_id}/obligaciones", response_model=list[ObligacionOut]
+)
+def listar_obligaciones(
+    negocio_id: int,
+    hito_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Las seis partes de la liquidación, registradas o no.
+
+    Van siempre las seis: una parte que nadie tocó es información --«esto falta»--
+    y omitirla haría que la pantalla dependiera de lo que ya se registró.
+    """
+    return obligaciones_del_hito(db, _hito_de(db, negocio_id, hito_id))
+
+
+@router.post(
+    "/{negocio_id}/hitos/{hito_id}/obligaciones", response_model=list[ObligacionOut]
+)
+def registrar_obligacion(
+    negocio_id: int,
+    hito_id: int,
+    payload: AvanceIn,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Registra un avance y devuelve las seis partes ya actualizadas.
+
+    Devuelve la lista completa y no la obligación sola para que la pantalla no
+    tenga que consultar de nuevo: es una tabla de seis filas, y refrescarla entera
+    evita que quede mostrando un estado viejo en las otras cinco.
+    """
+    hito = _hito_de(db, negocio_id, hito_id)
+    try:
+        registrar_avance(
+            db,
+            hito=hito,
+            tipo=payload.tipo,
+            estado_id=payload.estado_id,
+            monto=payload.monto,
+            fecha=payload.fecha,
+            autor_id=usuario.id,
+        )
+        db.commit()
+    except ObligacionError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    return obligaciones_del_hito(db, hito)

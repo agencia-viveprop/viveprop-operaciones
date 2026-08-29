@@ -118,8 +118,15 @@ def _dias(desde: datetime | date, hasta: date) -> int:
     return (hasta - desde).days
 
 
-def _uf_para(db: Session, canje: Canje, hoy: date) -> Decimal | None:
-    """Con qué UF se valoriza este canje. Ver el docstring del módulo."""
+def uf_del_canje(db: Session, canje: Canje, hoy: date) -> Decimal | None:
+    """Con qué UF se valoriza este canje. Ver el docstring del módulo.
+
+    Es público porque la política es una sola y la usa también la facturación de
+    canjes: cada caso con la UF que le corresponde, y no la de hoy para todos.
+    Duplicarla ahí ya salió mal una vez --un canje cancelado en 2022 valorizado
+    con la UF de hoy daba una comisión de miles de millones-- porque su valor
+    viene mal etiquetado en el Excel de origen.
+    """
     if canje.estado == CanjeEstado.ACTIVO:
         cuando = hoy
     elif canje.estado == CanjeEstado.CERRADO:
@@ -182,7 +189,7 @@ def obtener_plata_canjes(db: Session, hoy: date | None = None) -> PlataCanjes:
     def calculados(estado: CanjeEstado) -> list[tuple[Canje, ComisionCanje | None]]:
         salida = []
         for c in por_estado[estado]:
-            uf = _uf_para(db, c, hoy)
+            uf = uf_del_canje(db, c, hoy)
             salida.append(
                 (c, calcular(c.tipo_operacion, c.valor_prop, c.moneda_valor, uf) if uf else None)
             )

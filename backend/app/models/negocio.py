@@ -30,17 +30,6 @@ PCT = Numeric(16, 14)
 MONTO = Numeric(16, 2)
 
 
-class TipoObligacion(str, enum.Enum):
-    """Las 6 columnas de facturacion y pago del Excel, verticalizadas."""
-
-    PAGO_PARTNER_COMERCIAL = "PAGO_PARTNER_COMERCIAL"
-    FACT_CORREDOR_VP = "FACT_CORREDOR_VP"
-    FACT_CAPTADOR_ALIANZA = "FACT_CAPTADOR_ALIANZA"
-    PAGO_EQUIPO_VP = "PAGO_EQUIPO_VP"
-    FACT_COMISION_TOTAL = "FACT_COMISION_TOTAL"
-    PAGO_COMISION_REAL_VP = "PAGO_COMISION_REAL_VP"
-
-
 class Propiedad(Base):
     """La unidad fisica, separada del negocio (D0 seccion 2).
 
@@ -231,7 +220,7 @@ class NegocioHito(Base):
     )
 
     negocio: Mapped["Negocio"] = relationship(back_populates="hitos")
-    obligaciones: Mapped[list["NegocioObligacion"]] = relationship(
+    obligaciones: Mapped[list["Obligacion"]] = relationship(
         back_populates="hito", cascade="all, delete-orphan"
     )
 
@@ -245,34 +234,3 @@ class NegocioHito(Base):
         if self.valor_clp_manual is not None:
             return self.valor_clp_manual
         return self.valor_clp_calculado
-
-
-class NegocioObligacion(Base):
-    """Facturacion y pago por parte, en vez de 6 columnas aplanadas.
-
-    Cuelga del hito y no del negocio: cada liquidacion se factura y se paga por
-    separado.
-
-    El estado se guarda explicito y no se deriva del estado del negocio, aunque
-    en el historico los 10 perdidos tengan "No Aplica - Negocio Caido" en las 6
-    columnas. Un negocio puede caerse DESPUES de que algo ya se facturo, y ahi
-    la derivacion mentiria.
-    """
-
-    __tablename__ = "negocio_obligaciones"
-    __table_args__ = (
-        UniqueConstraint("hito_id", "tipo", name="uq_negocio_obligaciones_hito_tipo"),
-    )
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    hito_id: Mapped[int] = mapped_column(
-        ForeignKey("negocio_hitos.id", ondelete="CASCADE"), nullable=False
-    )
-    tipo: Mapped[TipoObligacion] = mapped_column(
-        Enum(TipoObligacion, name="tipo_obligacion"), nullable=False
-    )
-    estado_id: Mapped[int | None] = mapped_column(ForeignKey("catalogos.id"), nullable=True)
-    monto: Mapped[Decimal | None] = mapped_column(MONTO, nullable=True)
-    fecha: Mapped[date | None] = mapped_column(Date, nullable=True)
-
-    hito: Mapped["NegocioHito"] = relationship(back_populates="obligaciones")

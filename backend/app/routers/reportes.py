@@ -18,6 +18,7 @@ from app.services.reporte_mensual import (
     ReporteMensual,
     obtener_reporte_mensual,
 )
+from app.services.obligaciones import Cobranza, obtener_cobranza
 from app.services.vista_directorio import VistaDirectorio, obtener_vista_directorio
 from app.services.reporte_semanal import (
     ReporteSemanal,
@@ -130,3 +131,19 @@ def directorio(
             f"La ventana tiene que ser una de {list(VENTANAS_VALIDAS)}.",
         )
     return obtener_vista_directorio(db, ventana=ventana)
+
+
+@router.get("/cobranza", response_model=Cobranza)
+def cobranza(
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(get_current_user),
+):
+    """Todo lo facturable y pagable de los dos mundos, agrupado por parte.
+
+    Va acá y no en el router de negocios porque cruza los dos dominios, como el
+    reporte semanal. **No hay un gran total**: los seis conceptos de negocios son
+    dos niveles de la misma plata --la comisión total se reparte, y lo que le queda
+    a ViveProp se reparte otra vez-- así que sumarlos contaría lo mismo dos veces;
+    y la de canjes es de Dataprop, que no se suma con la de ViveProp por definición.
+    """
+    return obtener_cobranza(db)

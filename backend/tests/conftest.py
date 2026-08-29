@@ -30,9 +30,9 @@ from app.models.usuario import RolUsuario, Sesion, Usuario
 from app.models.negocio import (
     Negocio,
     NegocioHito,
-    NegocioObligacion,
     Propiedad,
 )
+from app.models.obligacion import Obligacion, ObligacionAvance
 from app.models.uf import UFDiaria
 from app.services.importar_canjes import COLUMNAS_REQUERIDAS
 
@@ -54,7 +54,7 @@ def db():
 
     for tabla in (
         Usuario, Sesion, IntentoLogin, Canje, UFDiaria, Catalogo, Etapa,
-        Propiedad, Negocio, NegocioHito, NegocioObligacion,
+        Propiedad, Negocio, NegocioHito, Obligacion, ObligacionAvance,
         TipoMovimiento, Movimiento,
     ):
         tabla.__table__.create(engine)

@@ -9,6 +9,10 @@ from app.models.catalogo import Catalogo, Etapa  # noqa: F401
 from app.models.negocio import (  # noqa: F401
     Negocio,
     NegocioHito,
-    NegocioObligacion,
     Propiedad,
+)
+from app.models.obligacion import (  # noqa: F401
+    Obligacion,
+    ObligacionAvance,
+    TipoObligacion,
 )

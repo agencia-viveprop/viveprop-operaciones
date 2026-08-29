@@ -20,6 +20,7 @@ import { obtenerNegocio, type Hito } from '../api/negocios'
 import HitoFormModal from './HitoFormModal'
 import NegocioEditarModal from './NegocioEditarModal'
 import NegocioPipeline from './NegocioPipeline'
+import Obligaciones from './Obligaciones'
 import { clp, COLOR_ESTADO, fecha, MODELO_CORTO, pct, uf } from './negociosFormato'
 import EstadoConsulta from './EstadoConsulta'
 
@@ -44,9 +45,11 @@ function descuadre(h: Hito): number | null {
 }
 
 function FichaHito({
+  negocioId,
   hito,
   onEditar,
 }: {
+  negocioId: number
   hito: Hito
   /** Nulo para gerencia: puede leer la ficha pero no cambiar la plata. */
   onEditar: (() => void) | null
@@ -164,6 +167,15 @@ function FichaHito({
           </Text>
         </Alert>
       )}
+
+      {/* Debajo de las comisiones porque es la misma plata un paso mas adelante:
+          arriba dice cuanto es, aca dice si se facturo y si se pago. Los montos
+          esperados salen del mismo reparto de arriba (`D-092`). */}
+      <Divider my="sm" label="Facturación y pago" labelPosition="left" />
+      <Obligaciones
+        dominio={{ tipo: 'negocio', negocioId, hitoId: hito.id }}
+        puedeEditar={onEditar !== null}
+      />
     </Card>
   )
 }
@@ -180,6 +192,7 @@ export default function NegocioFichaModal({
   // `undefined` cerrado; `null` = agregar una nueva; un hito = editar ese.
   const [editando, setEditando] = useState<Hito | null | undefined>(undefined)
   const [editandoNegocio, setEditandoNegocio] = useState(false)
+
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
   const consulta = useQuery({
@@ -279,6 +292,7 @@ export default function NegocioFichaModal({
           {negocio.hitos.map((h) => (
             <FichaHito
               key={h.id}
+              negocioId={negocio.id}
               hito={h}
               onEditar={puedeEditar ? () => setEditando(h) : null}
             />

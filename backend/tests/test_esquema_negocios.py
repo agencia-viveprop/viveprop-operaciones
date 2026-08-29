@@ -17,10 +17,9 @@ from app.models.catalogo import EstadoNegocio, ModeloNegocio
 from app.models.negocio import (
     Negocio,
     NegocioHito,
-    NegocioObligacion,
     Propiedad,
-    TipoObligacion,
 )
+from app.models.obligacion import Obligacion, TipoObligacion
 
 
 @pytest.fixture
@@ -141,10 +140,10 @@ def test_una_propiedad_puede_tener_varios_negocios(db, propiedad):
 
 def test_una_obligacion_por_tipo_y_por_hito(db, vvp3):
     hito = vvp3.hitos[0]
-    db.add(NegocioObligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
+    db.add(Obligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
     db.commit()
 
-    db.add(NegocioObligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
+    db.add(Obligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
     with pytest.raises(IntegrityError):
         db.commit()
 
@@ -152,21 +151,21 @@ def test_una_obligacion_por_tipo_y_por_hito(db, vvp3):
 def test_las_obligaciones_cuelgan_del_hito_no_del_negocio(db, vvp3):
     """Cada liquidación se factura y se paga por separado."""
     for hito in vvp3.hitos:
-        db.add(NegocioObligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
+        db.add(Obligacion(hito_id=hito.id, tipo=TipoObligacion.FACT_COMISION_TOTAL))
     db.commit()
 
-    assert db.scalar(select(func.count()).select_from(NegocioObligacion)) == 2
+    assert db.scalar(select(func.count()).select_from(Obligacion)) == 2
 
 
 def test_borrar_el_negocio_se_lleva_hitos_y_obligaciones(db, vvp3):
-    db.add(NegocioObligacion(hito_id=vvp3.hitos[0].id, tipo=TipoObligacion.PAGO_EQUIPO_VP))
+    db.add(Obligacion(hito_id=vvp3.hitos[0].id, tipo=TipoObligacion.PAGO_EQUIPO_VP))
     db.commit()
 
     db.delete(vvp3)
     db.commit()
 
     assert db.scalar(select(func.count()).select_from(NegocioHito)) == 0
-    assert db.scalar(select(func.count()).select_from(NegocioObligacion)) == 0
+    assert db.scalar(select(func.count()).select_from(Obligacion)) == 0
 
 
 def test_un_hito_no_puede_colgar_de_un_negocio_inexistente(db):

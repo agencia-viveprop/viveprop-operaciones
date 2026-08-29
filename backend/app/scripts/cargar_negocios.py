@@ -25,12 +25,12 @@ from sqlalchemy import delete, select
 from app.db import SessionLocal, engine
 from app.models.canje import MonedaTipo
 from app.models.catalogo import Catalogo, EstadoNegocio, ModeloNegocio
+from app.models.obligacion import Obligacion, TipoObligacion
 from app.models.negocio import (
     Negocio,
     NegocioHito,
-    NegocioObligacion,
+    Obligacion,
     Propiedad,
-    TipoObligacion,
 )
 from app.services import comisiones as motor
 from app.services.negocios import obtener_o_crear_propiedad
@@ -213,7 +213,7 @@ class Cargador:
             estado_id = self._catalogo("estado_facturacion", self._g(fila, col), contexto)
             if estado_id is None:
                 continue
-            hito.obligaciones.append(NegocioObligacion(tipo=tipo, estado_id=estado_id))
+            hito.obligaciones.append(Obligacion(tipo=tipo, estado_id=estado_id))
 
     # ------------------------------------------------------------ verificacion
 
@@ -281,7 +281,7 @@ def main() -> None:
             ("negocios", select(Negocio)),
             ("hitos", select(NegocioHito)),
             ("propiedades", select(Propiedad)),
-            ("obligaciones", select(NegocioObligacion)),
+            ("obligaciones", select(Obligacion)),
         ):
             print(f"  {etiqueta:<14}{len(db.scalars(consulta).all())}")
 

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-22 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
+**Última actualización:** 2026-08-29 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
 
 ---
 
@@ -125,6 +125,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-29 - Facturacion y pago, en negocios y en canjes
+
+Preguntaste donde se registra que casos como VVP-3 estan cerrados y pagados. La respuesta era incomoda: **la tabla existia y no estaba en ninguna pantalla.** Tenia las 114 filas cargadas del Excel --las seis columnas de facturacion y pago-- y ningun endpoint. Las de VVP-3 dicen «Pagado» en las seis desde la carga; lo unico visible era el texto de Observaciones, que quedo viejo.
+
+**Ahora cada liquidacion y cada canje tienen su bloque de facturacion y pago.** Un solo campo de estado que se va modificando --Por Facturar → Facturado → Por Pagar → Pagado-- y cada cambio deja un registro con su propio monto, su fecha y quien lo hizo. El monto viene **calculado** por el motor de comisiones y se puede corregir: la pantalla muestra los dos, y cuando difieren marca el registrado en color con el calculado al lado.
+
+**Las dos filas del mapeo que costaron** las resolvieron tus datos: «Facturacion corredor ViveProp» es el lado de ViveProp --VVP-15 tiene la del broker en cero con estado real-- y es la bruta **menos** el captador de la alianza, que se factura aparte. En 17 de tus 19 liquidaciones da igual a la bruta; solo se separa en VVP-3.
+
+**En canjes son dos facturas, una por corredor**, mitad y mitad de la comision de Dataprop y corregibles a mano. Es plata de Dataprop y no se suma nunca con la de negocios.
+
+**Y hay una pantalla nueva, Cobranza**, con todo lo facturable y pagable de los dos mundos. **No tiene un gran total, a proposito:** las seis partes de un negocio son dos niveles de la misma plata, asi que sumarlas contaria lo mismo dos veces. Cada parte trae el suyo.
+
+**Un hallazgo de paso:** el canje #3 mostraba $5.721.959.600 por corredor. El calculo estaba bien; ese canje trae 3.500.000 marcado en UF en un arriendo, mal etiquetado en el Excel de origen. Ademas de eso, un canje cancelado no tiene nada que facturar, asi que ya no se le calcula un esperado.
+
+**Verificado:** 829 tests --23 nuevos-- y la pantalla mirada: registre un avance de verdad contra la base de desarrollo, por la API y por el formulario, y lo borre despues. Ver `D-092`.
 
 ### 2026-08-28 - Las sugerencias de corredor se refrescan al guardar
 
