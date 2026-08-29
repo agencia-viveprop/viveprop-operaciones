@@ -126,6 +126,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Filtro por corredor en el listado de negocios
+
+El quinto filtro del listado, con sugerencias mientras escribes, igual que los de canjes. Sale del corredor que gestiona el negocio: son 9 en tus 18 negocios y todos tienen dato.
+
+Escribiendo «a» ofrece los siete que la contienen y el listado baja de 18 a 17 -- el que queda afuera es «Viveprop», que no tiene «a». Y acepta texto libre: «alcira» filtra sin que tengas que elegir de la lista.
+
+**Verificado:** 804 tests --3 nuevos, incluido el que fija que la lista de sugerencias no cambia cuando hay un filtro puesto-- y captura del desplegable abierto. Ver `D-090`.
+
 ### 2026-08-28 - La tendencia de los graficos es una curva, no una recta
 
 Lo que pediste: que la linea muestre las variaciones de la ventana en vez de una sola direccion.

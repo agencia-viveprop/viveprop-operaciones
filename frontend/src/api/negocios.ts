@@ -177,6 +177,21 @@ export type FiltrosNegocios = {
   modelo?: string
   alianza_id?: string
   codigo?: string
+  /** El corredor que gestiona. Coincidencia parcial: «alcira» alcanza. */
+  corredor?: string
+}
+
+/** Los valores que existen para los filtros del listado, para poder sugerir.
+ *
+ *  Solo los corredores: modelo, estado y alianza salen del catálogo, que la
+ *  pantalla ya consulta. Y es el universo completo, no el listado ya filtrado:
+ *  si saliera de lo que se ve, elegir un corredor haría desaparecer al resto. */
+export type OpcionesDeFiltroNegocios = {
+  corredores: string[]
+}
+
+export function listarOpcionesDeFiltroNegocios(): Promise<OpcionesDeFiltroNegocios> {
+  return fetch('/api/negocios/filtros', { credentials: 'include' }).then(parseOrThrow)
 }
 
 /**

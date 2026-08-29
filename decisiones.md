@@ -2320,3 +2320,15 @@ Y **el texto dejó de contradecir al dibujo**: sobre una curva con forma que ter
 801 tests, incluidos el que reproduce una parábola exacta con nueve puntos y el de la serie en V. Y mirado en pantalla en los tres casos que importan: seis meses --donde la curva sale casi recta, porque el dato no da más forma--, doce meses --el arco que sube y hace techo-- e histórico de canjes con 46 puntos y grado 4, donde la curva se queda pegada al cero durante 2022-2024 y arranca en 2025, que es lo que la recta escondía.
 
 Va en un commit solo: el usuario dijo *"si no me gusta como se ve reversamos"*, así que la vuelta es un `git revert`.
+
+---
+
+## D-090 · Filtro por corredor en el listado de negocios
+
+Quinto filtro del listado, con el mismo patrón que ya tienen los tres de canjes (`D-084`, `D-088`): campo que sugiere mientras se escribe, texto libre aceptado, y la lista de opciones desde un endpoint propio que devuelve el **universo completo** y no el listado ya filtrado.
+
+Sale de `negocios.corredor_agente`, que es el corredor que gestiona el negocio --uno solo, a diferencia de canjes, donde hay solicitante y propietario y por eso son dos filtros--. En producción son **9 corredores en 18 negocios** y todos tienen dato.
+
+**El endpoint va antes de `/{negocio_id}`.** Al revés, FastAPI intenta leer «filtros» como el id del negocio y responde 422. Es la misma trampa que en canjes, donde la cazó un test; acá el test lo dice en su docstring para que quede escrito antes de que alguien mueva la ruta.
+
+**La respuesta es un objeto y no una lista suelta** --`{corredores: [...]}`-- para poder sumar otra lista sin romper el contrato. Es lo que en canjes hubo que hacer al agregar las comunas, y ahí sí costó un renombre de endpoint.

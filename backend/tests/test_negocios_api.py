@@ -655,3 +655,65 @@ def test_el_listado_ordena_por_numero_y_no_alfabeticamente(cliente, base_negocio
     codigos = [n["codigo"] for n in cliente.get("/api/negocios").json()]
 
     assert codigos == ["VVP-1", "VVP-2", "VVP-3", "VVP-10", "VVP-11"]
+
+
+# --------------------------------------------- el filtro por corredor
+
+
+def _crear_con_corredor(cliente, codigo, corredor):
+    cuerpo = _payload_vvp4(codigo=codigo, corredor_agente=corredor)
+    r = cliente.post("/api/negocios", json=cuerpo)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_el_filtro_por_corredor_busca_por_parte_del_nombre(cliente, base_negocios):
+    """Nadie escribe «Alcira Claudia Montano Alvarez» completo para filtrar."""
+    _crear_con_corredor(cliente, "VVP-100", "Alcira Claudia Montano Alvarez")
+    _crear_con_corredor(cliente, "VVP-101", "Daniel Cuevas")
+
+    def _codigos(**params):
+        r = cliente.get("/api/negocios", params=params)
+        assert r.status_code == 200, r.text
+        return sorted(n["codigo"] for n in r.json())
+
+    assert _codigos(corredor="alcira") == ["VVP-100"]
+    assert _codigos(corredor="MONTANO") == ["VVP-100"], "sin importar mayusculas"
+    assert _codigos(corredor="cuevas") == ["VVP-101"]
+    assert _codigos(corredor="nadie") == []
+    # Y se combina con el resto de los filtros en vez de reemplazarlos.
+    assert _codigos(corredor="alcira", codigo="VVP-101") == []
+
+
+def test_los_corredores_se_sugieren_distintos_y_ordenados(cliente, base_negocios):
+    """La lista alimenta el campo que sugiere mientras se escribe.
+
+    **Es el universo completo y no depende de los filtros**: si saliera del listado
+    ya filtrado, elegir un corredor haria desaparecer al resto de las opciones y
+    para cambiar de corredor habria que limpiar el filtro primero.
+    """
+    _crear_con_corredor(cliente, "VVP-100", "Daniel Cuevas")
+    _crear_con_corredor(cliente, "VVP-101", "Alcira Montano")
+    # Dos negocios del mismo corredor: la sugerencia tiene que salir una sola vez.
+    _crear_con_corredor(cliente, "VVP-102", "Daniel Cuevas")
+
+    r = cliente.get("/api/negocios/filtros")
+
+    assert r.status_code == 200, r.text
+    assert r.json()["corredores"] == ["Alcira Montano", "Daniel Cuevas"]
+
+    # Con un filtro puesto, la lista no cambia.
+    con_filtro = cliente.get("/api/negocios/filtros", params={"corredor": "daniel"})
+    assert con_filtro.json() == r.json()
+
+
+def test_un_negocio_sin_corredor_no_aparece_como_opcion_en_blanco(cliente, base_negocios):
+    """La ruta `/filtros` va antes de `/{negocio_id}`, o FastAPI la lee como un id."""
+    _crear_con_corredor(cliente, "VVP-100", "Daniel Cuevas")
+    r = cliente.post("/api/negocios", json=_payload_vvp4(codigo="VVP-101"))
+    assert r.status_code == 201, r.text
+
+    corredores = cliente.get("/api/negocios/filtros").json()["corredores"]
+
+    assert corredores == ["Daniel Cuevas"]
+    assert all(c for c in corredores)

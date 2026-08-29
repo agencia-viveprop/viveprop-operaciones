@@ -116,6 +116,8 @@ Variables de entorno en Render:
 
 **La etapa dice su nombre al pasar el mouse.** La insignia del listado de Negocios y de «Qué me toca hoy» muestra el código --`E5`, que es lo que cabe en la columna y como se habla del pipeline-- y el nombre completo en el tooltip, tomado del catálogo de etapas. Donde el rótulo tiene lugar --«Pipeline por etapa», en el dashboard-- el nombre va escrito: `E5 · Escritura / Contrato / firma final` (`D-077`).
 
+**Filtrar negocios por corredor.** El listado tiene, además de código, modelo, estado y alianza, un filtro de **corredor** que sugiere mientras se escribe y acepta texto libre. La lista de opciones sale de un endpoint propio y es el universo completo, no el listado ya filtrado (`D-090`).
+
 **El potencial no se mezcla con lo efectivo.** El listado de Negocios tiene tres columnas de plata --**Ganado**, **En pipeline**, **No concretado**-- y tres totales al pie, en vez de un total que sumaba los tres estados juntos. El tablero abre con las cantidades --negocios arriba, liquidaciones en el renglón chico-- y la tasa de cierre deja las abiertas afuera del denominador (`D-063`).
 
 **Sobre quién se hizo la gestión.** Tercer campo de la bitácora, junto al tipo y la etapa: a cuál de los dos corredores --solicitante o propietario--. El selector muestra los nombres, no las etiquetas. **Es optativo**: hay movimientos que no son sobre un corredor, y forzarlo pondría un dato falso. Los 605 migrados quedan en nulo, porque el Excel no lo traía (`D-062`).

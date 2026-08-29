@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
+  Autocomplete,
   Badge,
   Button,
   Group,
@@ -15,6 +16,7 @@ import { IconEye, IconPlus, IconHistory, IconTableImport } from '@tabler/icons-r
 import { obtenerCatalogos } from '../api/catalogos'
 import {
   listarNegocios,
+  listarOpcionesDeFiltroNegocios,
   type EstadoNegocio,
   type FiltrosNegocios,
   type NegocioResumen,
@@ -56,6 +58,13 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   const [historialAbierto, setHistorialAbierto] = useState(false)
 
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
+  // Las sugerencias del filtro de corredor. Se consultan una vez y se cachean: no
+  // dependen de los filtros aplicados, justamente para que elegir uno no vacíe las
+  // opciones de los demás.
+  const { data: opciones } = useQuery({
+    queryKey: ['negocios-opciones-filtro'],
+    queryFn: listarOpcionesDeFiltroNegocios,
+  })
   const consulta = useQuery({
     queryKey: ['negocios', filtros],
     queryFn: () => listarNegocios(filtros),
@@ -147,6 +156,19 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           onChange={(v) => setFiltros({ ...filtros, alianza_id: v ?? undefined })}
           clearable
           w={180}
+        />
+        {/* `Autocomplete` y no `Select`: es un filtro, no un formulario. Escribir
+            «alcira» y ver sus negocios tiene que funcionar sin terminar de elegir
+            de la lista, así que el texto viaja tal cual y el backend hace
+            coincidencia parcial. Las sugerencias son una ayuda, no un corsé. */}
+        <Autocomplete
+          placeholder="Corredor"
+          data={opciones?.corredores ?? []}
+          value={filtros.corredor ?? ''}
+          onChange={(v) => setFiltros({ ...filtros, corredor: v || undefined })}
+          limit={10}
+          clearable
+          w={260}
         />
       </Group>
 

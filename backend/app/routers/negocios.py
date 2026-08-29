@@ -608,12 +608,50 @@ def listar_tipos_movimiento(
     ).all()
 
 
+class OpcionesDeFiltroNegocios(BaseModel):
+    """Los valores que existen, para que el filtro sugiera en vez de adivinar.
+
+    Solo los corredores: modelo, estado y alianza salen del catálogo, que la
+    pantalla ya consulta. Va como objeto y no como lista suelta para poder sumar
+    otra lista sin romper el contrato, igual que en canjes.
+    """
+
+    corredores: list[str]
+
+
+@router.get("/filtros", response_model=OpcionesDeFiltroNegocios)
+def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends(get_current_user)):
+    """Los corredores distintos, ordenados.
+
+    **Es el universo completo y no depende de los filtros aplicados.** Si saliera
+    del listado ya filtrado, elegir un corredor haría desaparecer al resto de las
+    opciones y para cambiar de corredor habría que limpiar el filtro primero.
+
+    Va **antes** de `/{negocio_id}`: al revés, FastAPI intenta leer «filtros» como
+    el id del negocio y responde 422. Ya pasó en canjes, y ahí lo cazó un test.
+    """
+    return OpcionesDeFiltroNegocios(
+        corredores=[
+            n
+            for (n,) in db.execute(
+                select(Negocio.corredor_agente)
+                .where(Negocio.corredor_agente.is_not(None), Negocio.corredor_agente != "")
+                .distinct()
+                .order_by(Negocio.corredor_agente)
+            ).all()
+        ]
+    )
+
+
 @router.get("", response_model=list[NegocioResumen])
 def listar(
     estado: EstadoNegocio | None = None,
     modelo: ModeloNegocio | None = None,
     alianza_id: int | None = None,
     codigo: str | None = None,
+    # El corredor que gestiona el negocio. Coincidencia parcial, como el código:
+    # nadie escribe «Alcira Claudia Montano Álvarez» completo para filtrar.
+    corredor: str | None = None,
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
@@ -626,6 +664,8 @@ def listar(
         consulta = consulta.where(Negocio.alianza_id == alianza_id)
     if codigo:
         consulta = consulta.where(Negocio.codigo.ilike(f"%{codigo}%"))
+    if corredor:
+        consulta = consulta.where(Negocio.corredor_agente.ilike(f"%{corredor}%"))
 
     # Por número y no como texto: alfabéticamente `VVP-10` va antes de `VVP-2`.
     negocios = sorted(db.scalars(consulta).all(), key=lambda n: clave_de_orden(n.codigo))
