@@ -323,6 +323,11 @@ export type OpcionesDeFiltro = {
   comunas: string[]
 }
 
+/** La clave de la consulta de opciones, en un solo lugar. Ver el porqué en el
+ *  equivalente de `api/negocios.ts`: una clave escrita en dos archivos deja las
+ *  sugerencias viejas cuando alguien crea o importa canjes. */
+export const CLAVE_OPCIONES_CANJES = ['canjes-opciones-filtro']
+
 export function listarOpcionesDeFiltro(): Promise<OpcionesDeFiltro> {
   return fetch('/api/canjes/filtros', { credentials: 'include' }).then(parseOrThrow)
 }

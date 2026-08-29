@@ -190,6 +190,14 @@ export type OpcionesDeFiltroNegocios = {
   corredores: string[]
 }
 
+/** La clave de la consulta de opciones, en un solo lugar.
+ *
+ *  Se exporta para que **quien guarda un negocio invalide la misma clave que la
+ *  pantalla consulta**. Cuando el string estaba escrito en dos archivos, crear un
+ *  negocio con un corredor nuevo no lo agregaba a las sugerencias hasta recargar
+ *  la página: la lista quedaba en caché y nadie la tocaba. */
+export const CLAVE_OPCIONES_NEGOCIOS = ['negocios-opciones-filtro']
+
 export function listarOpcionesDeFiltroNegocios(): Promise<OpcionesDeFiltroNegocios> {
   return fetch('/api/negocios/filtros', { credentials: 'include' }).then(parseOrThrow)
 }

@@ -2332,3 +2332,29 @@ Sale de `negocios.corredor_agente`, que es el corredor que gestiona el negocio -
 **El endpoint va antes de `/{negocio_id}`.** Al revés, FastAPI intenta leer «filtros» como el id del negocio y responde 422. Es la misma trampa que en canjes, donde la cazó un test; acá el test lo dice en su docstring para que quede escrito antes de que alguien mueva la ruta.
 
 **La respuesta es un objeto y no una lista suelta** --`{corredores: [...]}`-- para poder sumar otra lista sin romper el contrato. Es lo que en canjes hubo que hacer al agregar las comunas, y ahí sí costó un renombre de endpoint.
+
+---
+
+## D-091 · Las sugerencias se refrescan al guardar, no al recargar
+
+El usuario precisó la regla del filtro de corredor: solo los que **tienen o tuvieron** al menos un negocio, en cualquier etapa y estado; los que nunca tuvieron quedan fuera y **aparecen cuando tengan uno**.
+
+**La primera mitad ya estaba** y se verificó con sus datos: la lista sale de `SELECT DISTINCT corredor_agente FROM negocios`, así que alguien sin negocios no existe en esa tabla y no puede aparecer. Los nueve corredores del filtro tienen entre uno y tres negocios, en PERDIDO, CERRADO y ACTIVO indistintamente. Quedó fijado en un test que dice explícitamente por qué --para que «solo los activos» no vuelva a entrar sin que algo se rompa-- porque es una regla que suena razonable y sería un cambio silencioso.
+
+**La segunda mitad no estaba, y era un defecto real.** La consulta de sugerencias está cacheada, y quien guarda un negocio invalidaba solo `['negocios']`. Así que crear un negocio con un corredor nuevo actualizaba el listado pero **no** la lista de sugerencias: el corredor recién aparecía al recargar la página.
+
+### La causa, y por qué se arregla centralizando
+
+La clave de la consulta estaba escrita como texto en dos archivos: donde se consulta y donde habría que invalidar. Dos lugares con el mismo string es exactamente cómo se olvida uno.
+
+Ahora la clave se exporta desde el módulo de la API --`CLAVE_OPCIONES_NEGOCIOS`, y su equivalente en canjes-- y la usan tanto la pantalla que consulta como los tres lugares que pueden introducir un corredor: el alta, la edición y la carga masiva. El movimiento del pipeline y el formulario de hitos no la invalidan porque no pueden tocar el corredor.
+
+**La edición cuenta doble**: cambiarle el corredor a un negocio puede dejar uno nuevo en la lista **y** dejar sin negocios al anterior, que entonces tiene que salir. Hay un test que hace exactamente eso y verifica las dos cosas.
+
+### El mismo defecto en canjes, arreglado de paso
+
+Los filtros de corredor y comuna de canjes tenían el problema idéntico: crear, editar o **importar** canjes no refrescaba las sugerencias. Una importación es justo donde entran corredores y comunas nuevos de a decenas. Se arregló en la misma pasada porque es la misma línea y el mismo motivo.
+
+### Lo que no se pudo verificar mirando
+
+El refresco es una invalidación de React Query, y ejercitarla pide escribir en un formulario y guardar --interacción que las capturas de este entorno no hacen--. Lo que sí se verificó es el backend, con dos tests nuevos: que cualquier estado cuenta, y que cambiar el corredor saca al anterior y mete al nuevo. La invalidación en sí es la misma mecánica que ya refresca el listado cada vez que se guarda un negocio, que es visible en cada uso.

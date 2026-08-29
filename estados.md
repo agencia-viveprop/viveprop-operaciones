@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-28 - Las sugerencias de corredor se refrescan al guardar
+
+Precisaste la regla del filtro: solo los corredores que tienen o tuvieron al menos un negocio, en cualquier etapa y estado.
+
+**Esa mitad ya estaba**, y la verifique con tus datos: la lista sale de los negocios que existen, asi que alguien sin negocios no puede aparecer. Tus nueve corredores tienen entre uno y tres negocios, en PERDIDO, CERRADO y ACTIVO indistintamente. Le puse un test que lo dice explicito, para que «solo los activos» no vuelva a entrar sin que algo se rompa: suena razonable y seria un cambio silencioso.
+
+**La otra mitad no estaba, y era un defecto.** La lista de sugerencias esta cacheada y al guardar un negocio se refrescaba el listado pero no ella, asi que un corredor nuevo aparecia recien al recargar la pagina. La causa: la clave de esa consulta estaba escrita como texto en dos archivos --donde se consulta y donde habria que invalidar--, que es justo como se olvida uno. Ahora la clave vive en un solo lugar y la usan el alta, la edicion y la carga masiva.
+
+**La edicion cuenta doble:** cambiarle el corredor a un negocio puede meter uno nuevo y dejar sin negocios al anterior, que entonces sale de la lista. Hay un test que verifica las dos cosas.
+
+**Y arregle el mismo defecto en canjes de paso:** crear, editar o importar canjes no refrescaba sus filtros de corredor y comuna. Una importacion es justo donde entran valores nuevos de a decenas.
+
+**Verificado:** 806 tests --2 nuevos-- contra el backend. El refresco en si no lo pude ver renderizado: pide escribir en un formulario y guardar, y las capturas de mi entorno no interactuan. Ver `D-091`.
+
 ### 2026-08-28 - Filtro por corredor en el listado de negocios
 
 El quinto filtro del listado, con sugerencias mientras escribes, igual que los de canjes. Sale del corredor que gestiona el negocio: son 9 en tus 18 negocios y todos tienen dato.

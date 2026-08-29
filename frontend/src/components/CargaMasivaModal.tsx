@@ -13,6 +13,7 @@ import {
 import { IconDownload, IconUpload } from '@tabler/icons-react'
 import { obtenerEstructuraNegocios } from '../api/estructura'
 import {
+  CLAVE_OPCIONES_NEGOCIOS,
   descargarPlantillaNegocios,
   importarNegocios,
   type ResumenCargaNegocios,
@@ -64,6 +65,8 @@ export default function CargaMasivaModal({
       if (r.errores.length === 0) {
         queryClient.invalidateQueries({ queryKey: ['negocios'] })
         queryClient.invalidateQueries({ queryKey: ['resumen-negocios'] })
+        // Una carga masiva es justo donde entran corredores nuevos de a varios.
+        queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_NEGOCIOS })
       }
     },
   })

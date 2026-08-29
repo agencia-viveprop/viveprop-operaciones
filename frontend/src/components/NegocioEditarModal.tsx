@@ -13,7 +13,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { obtenerCatalogos } from '../api/catalogos'
-import { actualizarNegocio, type Negocio } from '../api/negocios'
+import { actualizarNegocio, CLAVE_OPCIONES_NEGOCIOS, type Negocio } from '../api/negocios'
 
 /**
  * Editar los datos del negocio: modelo, alianza, contrapartes, notas.
@@ -80,6 +80,10 @@ export default function NegocioEditarModal({
       ;['negocio', 'negocios', 'resumen-negocios', 'negocios-por-mes',
         'bandeja-negocios', 'reporte-mensual', 'reporte-semanal', 'vista-directorio',
       ].forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }))
+      // Este formulario **edita el corredor**, así que puede dejar uno nuevo o
+      // dejar sin negocios al anterior: la lista de sugerencias cambia en los dos
+      // casos.
+      queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_NEGOCIOS })
       onClose()
     },
   })

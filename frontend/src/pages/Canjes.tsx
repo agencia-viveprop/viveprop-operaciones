@@ -26,6 +26,7 @@ import {
   crearCanje,
   descargarPlantillaCanjes,
   importarCanjes,
+  CLAVE_OPCIONES_CANJES,
   listarCanjes,
   listarOpcionesDeFiltro,
   type Canje,
@@ -90,7 +91,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
   // dependen de los filtros aplicados, justamente para que elegir uno no vacie
   // las opciones de los demas.
   const { data: opciones } = useQuery({
-    queryKey: ['canjes-opciones-filtro'],
+    queryKey: CLAVE_OPCIONES_CANJES,
     queryFn: listarOpcionesDeFiltro,
   })
   const { data: canjes, isLoading } = useQuery({
@@ -125,6 +126,9 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
     onSuccess: (resumen) => {
       setResumenImport(resumen)
       queryClient.invalidateQueries({ queryKey: ['canjes'] })
+      // Una importación trae corredores y comunas nuevos: sin esto, el filtro
+      // sigue ofreciendo la lista de antes hasta que alguien recargue.
+      queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_CANJES })
     },
   })
 
@@ -155,6 +159,9 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['canjes'] })
+      // El alta y la edición escriben corredor y comuna, así que las sugerencias
+      // quedan viejas.
+      queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_CANJES })
       setModalAbierto(false)
     },
   })

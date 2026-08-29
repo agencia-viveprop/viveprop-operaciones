@@ -15,6 +15,7 @@ import {
 import { IconEye, IconPlus, IconHistory, IconTableImport } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
 import {
+  CLAVE_OPCIONES_NEGOCIOS,
   listarNegocios,
   listarOpcionesDeFiltroNegocios,
   type EstadoNegocio,
@@ -62,7 +63,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
   // dependen de los filtros aplicados, justamente para que elegir uno no vacíe las
   // opciones de los demás.
   const { data: opciones } = useQuery({
-    queryKey: ['negocios-opciones-filtro'],
+    queryKey: CLAVE_OPCIONES_NEGOCIOS,
     queryFn: listarOpcionesDeFiltroNegocios,
   })
   const consulta = useQuery({

@@ -717,3 +717,49 @@ def test_un_negocio_sin_corredor_no_aparece_como_opcion_en_blanco(cliente, base_
 
     assert corredores == ["Daniel Cuevas"]
     assert all(c for c in corredores)
+
+
+def test_el_corredor_se_sugiere_en_cualquier_estado_del_negocio(cliente, base_negocios):
+    """**Cualquier etapa y cualquier estado cuentan.**
+
+    El usuario lo precisó así: al filtro entran los corredores que tienen **o
+    tuvieron** al menos un negocio, sin importar en qué terminó. Un corredor cuyo
+    unico negocio se perdio hace un año sigue siendo alguien por quien uno quiere
+    filtrar --justamente para ver que se perdio--.
+
+    Este test existe para que "solo los activos" no vuelva a entrar sin que algo
+    se rompa.
+    """
+    for codigo, estado, corredor in (
+        ("VVP-100", "ACTIVO", "Con Activo"),
+        ("VVP-101", "PERDIDO", "Con Perdido"),
+        ("VVP-102", "CERRADO", "Con Cerrado"),
+    ):
+        hito = dict(_payload_vvp4()["hitos"][0], estado=estado)
+        if estado == "CERRADO":
+            hito["fecha_cierre"] = "2026-03-01"
+        cuerpo = _payload_vvp4(codigo=codigo, corredor_agente=corredor, hitos=[hito])
+        r = cliente.post("/api/negocios", json=cuerpo)
+        assert r.status_code == 201, r.text
+
+    corredores = cliente.get("/api/negocios/filtros").json()["corredores"]
+
+    assert corredores == ["Con Activo", "Con Cerrado", "Con Perdido"]
+
+
+def test_cambiarle_el_corredor_a_un_negocio_saca_al_anterior_de_las_sugerencias(cliente, base_negocios):
+    """El que se queda sin negocios sale de la lista, y el nuevo entra.
+
+    La lista sale de los negocios que existen, asi que esto es automatico en el
+    backend. Lo que hace falta del lado de la pantalla es refrescarla: la consulta
+    esta cacheada, y por eso el formulario de edicion invalida su clave.
+    """
+    creado = cliente.post(
+        "/api/negocios", json=_payload_vvp4(codigo="VVP-100", corredor_agente="El Primero")
+    ).json()
+    assert cliente.get("/api/negocios/filtros").json()["corredores"] == ["El Primero"]
+
+    r = cliente.patch(f"/api/negocios/{creado['id']}", json={"corredor_agente": "El Segundo"})
+    assert r.status_code == 200, r.text
+
+    assert cliente.get("/api/negocios/filtros").json()["corredores"] == ["El Segundo"]
