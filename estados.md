@@ -140,7 +140,11 @@ Probaste la app en tu telefono y no se veia completa. **No era un tema de estilo
 
 **Verificado:** 11 rutas x 5 anchos (360, 390, 430, 820, 1180) mas escritorio a 1440. **55 combinaciones sin desborde ni texto cortado**, contra 4 pantallas con problema al empezar. Y las capturas revisadas a ojo.
 
-**Falta la segunda entrega:** modales a pantalla completa en telefono, los formularios de adentro, y las filas de botones de cabecera. Ver `D-093`.
+**Y la segunda entrega, ya lista:** los modales van a pantalla completa en telefono --en 360 px quedaban en 324, con 36 px de margenes que no aportan y los pares de campos apretados hasta partir las etiquetas en dos lineas-- con la cabecera fija para que cerrar no obligue a subir hasta el principio. Los pares de campos y los filtros ocupan la fila completa bajo 768 px y **desde ahi conservan el ancho exacto que tenian**, para que en PC no cambie nada.
+
+**Una cosa que decidi no tocar:** los botones de cabecera se apilan en un telefono y ocupan alto antes del contenido. Hacerlos compactos pide duplicar la logica del punto de corte en cada pagina o barrer con CSS sobre todos los botones de la app; apilados son alcanzables y con buen tamaño de toque, y la medicion no los marca.
+
+**Verificado, las dos entregas juntas:** 11 rutas x 6 anchos = 66 combinaciones sin desborde ni texto cortado, y los 8 modales x 4 anchos = 32 sin problema. Mas las capturas revisadas a ojo. Ver `D-093`.
 
 ### 2026-08-29 - Facturacion y pago, en negocios y en canjes
 

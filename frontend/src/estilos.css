@@ -127,6 +127,38 @@
   font-size: clamp(1.05rem, 13cqw, var(--cifra-max, 1.75rem));
 }
 
+/* Modales a pantalla completa en teléfono.
+ *
+ * En un teléfono de 360 px el modal quedaba en 324: 36 px se iban en márgenes
+ * que no aportan --no hay nada detrás que valga la pena mirar-- y adentro los
+ * pares de campos se apretaban hasta partir las etiquetas en dos líneas.
+ *
+ * Va en CSS y en un solo lugar, y no como `fullScreen={esCompacto}` en cada
+ * `Modal`: son trece, y el que se olvide no avisa. El corte es el mismo `47.99em`
+ * que usa la barra lateral.
+ */
+@media (max-width: 47.99em) {
+  .mantine-Modal-inner {
+    padding: 0;
+  }
+
+  .mantine-Modal-content {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100dvh;
+    border-radius: 0;
+  }
+
+  /* La cabecera se queda arriba: en un formulario largo, si se va con el
+   * desplazamiento, cerrar obliga a subir hasta el principio. */
+  .mantine-Modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--mantine-color-body);
+  }
+}
+
 /* Impresión de la vista directorio.
  *
  * "Exportable" se resolvió así en vez de generando un PDF: `Ctrl+P` ya produce

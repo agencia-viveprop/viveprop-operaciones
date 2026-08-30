@@ -132,7 +132,7 @@ export default function NegocioFormModal({
         }}
       >
         <Stack gap="sm">
-          <SimpleGrid cols={2}>
+          <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <TextInput
               label="Código"
               placeholder="VVP-20"
@@ -199,7 +199,7 @@ export default function NegocioFormModal({
             </Alert>
           )}
 
-          <SimpleGrid cols={2}>
+          <SimpleGrid cols={{ base: 1, xs: 2 }}>
             <Select
               label="Tipo de propiedad"
               data={opciones(catalogos?.tipos_propiedad)}

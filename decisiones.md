@@ -2477,4 +2477,22 @@ Ese contenedor lleva `min-width: 0`, y no es decoración: sin eso un hijo de un 
 
 11 rutas × 5 anchos de dispositivo (360, 390, 430, 820, 1180) más el escritorio a 1440: **55 combinaciones sin desborde ni texto cortado**, contra 4 pantallas con problema en la línea base. Y las capturas revisadas a ojo, que es lo que la sonda no puede decir: que el resultado además se lea bien.
 
-Queda pendiente la segunda entrega: modales a pantalla completa en teléfono, los formularios de adentro con campos que se estiran, y las filas de botones de cabecera.
+### La segunda entrega: los modales y los formularios
+
+**Los modales van a pantalla completa bajo 768 px.** En un teléfono de 360 quedaban en 324: 36 px se iban en márgenes que no aportan --no hay nada detrás que valga la pena mirar-- y adentro los pares de campos se apretaban hasta partir las etiquetas en dos líneas.
+
+Va **en CSS y en un solo lugar**, no como `fullScreen={esCompacto}` en cada `Modal`: son trece, y el que se olvide no avisa. La cabecera queda `sticky`, porque en un formulario largo el botón de cerrar no puede irse con el desplazamiento.
+
+**Los pares de campos con `cols={2}` fijo** --dos en el formulario de negocio, uno en el de canje-- pasan a `{ base: 1, xs: 2 }`. Ese `2` a secas ignoraba el teléfono: dos columnas de 140 px partían «Modelo de negocio» y «Estado de la propiedad» en dos líneas cada una.
+
+**Los filtros y los campos del formulario de facturación ocupan la fila completa** bajo 768 px, con `w={{ base: '100%', sm: <el ancho de siempre> }}`. Se eligió esa forma en vez de `flex: 1` justamente para que **desde 768 px el ancho sea idéntico al de antes**: con `flex` los filtros se habrían repartido la fila y eso cambiaba el PC, que no era lo pedido.
+
+**Lo que se dejó como está, a propósito:** los botones de cabecera se apilan en un teléfono --tres botones, tres filas-- y ocupan alto antes del contenido. Se evaluó hacerlos compactos en pantalla chica, y eso pide duplicar la lógica del punto de corte en JavaScript en cada página o barrer con CSS sobre todos los botones de la app. Apilados son alcanzables, legibles y con buen tamaño de toque, y la medición no los marca. No se toca sin un motivo mejor que «ocupan alto».
+
+### Verificado, las dos entregas juntas
+
+- **Páginas:** 11 rutas × 6 anchos (360, 390, 430, 820, 1180 y escritorio a 1440) = **66 combinaciones sin desborde ni texto cortado**.
+- **Modales:** los 8 que se abren desde la interfaz × 4 anchos = **32 combinaciones sin problema**, en pantalla completa a 360 y 390, y con el tamaño de siempre en iPad y PC.
+- Las capturas revisadas a ojo en los dos casos, que es lo que la medición no puede decir.
+
+La herramienta de medición vive **fuera del repo**, en el directorio temporal, con `puppeteer-core`: es verificación, no una dependencia de la app. Los dos scripts --uno para páginas, otro para modales-- informan `scrollWidth` contra el ancho del dispositivo y, aparte, qué textos quedan cortados dentro de su caja.

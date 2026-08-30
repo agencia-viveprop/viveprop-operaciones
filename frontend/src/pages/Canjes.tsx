@@ -233,7 +233,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               value={filtros.estado || null}
               onChange={(v) => setFiltros({ ...filtros, estado: v ?? '' })}
               clearable
-              w={160}
+              w={{ base: '100%', sm: 160 }}
             />
             <Select
               placeholder="Etapa"
@@ -241,7 +241,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               value={filtros.etapa || null}
               onChange={(v) => setFiltros({ ...filtros, etapa: v ?? '' })}
               clearable
-              w={200}
+              w={{ base: '100%', sm: 200 }}
             />
             {/* Comuna tambien sugiere, igual que los dos de corredor. Ya filtraba
                 con lo que se escribiera --el backend hace coincidencia parcial--
@@ -255,7 +255,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               onChange={(v) => setFiltros({ ...filtros, comuna: v })}
               limit={10}
               clearable
-              w={200}
+              w={{ base: '100%', sm: 200 }}
             />
             {/* El N° de solicitud es el ID_CANJE de Dataprop, el mismo que se ve
                 en la primera columna. Busca **por prefijo**: mientras se escribe
@@ -276,7 +276,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                   numero: e.currentTarget.value.replace(/[^0-9]/g, ''),
                 })
               }
-              w={160}
+              w={{ base: '100%', sm: 160 }}
             />
             {/* Autocomplete y no Select: es un filtro, no un formulario. El
                 Select obligaria a elegir una opcion exacta, y acá escribir
@@ -292,7 +292,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               onChange={(v) => setFiltros({ ...filtros, solicitante: v })}
               limit={10}
               clearable
-              w={260}
+              w={{ base: '100%', sm: 260 }}
             />
             <Autocomplete
               placeholder="Corredor propietario"
@@ -301,7 +301,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               onChange={(v) => setFiltros({ ...filtros, propietario: v })}
               limit={10}
               clearable
-              w={260}
+              w={{ base: '100%', sm: 260 }}
             />
           </Group>
 
@@ -390,7 +390,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           }}
         >
           <Stack gap="sm">
-            <SimpleGrid cols={2}>
+            <SimpleGrid cols={{ base: 1, xs: 2 }}>
               {editandoId === null && (
                 <NumberInput
                   label="ID (mismo ID_CANJE de Dataprop)"

@@ -109,7 +109,7 @@ function Formulario({
           data={estados}
           value={estadoId}
           onChange={setEstadoId}
-          w={180}
+          w={{ base: '100%', sm: 180 }}
           searchable
           required
         />
@@ -121,14 +121,14 @@ function Formulario({
           thousandSeparator="."
           decimalSeparator=","
           hideControls
-          w={200}
+          w={{ base: '100%', sm: 200 }}
         />
         <TextInput
           label="Fecha"
           type="date"
           value={fecha}
           onChange={(e) => setFecha(e.currentTarget.value)}
-          w={160}
+          w={{ base: '100%', sm: 160 }}
         />
         <Button
           size="sm"

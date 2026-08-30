@@ -132,7 +132,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           placeholder="Código"
           value={filtros.codigo ?? ''}
           onChange={(e) => setFiltros({ ...filtros, codigo: e.currentTarget.value })}
-          w={140}
+          w={{ base: '100%', sm: 140 }}
         />
         <Select
           placeholder="Modelo"
@@ -140,7 +140,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           value={filtros.modelo ?? null}
           onChange={(v) => setFiltros({ ...filtros, modelo: v ?? undefined })}
           clearable
-          w={230}
+          w={{ base: '100%', sm: 230 }}
         />
         <Select
           placeholder="Estado"
@@ -148,7 +148,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           value={filtros.estado ?? null}
           onChange={(v) => setFiltros({ ...filtros, estado: v ?? undefined })}
           clearable
-          w={160}
+          w={{ base: '100%', sm: 160 }}
         />
         <Select
           placeholder="Alianza"
@@ -156,7 +156,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           value={filtros.alianza_id ?? null}
           onChange={(v) => setFiltros({ ...filtros, alianza_id: v ?? undefined })}
           clearable
-          w={180}
+          w={{ base: '100%', sm: 180 }}
         />
         {/* `Autocomplete` y no `Select`: es un filtro, no un formulario. Escribir
             «alcira» y ver sus negocios tiene que funcionar sin terminar de elegir
@@ -169,7 +169,7 @@ export default function Negocios({ puedeEditar }: { puedeEditar: boolean }) {
           onChange={(v) => setFiltros({ ...filtros, corredor: v || undefined })}
           limit={10}
           clearable
-          w={260}
+          w={{ base: '100%', sm: 260 }}
         />
       </Group>
 
