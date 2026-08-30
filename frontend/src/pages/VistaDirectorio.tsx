@@ -41,11 +41,11 @@ function Tile({
   color?: string
 }) {
   return (
-    <Paper withBorder radius="md" p="md">
+    <Paper withBorder radius="md" p="md" className="caja-cifra" style={{ ["--cifra-max" as string]: "1.5rem" }}>
       <Text size="xs" fw={700} c="dimmed">
         {rotulo}
       </Text>
-      <Text size="24px" fw={800} mt={4} lh={1.1} c={color}>
+      <Text className="cifra" fw={800} mt={4} lh={1.1} c={color}>
         {valor}
       </Text>
       {detalle && (
@@ -235,7 +235,7 @@ export default function VistaDirectorio() {
       {dominio === 'negocios' ? (
         <>
       {/* Lo primero: cuánto entró. */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }}>
+      <SimpleGrid cols={{ base: 2, md: 4 }}>
         <Tile
           rotulo="AÑO CORRIDO"
           valor={clp(anioActual)}
@@ -347,28 +347,32 @@ export default function VistaDirectorio() {
         <Title order={5} mb={4}>
           Qué podría entrar del pipeline
         </Title>
-        <SimpleGrid cols={{ base: 3 }} mt="sm">
-          <div>
+        {/* Tres montos en fila no caben en un telefono: a 360 px cada columna
+            queda en 100 px y ahi «$1.178.480» se cortaba. Apilados se leen
+            enteros, que para un rango pesimista-esperado-optimista es lo que
+            importa; desde 576 px vuelven a la fila. */}
+        <SimpleGrid cols={{ base: 1, xs: 3 }} mt="sm">
+          <div className="caja-cifra" style={{ ['--cifra-max' as string]: '1.25rem' }}>
             <Text size="xs" c="dimmed" fw={700}>
               PESIMISTA
             </Text>
-            <Text size="20px" fw={700}>
+            <Text className="cifra" fw={700}>
               {clp(p.pesimista)}
             </Text>
           </div>
-          <div>
+          <div className="caja-cifra" style={{ ['--cifra-max' as string]: '1.25rem' }}>
             <Text size="xs" c="dimmed" fw={700}>
               ESPERADO
             </Text>
-            <Text size="20px" fw={800} c="brand">
+            <Text className="cifra" fw={800} c="brand">
               {clp(p.esperado)}
             </Text>
           </div>
-          <div>
+          <div className="caja-cifra" style={{ ['--cifra-max' as string]: '1.25rem' }}>
             <Text size="xs" c="dimmed" fw={700}>
               OPTIMISTA
             </Text>
-            <Text size="20px" fw={700}>
+            <Text className="cifra" fw={700}>
               {clp(p.optimista)}
             </Text>
           </div>
@@ -400,7 +404,7 @@ export default function VistaDirectorio() {
         <>
 
       {/* Lo primero de canjes: cuánto volumen entró y cuánto sobrevive. */}
-      <SimpleGrid cols={{ base: 2, sm: 4 }}>
+      <SimpleGrid cols={{ base: 2, md: 4 }}>
         <Tile
           rotulo="SOLICITADOS"
           valor={String(data.canjes.solicitados)}

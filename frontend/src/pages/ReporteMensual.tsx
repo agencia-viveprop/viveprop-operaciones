@@ -111,11 +111,11 @@ function Tile({
   pie?: string
 }) {
   return (
-    <Paper withBorder radius="md" p="md">
+    <Paper withBorder radius="md" p="md" className="caja-cifra" style={{ ["--cifra-max" as string]: "1.375rem" }}>
       <Text size="xs" fw={700} c="dimmed">
         {etiqueta}
       </Text>
-      <Text size="22px" fw={800} mt={4} lh={1.1}>
+      <Text className="cifra" fw={800} mt={4} lh={1.1}>
         {monto}
       </Text>
       {pie && (
@@ -295,7 +295,7 @@ export default function ReporteMensual() {
            * último cierre es del 1 de junio-- y la conclusión natural era que la
            * app estaba rota. La maquetación contradecía el mensaje. */}
           {dominio === 'negocios' ? (
-            <SimpleGrid cols={{ base: 2, sm: 4 }}>
+            <SimpleGrid cols={{ base: 2, md: 4 }}>
               <Tile
                 rotulo="COMISIÓN REAL VP"
                 valor={clp(data.movil.actual.comision_real_vp)}
@@ -310,7 +310,7 @@ export default function ReporteMensual() {
               <Tile rotulo="NEGOCIOS INICIADOS" valor={data.movil.actual.negocios_iniciados} />
             </SimpleGrid>
           ) : (
-            <SimpleGrid cols={{ base: 2, sm: 4 }}>
+            <SimpleGrid cols={{ base: 2, md: 4 }}>
               <Tile
                 rotulo="CANJES SOLICITADOS"
                 valor={data.movil.actual.canjes_solicitados}

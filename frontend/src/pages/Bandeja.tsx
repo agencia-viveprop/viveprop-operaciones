@@ -234,13 +234,13 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
           el de ayer. */}
       <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
-          <Paper key={nivel} withBorder radius="md" p="md">
+          <Paper key={nivel} withBorder radius="md" p="md" className="caja-cifra">
             <Group gap="xs" mb={4}>
               <Badge color={NIVELES[nivel].color} variant="light">
                 {NIVELES[nivel].texto}
               </Badge>
             </Group>
-            <Text size="28px" fw={800} lh={1.1}>
+            <Text className="cifra" fw={800} lh={1.1}>
               {nivel === 'al_dia' ? alDia : resumen[nivel]}
             </Text>
             <Text size="xs" c="dimmed" mt={4}>
@@ -252,6 +252,9 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         ))}
       </SimpleGrid>
 
+      {/* En un telefono las cuatro etiquetas piden mas de 400 px y la ultima
+          quedaba fuera de la pantalla, sin forma de tocarla. */}
+      <div className="fila-scroll-x">
       <SegmentedControl
         value={filtro}
         onChange={setFiltro}
@@ -265,6 +268,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
           { value: 'todos', label: `Todos los de hoy (${filas.length})` },
         ]}
       />
+      </div>
 
       {/* El vacio tiene dos causas distintas y decia solo una: con todos los
           canjes abiertos agendados, la tabla queda sin filas y "nada pendiente"

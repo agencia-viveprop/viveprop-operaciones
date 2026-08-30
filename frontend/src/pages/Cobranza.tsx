@@ -32,7 +32,11 @@ const COLOR_ESTADO: Record<string, string> = {
 
 function TablaDePartes({ partes }: { partes: ParteDeCobranza[] }) {
   return (
-    <Table withRowBorders={false} verticalSpacing={6}>
+    // Se desplaza dentro de su caja: los rotulos de las partes y las dos
+    // columnas de plata no caben en un telefono, y apretarlos partiria los
+    // montos, que es justo lo que no puede pasar con la plata.
+    <div className="tabla-scroll-x">
+    <Table withRowBorders={false} verticalSpacing={6} miw={520}>
       <Table.Thead>
         <Table.Tr>
           <Table.Th>Parte</Table.Th>
@@ -87,6 +91,7 @@ function TablaDePartes({ partes }: { partes: ParteDeCobranza[] }) {
         ))}
       </Table.Tbody>
     </Table>
+    </div>
   )
 }
 

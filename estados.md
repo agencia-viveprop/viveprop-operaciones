@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-29 - La app se usa en telefono y tablet (primera entrega)
+
+Probaste la app en tu telefono y no se veia completa. **No era un tema de estilo: era un defecto.** La barra lateral se dibujaba **encima** del contenido y no habia ningun boton para sacarla del camino; de paso, el menu de usuario, el cambio de clave, salir y el cambio de tema viven al pie de esa barra, asi que en un telefono eran inalcanzables.
+
+**Ahora hay boton de menu.** La barra se colapsa, se abre con el boton y se cierra al elegir una pantalla. En PC no cambia nada: la cabecera con el boton existe solo en pantalla chica.
+
+**Los montos ya no se cortan.** Se leia «$2.822.65» donde dice $2.822.656, que es peor que un numero chico porque se lee como si fuera el monto. La letra ahora se mide contra el ancho de la tarjeta, no de la ventana --en el iPad el problema no es que la ventana sea angosta, es que la barra lateral se lleva 260 px--. Y donde ninguna letra alcanzaba, lo que cambio fue la grilla: las casillas de plata pasaban a cuatro columnas desde 768 px, y a 820 quedaban en 120 px cada una; ahora esperan hasta 992. **Desde 992 --cualquier notebook-- la pantalla es identica a la de antes.**
+
+**Y un filtro que no se podia tocar:** en la bandeja, la ultima opcion del selector quedaba fuera de la pantalla del telefono, recortada. Ahora esa fila se desplaza.
+
+**Dos errores mios en el camino, que vale la pena dejar anotados:** las primeras capturas «de telefono a 390 px» eran en realidad un viewport de 500 recortado --Chrome sin interfaz no baja de 500-- y de ahi saque un diagnostico falso. Y la medida de desborde daba cero justo en las paginas peores, porque Chrome agranda el viewport cuando el contenido no cabe. Con la medicion arreglada, ocho de las once pantallas ya estaban bien: el trabajo real eran cuatro, no catorce.
+
+**Verificado:** 11 rutas x 5 anchos (360, 390, 430, 820, 1180) mas escritorio a 1440. **55 combinaciones sin desborde ni texto cortado**, contra 4 pantallas con problema al empezar. Y las capturas revisadas a ojo.
+
+**Falta la segunda entrega:** modales a pantalla completa en telefono, los formularios de adentro, y las filas de botones de cabecera. Ver `D-093`.
+
 ### 2026-08-29 - Facturacion y pago, en negocios y en canjes
 
 Preguntaste donde se registra que casos como VVP-3 estan cerrados y pagados. La respuesta era incomoda: **la tabla existia y no estaba en ninguna pantalla.** Tenia las 114 filas cargadas del Excel --las seis columnas de facturacion y pago-- y ningun endpoint. Las de VVP-3 dicen «Pagado» en las seis desde la carga; lo unico visible era el texto de Observaciones, que quedo viejo.

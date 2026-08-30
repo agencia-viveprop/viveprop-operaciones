@@ -126,11 +126,11 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
           decisión y por los mismos motivos. */}
       <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }}>
         {ORDEN.map((nivel) => (
-          <Paper key={nivel} withBorder radius="md" p="md">
+          <Paper key={nivel} withBorder radius="md" p="md" className="caja-cifra">
             <Badge color={NIVELES[nivel].color} variant="light" mb={4}>
               {NIVELES[nivel].texto}
             </Badge>
-            <Text size="28px" fw={800} lh={1.1}>
+            <Text className="cifra" fw={800} lh={1.1}>
               {nivel === 'al_dia' ? alDia : data.resumen[nivel]}
             </Text>
             <Text size="xs" c="dimmed" mt={4}>

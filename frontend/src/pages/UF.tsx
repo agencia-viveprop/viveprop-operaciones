@@ -107,7 +107,7 @@ export default function UF() {
       {estado && (
         <>
           <SimpleGrid cols={{ base: 1, sm: 3 }}>
-            <Paper withBorder radius="md" p="md">
+            <Paper withBorder radius="md" p="md" className="caja-cifra" style={{ ["--cifra-max" as string]: "1.5rem" }}>
               <Text size="xs" fw={700} c="dimmed">
                 ESTADO
               </Text>
@@ -117,11 +117,11 @@ export default function UF() {
                 </Badge>
               </Group>
             </Paper>
-            <Paper withBorder radius="md" p="md">
+            <Paper withBorder radius="md" p="md" className="caja-cifra" style={{ ["--cifra-max" as string]: "1.5rem" }}>
               <Text size="xs" fw={700} c="dimmed">
                 LLEGA HASTA
               </Text>
-              <Text size="24px" fw={800} mt={4} lh={1.1}>
+              <Text className="cifra" fw={800} mt={4} lh={1.1}>
                 {fecha(estado.ultima)}
               </Text>
               {estado.dias_de_colchon !== null && (
@@ -132,11 +132,11 @@ export default function UF() {
                 </Text>
               )}
             </Paper>
-            <Paper withBorder radius="md" p="md">
+            <Paper withBorder radius="md" p="md" className="caja-cifra" style={{ ["--cifra-max" as string]: "1.5rem" }}>
               <Text size="xs" fw={700} c="dimmed">
                 FILAS CARGADAS
               </Text>
-              <Text size="24px" fw={800} mt={4} lh={1.1}>
+              <Text className="cifra" fw={800} mt={4} lh={1.1}>
                 {estado.filas.toLocaleString('es-CL')}
               </Text>
               {estado.primera && (

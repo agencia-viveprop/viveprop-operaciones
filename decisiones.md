@@ -2431,3 +2431,50 @@ El texto libre de Observaciones queda como está. La ficha ahora muestra el esta
 ### Verificado mirando
 
 Se registró un avance real contra la base de desarrollo por la API y por la pantalla: la ficha de VVP-3 muestra sus dos liquidaciones con las seis partes cada una --y el corredor ViveProp en $2.345.028 y $1.174.975, o sea bruta menos tercero en las dos--, la historia con autor y fecha, y la cobranza reflejando el monto ajustado. Los registros de prueba se borraron después.
+
+---
+
+## D-093 · La app en teléfono y tablet: el defecto era la barra lateral, no el estilo
+
+El usuario probó la app en su teléfono y «no se ve completa». Lo que había no era un problema de apretón visual: era un defecto.
+
+### La barra lateral se dibujaba encima del contenido
+
+`AppShell` declaraba `navbar={{ width: 260, breakpoint: 'sm' }}` **sin `collapsed`**. Bajo el punto de corte, Mantine deja de correr el contenido para hacerle lugar a la barra, pero **no esconde la barra**: las dos cosas quedaban en el mismo espacio, la barra arriba. Y como no había ni cabecera ni botón de menú, no existía ningún control para sacarla del camino. De paso, el menú de usuario, el cambio de contraseña, el botón de salir y el cambio de tema viven al pie de esa barra, así que en un teléfono eran inalcanzables.
+
+El arreglo son tres cosas: `collapsed: { mobile: !abierto }`, una `AppShell.Header` con `Burger` que **existe solo bajo el punto de corte** --en PC va colapsada, así que no reserva alto y la pantalla queda igual que siempre-- y cerrar el menú al navegar. Lo último tiene dos disparadores a propósito: un efecto sobre `location.pathname` para la navegación normal, y un `onClick` en los tres grupos de enlaces, porque tocar el enlace de la pantalla en la que uno ya está no cambia la ruta y ahí la barra se quedaba abierta tapando lo que se acababa de pedir ver.
+
+El corte se escribe `(max-width: 47.99em)` y no en píxeles: los puntos de corte de Mantine son en `em`, y con un valor en píxeles la cabecera y la barra podían quedar en desacuerdo con la letra agrandada --que es el mismo desacuerdo que se estaba arreglando--.
+
+### La medición, y dos errores propios que corregir antes de creerle
+
+Lo primero fue medir en vez de opinar, con una sonda que informa `scrollWidth` contra el ancho del dispositivo y, aparte, qué textos quedan cortados dentro de su caja. Dos cosas salieron mal antes de que los números sirvieran:
+
+1. **Chrome `--headless` no baja de 500 px de ventana.** Las primeras capturas «de teléfono a 390» eran en realidad un viewport de 500 recortado a 390, y de ahí salió un diagnóstico falso --«la página scrollea de lado»-- que no se sostuvo. Se resolvió midiendo por el protocolo, con `puppeteer-core` instalado **fuera del repo**, en el directorio temporal: es una herramienta de verificación, no una dependencia de la app.
+2. **`scrollWidth - innerWidth` daba cero justo en las páginas que desbordaban más.** Chrome en emulación móvil agranda el viewport de maquetación cuando el contenido no cabe: `/admin/usuarios` informaba `innerWidth` 748 en un teléfono de 360. La medida correcta es contra el ancho del dispositivo.
+
+Con eso, la línea base a 360 px fue: `/cobranza` y `/admin/usuarios` ensanchaban la página, y `/reportes/mensual` y `/reportes/directorio` cortaban montos. Ocho de las once pantallas ya estaban bien --las tablas de Canjes y Negocios ya se desplazaban dentro de su caja--, así que **no había que tocar 14 archivos**, que era el plan que la primera medición mala sugería.
+
+### Un monto cortado a la mitad es peor que un monto chico
+
+Se leía `$2.822.65` donde dice `$2.822.656`, y eso no se lee como un error: se lee como el monto. Los montos no tienen espacios, así que no pueden partirse en dos líneas; la única salida es que la letra se ajuste.
+
+**El tamaño se calcula contra el ancho de la tarjeta y no de la ventana**, con `container-type: inline-size` y `cqw`. Con `vw` el iPad --que es ancho-- se quedaba con la letra grande y seguía cortando, porque ahí el problema no es la ventana sino que la barra lateral se lleva 260 px. El máximo sale de una variable por tarjeta, fijada en el tamaño que ya tenía en escritorio: la jerarquía entre paneles es deliberada.
+
+### Y donde la letra no alcanzaba, el problema era la grilla
+
+A 820 px --iPad vertical, con la barra visible-- el contenido son 528 px y las casillas de plata estaban en `{ base: 2, sm: 4 }`: **cuatro columnas de 120 px**. Ahí ninguna letra razonable entra. El salto a cuatro columnas se corrió de `sm` (768) a `md` (992), donde caben con holgura. Solo cambia la banda 768-991, que es exactamente la que estaba mal: **desde 992 px --cualquier notebook-- la pantalla queda idéntica**, que es lo que el usuario pidió.
+
+Lo mismo con los tres montos de proyección de la vista directorio, que estaban en `{ base: 3 }` fijo: en un teléfono son tres columnas de 100 px. Se apilan bajo 576 px, y para un rango pesimista-esperado-optimista leerlos enteros importa más que verlos en fila.
+
+### Un filtro que no se puede tocar
+
+Los selectores de la bandeja tienen cuatro opciones con etiquetas largas --«Requieren atención (12)»-- que piden más de 400 px. En un teléfono la última quedaba fuera de la pantalla, recortada y sin forma de alcanzarla. `SegmentedControl` no se desplaza ni se parte solo, así que el desplazamiento va en un contenedor afuera, con el mismo mecanismo que ya usaban las tablas anchas.
+
+Ese contenedor lleva `min-width: 0`, y no es decoración: sin eso un hijo de un flex se ata al ancho de su contenido y en vez de desplazarse por dentro ensancha la página entera.
+
+### Verificado
+
+11 rutas × 5 anchos de dispositivo (360, 390, 430, 820, 1180) más el escritorio a 1440: **55 combinaciones sin desborde ni texto cortado**, contra 4 pantallas con problema en la línea base. Y las capturas revisadas a ojo, que es lo que la sonda no puede decir: que el resultado además se lea bien.
+
+Queda pendiente la segunda entrega: modales a pantalla completa en teléfono, los formularios de adentro con campos que se estiran, y las filas de botones de cabecera.

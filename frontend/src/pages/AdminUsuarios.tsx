@@ -102,6 +102,9 @@ export default function AdminUsuarios() {
 
       {actualizar.isError && <Alert color="critical" variant="filled">{(actualizar.error as Error).message}</Alert>}
 
+      {/* La tabla se desplaza dentro de su caja en vez de ensanchar la pagina:
+          en un telefono de 360 px sus columnas piden 748. */}
+      <div className="tabla-scroll-x">
       <Table striped withTableBorder>
         <Table.Thead>
           <Table.Tr>
@@ -183,6 +186,7 @@ export default function AdminUsuarios() {
             ))}
         </Table.Tbody>
       </Table>
+      </div>
 
       {resetear.isError && (
         <Alert color="critical" variant="light">

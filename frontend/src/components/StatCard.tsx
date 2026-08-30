@@ -18,12 +18,16 @@ export default function StatCard({
       withBorder
       radius="md"
       p="md"
+      // `caja-cifra` deja que la cifra se mida contra el ancho de esta tarjeta:
+      // en un teléfono de 360 px entran dos por fila y un monto de siete dígitos
+      // no cabe al tamaño de escritorio.
+      className="caja-cifra"
       style={{ borderTop: `4px solid var(--mantine-color-${colorName}-${shade})` }}
     >
       <Text size="xs" fw={700} c="dimmed" style={{ letterSpacing: 0.5 }}>
         {label.toUpperCase()}
       </Text>
-      <Text size="28px" fw={800} mt={4} lh={1.1}>
+      <Text className="cifra" fw={800} mt={4} lh={1.1}>
         {value}
       </Text>
       {caption && (

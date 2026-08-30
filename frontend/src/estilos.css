@@ -55,22 +55,76 @@
 }
 
 /* WebKit y Blink: la barra nativa se esconde en macOS, así que se dibuja. */
-.tabla-scroll-x::-webkit-scrollbar {
+.tabla-scroll-x::-webkit-scrollbar,
+.fila-scroll-x::-webkit-scrollbar {
   height: 10px;
 }
 
-.tabla-scroll-x::-webkit-scrollbar-track {
+.tabla-scroll-x::-webkit-scrollbar-track,
+.fila-scroll-x::-webkit-scrollbar-track {
   background: var(--mantine-color-default-border);
   border-radius: 5px;
 }
 
-.tabla-scroll-x::-webkit-scrollbar-thumb {
+.tabla-scroll-x::-webkit-scrollbar-thumb,
+.fila-scroll-x::-webkit-scrollbar-thumb {
   background: var(--mantine-color-gray-5);
   border-radius: 5px;
 }
 
-.tabla-scroll-x::-webkit-scrollbar-thumb:hover {
+.tabla-scroll-x::-webkit-scrollbar-thumb:hover,
+.fila-scroll-x::-webkit-scrollbar-thumb:hover {
   background: var(--mantine-color-gray-6);
+}
+
+/* Fila de controles que se desplaza cuando no cabe.
+ *
+ * Los selectores de la bandeja tienen cuatro opciones con etiquetas largas
+ * --«Requieren atención (12)»-- y en un teléfono de 360 px la última quedaba
+ * fuera de la pantalla, recortada y **sin forma de alcanzarla**: un filtro que
+ * no se puede tocar es un defecto, no un apretón visual. `SegmentedControl` no
+ * se desplaza ni se parte por su cuenta, así que el desplazamiento va afuera.
+ *
+ * El hijo pide `max-content` para que no se comprima: se queda del ancho que
+ * necesita y el contenedor lo desliza.
+ */
+.fila-scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Sin esto el contenedor se niega a encogerse cuando es hijo de un flex
+   * --`min-width: auto` lo ata al ancho de su contenido-- y en vez de
+   * desplazarse por dentro ensancha la página entera. */
+  min-width: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mantine-color-gray-5) transparent;
+}
+
+.fila-scroll-x > * {
+  min-width: max-content;
+}
+
+/* Cifras que no se pueden cortar.
+ *
+ * Un monto cortado a la mitad --se leía «$2.822.65» donde dice $2.822.656-- es
+ * peor que un número chico: se lee como si fuera el monto. Los montos no tienen
+ * espacios, así que no pueden partirse en dos líneas; la única salida es que la
+ * letra se ajuste.
+ *
+ * **El tamaño se calcula contra el ancho de la tarjeta, no de la ventana.** La
+ * misma tarjeta mide 156 px en un teléfono sin barra lateral y 165 px en un iPad
+ * con ella, y `vw` no ve esa diferencia: con `vw` el iPad --que es ancho-- se
+ * quedaba con la letra grande y seguía cortando. Por eso la tarjeta declara
+ * `container-type` y la cifra se mide en `cqw`.
+ *
+ * El máximo sale de `--cifra-max`, que cada tarjeta fija en el tamaño que ya
+ * tenía en escritorio: la jerarquía entre paneles es deliberada y no se toca.
+ */
+.caja-cifra {
+  container-type: inline-size;
+}
+
+.cifra {
+  font-size: clamp(1.05rem, 13cqw, var(--cifra-max, 1.75rem));
 }
 
 /* Impresión de la vista directorio.

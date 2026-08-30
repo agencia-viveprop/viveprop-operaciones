@@ -321,12 +321,17 @@ function Tile({
       radius="md"
       p="md"
       onClick={onClick}
-      style={{ cursor: 'pointer', borderColor: activo ? `var(--mantine-color-${color}-6)` : undefined }}
+      className="caja-cifra"
+      style={{
+        cursor: 'pointer',
+        borderColor: activo ? `var(--mantine-color-${color}-6)` : undefined,
+        ["--cifra-max" as string]: '1.625rem',
+      }}
     >
       <Badge color={color} variant="light" mb={6}>
         {texto}
       </Badge>
-      <Text size="26px" fw={800} lh={1.1}>
+      <Text className="cifra" fw={800} lh={1.1}>
         {valor}
       </Text>
       <Text size="xs" c="dimmed" mt={4}>
@@ -399,7 +404,7 @@ function SeccionDominio({
           <Title order={4}>{nombre}</Title>
         </Group>
 
-        <SimpleGrid cols={{ base: 2, sm: 4 }}>
+        <SimpleGrid cols={{ base: 2, md: 4 }}>
           <Tile
             rotulo="Se cerró"
             valor={conMonto ? clp(seccion.monto_cerrado) : String(seccion.total_cerrados)}

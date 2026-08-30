@@ -11,11 +11,17 @@ export default function PageHeader({
 }) {
   return (
     <Stack gap={4} mb="md">
-      <Group justify="space-between" align="flex-start">
-        <Title order={2}>{title}</Title>
+      {/* El titulo y su barrita van juntos en la misma columna. Estaban en
+          niveles distintos, y cuando la accion no cabe al lado --en un telefono
+          los botones se van a la linea siguiente-- la barra quedaba debajo de
+          ellos, separada del titulo al que subraya. */}
+      <Group justify="space-between" align="flex-start" gap="sm">
+        <Stack gap={4}>
+          <Title order={2}>{title}</Title>
+          <Box w={36} h={4} bg="accent" style={{ borderRadius: 2 }} />
+        </Stack>
         {action}
       </Group>
-      <Box w={36} h={4} bg="accent" style={{ borderRadius: 2 }} />
       {subtitle && (
         <Text size="sm" c="dimmed">
           {subtitle}

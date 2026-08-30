@@ -38,13 +38,13 @@ function Plazo({
   ayuda: string
 }) {
   return (
-    <Paper withBorder radius="md" p="md">
+    <Paper withBorder radius="md" p="md" className="caja-cifra">
       <Text size="xs" fw={700} c="dimmed" style={{ letterSpacing: 0.5 }}>
         {titulo.toUpperCase()}
       </Text>
       {mediana === null ? (
         <>
-          <Text size="28px" fw={800} mt={4} lh={1.1} c="dimmed">
+          <Text className="cifra" fw={800} mt={4} lh={1.1} c="dimmed">
             —
           </Text>
           <Text size="xs" c="dimmed" mt={4}>
@@ -53,7 +53,7 @@ function Plazo({
         </>
       ) : (
         <>
-          <Text size="28px" fw={800} mt={4} lh={1.1}>
+          <Text className="cifra" fw={800} mt={4} lh={1.1}>
             {mediana} <Text span size="sm" fw={400} c="dimmed">días</Text>
           </Text>
           <Text size="xs" c="dimmed" mt={4}>
