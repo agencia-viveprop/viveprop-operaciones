@@ -44,6 +44,11 @@ const NIVELES: Record<NivelNegocio, { texto: string; color: string }> = {
  * mismo umbral: el día que se ajuste uno, la pantalla seguiría explicando el
  * viejo y nada fallaría. Un cartel que miente sobre la regla que aplica es peor
  * que no tener cartel.
+ *
+ * De ahí sale el «y sin próxima acción agendada» de Crítico y Advertencia: el
+ * reloj clasifica solo a los negocios sin compromiso registrado, así que sin esa
+ * mitad de la frase el recuadro puede decir 0 mientras la tabla muestra semanas
+ * sin gestión --están contados en «Vencido»-- (`D-093`).
  */
 function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): string {
   switch (nivel) {
@@ -54,9 +59,9 @@ function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): str
     case 'sin_gestion':
       return 'Nunca se registró un movimiento'
     case 'critico':
-      return `Más de ${critico} días sin gestión`
+      return `Más de ${critico} días sin gestión y sin próxima acción agendada`
     case 'advertencia':
-      return `Entre ${advertencia} y ${critico} días`
+      return `Entre ${advertencia} y ${critico} días, sin próxima acción agendada`
     case 'al_dia':
       return `Menos de ${advertencia} días`
   }

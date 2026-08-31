@@ -40,6 +40,15 @@ const NIVELES: Record<NivelSemaforo, { texto: string; color: string }> = {
  * `UMBRAL_CRITICO` y `UMBRAL_ADVERTENCIA` --que salen de la hoja `CONFIG`-- y ya
  * los devolvía en la respuesta. Dos copias del mismo umbral: el día que se
  * ajuste uno, la pantalla seguiría explicando el viejo y nada fallaría.
+ *
+ * **Crítico y Advertencia dicen «y sin seguimiento agendado», y esa mitad no se
+ * puede sacar.** El reloj clasifica solo a los canjes que no tienen un
+ * compromiso registrado: el compromiso es un hecho y el reloj una inferencia, y
+ * cuando los dos opinan gana el hecho (`bandeja_canjes.py`). Sin esa mitad de la
+ * frase el recuadro se contradice con la tabla que tiene debajo --el usuario lo
+ * leyó así: «Crítico 0» arriba y «Espera 4 días» en cinco filas, cuando el
+ * umbral son 48 horas-- porque esos canjes están contados en «Vencido»
+ * (`D-093`).
  */
 function ayudaDe(nivel: NivelSemaforo, critico: number, advertencia: number): string {
   switch (nivel) {
@@ -50,9 +59,9 @@ function ayudaDe(nivel: NivelSemaforo, critico: number, advertencia: number): st
     case 'sin_gestion':
       return 'Nunca se registró un movimiento en la app'
     case 'critico':
-      return `Más de ${critico} horas sin gestión`
+      return `Más de ${critico} horas sin gestión y sin seguimiento agendado`
     case 'advertencia':
-      return `Entre ${advertencia} y ${critico} horas`
+      return `Entre ${advertencia} y ${critico} horas, sin seguimiento agendado`
     case 'al_dia':
       return `Menos de ${advertencia} horas`
   }

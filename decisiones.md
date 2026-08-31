@@ -2496,3 +2496,29 @@ Va **en CSS y en un solo lugar**, no como `fullScreen={esCompacto}` en cada `Mod
 - Las capturas revisadas a ojo en los dos casos, que es lo que la medición no puede decir.
 
 La herramienta de medición vive **fuera del repo**, en el directorio temporal, con `puppeteer-core`: es verificación, no una dependencia de la app. Los dos scripts --uno para páginas, otro para modales-- informan `scrollWidth` contra el ancho del dispositivo y, aparte, qué textos quedan cortados dentro de su caja.
+
+---
+
+## D-093 · El recuadro de «Crítico» decía menos de lo que contaba
+
+El usuario preguntó por qué «Crítico» marcaba **0** cuando la tabla de abajo, en la misma pantalla, mostraba cinco canjes con **4, 4, 3, 3 y 6 días** de espera y el umbral son 48 horas.
+
+**El conteo estaba bien; el cartel estaba mal.** Los seis recuadros reparten los canjes abiertos en una casilla cada uno, y hay una precedencia deliberada (`D-059`): el reloj de horas sin gestión clasifica **solo** a los canjes que no tienen un seguimiento agendado. El compromiso registrado es un hecho --alguien dijo «lo sigo el jueves»-- y el reloj es una inferencia sobre el abandono; cuando los dos opinan, gana el que no es inferencia. Sus siete canjes abiertos tenían todos un compromiso: 4 vencidos + 1 para hoy + 2 agendados = 7, así que las tres casillas de reloj daban cero por construcción.
+
+Lo que el recuadro decía era «Más de 48 horas sin gestión», y eso es **literalmente falso**: había cinco canjes con más de 48 horas sin gestión. Lo que contaba era «más de 48 horas sin gestión **y sin ningún seguimiento agendado**». La regla completa sí estaba en la frase de arriba de la pantalla, pero el recuadro por sí solo se contradecía con la tabla que tenía debajo, y así lo leyó.
+
+Ahora los dos recuadros nombran la condición entera, en los dos dominios --«y sin seguimiento agendado» en canjes, «y sin próxima acción agendada» en negocios, que es el término que usa esa pestaña--. La pestaña de negocios tenía el defecto idéntico, con la misma precedencia, y se arregló en la misma pasada.
+
+### Lo que **no** se cambió, y por qué se preguntó
+
+Se le ofrecieron tres caminos y eligió el primero: solo el texto. Los otros dos quedan registrados porque el hueco que los motiva sigue existiendo.
+
+**No hay nada desatendido que la pantalla esconda hoy:** los cuatro canjes con 3 y 4 días ya salían marcados como «Vencido», que tiene prioridad más alta que «Crítico», así que estaban en «Requieren atención» igual.
+
+**El hueco real es otro:** un canje con el seguimiento agendado para dentro de dos semanas y quince días sin que nadie lo toque queda en «Al día», porque su compromiso todavía no vence. Al momento de mirarlo eran 2 canjes. Las alternativas ofrecidas fueron marcar la fila con un reloj rojo sin cambiarla de casilla --los recuadros seguirían sumando el total-- o invertir la precedencia, que tiene el costo de pintar en rojo el miércoles un canje que se prometió seguir el jueves. Si el hueco molesta, la primera es la que no rompe la aritmética de los recuadros.
+
+### Un defecto de paso: la insignia decía media palabra
+
+En la misma tabla la insignia de nivel salía **«CRÍTI…»** y **«PARA H…»**. La regla `[class*='Badge-label']` que evita los puntos suspensivos estaba limitada a `.tabla-una-linea`, y la bandeja de canjes no lleva esa clase --su columna de propiedad es una dirección larga que conviene que parta en dos líneas--. Pasó a aplicar a cualquier tabla, con `white-space: nowrap` en la raíz de la insignia para que la celda ensanche en vez de dejar que el texto se salga de la pastilla.
+
+Importa más de lo que parece: `theme.ts` anota que el coral de acento y el rojo crítico se parecen entre sí, así que **el nivel se lee por su palabra y nunca por el color solo**. Media palabra no es la palabra.

@@ -25,9 +25,23 @@
 }
 
 /* Mantine le pone puntos suspensivos a la etiqueta del badge cuando no cabe, y
- * de ahí salía el "CANCELA...". Con las columnas sin apretar ya no debería
- * hacer falta, pero se fuerza para que no reaparezca al cambiar el ancho. */
-.tabla-una-linea [class*='Badge-label'] {
+ * de ahí salía el "CANCELA...".
+ *
+ * Va para **cualquier** tabla y no solo para las de una línea: la bandeja de
+ * canjes no lleva esa clase --su columna de propiedad es una dirección larga que
+ * conviene que parta en dos líneas-- y ahí la insignia salía "CRÍTI..." y
+ * "PARA H...". Eso contradice la regla del proyecto anotada en `theme.ts`: el
+ * nivel se lee por su palabra y nunca por el color solo, porque el coral de
+ * acento y el rojo crítico se parecen. Media palabra no es la palabra.
+ *
+ * El `nowrap` en la raíz es la otra mitad: sin él la celda puede angostarse
+ * hasta que el texto se sale de la pastilla en vez de ensanchar la columna. Con
+ * los dos, el ancho mínimo de la celda pasa a ser el de la insignia completa. */
+table [class*='Badge-root'] {
+  white-space: nowrap;
+}
+
+table [class*='Badge-label'] {
   overflow: visible;
   text-overflow: clip;
 }

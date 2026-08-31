@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-29 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
+**Última actualización:** 2026-08-31 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
 
 ---
 
@@ -125,6 +125,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-08-31 - El recuadro de «Critico» decia menos de lo que contaba
+
+Preguntaste por que «Critico» marcaba 0 con cinco canjes de 3, 4 y 6 dias de espera justo abajo, siendo que el umbral son 48 horas.
+
+**El numero estaba bien; el cartel estaba mal.** El reloj de horas sin gestion clasifica solo a los canjes que **no** tienen seguimiento agendado: el compromiso es un hecho y el reloj una inferencia, y cuando los dos opinan gana el hecho (`D-059`). Tus siete abiertos tenian todos un compromiso --4 vencidos + 1 para hoy + 2 agendados-- asi que las casillas de reloj daban cero por construccion.
+
+Pero el recuadro decia «Mas de 48 horas sin gestion», y eso era falso: habia cinco canjes en esa condicion. Lo que contaba era «y **sin ningun seguimiento agendado**». Ahora lo dice completo, en las dos pestañas --en negocios, «y sin proxima accion agendada»--.
+
+**Nada se te estaba escapando:** esos cuatro ya salian como «Vencido», que pesa mas que «Critico». El hueco que si existe es otro y quedo anotado: un canje agendado para dentro de dos semanas y quince dias sin tocarse queda en «Al dia». Eran 2 casos. Elegiste arreglar solo el texto y dejar la regla como esta.
+
+**De paso**, la insignia de nivel salia cortada --«CRITI...», «PARA H...»--. La regla que evita los puntos suspensivos solo alcanzaba a dos tablas; ahora alcanza a todas. Importa porque el rojo critico y el coral de acento se parecen, asi que el nivel se lee por su palabra y no por el color.
+
+**Verificado:** mirando las dos pestañas en pantalla ancha y a 500 px. Ver `D-093`.
 
 ### 2026-08-29 - La app se usa en telefono y tablet (primera entrega)
 
