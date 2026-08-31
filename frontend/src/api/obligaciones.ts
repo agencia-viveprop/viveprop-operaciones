@@ -104,19 +104,40 @@ export type TramoDeCobranza = {
   estado_nombre: string | null
   casos: number
   monto_registrado: number
-  monto_esperado: number
   /** De cuántos casos se registró monto: con esto se lee si el registrado está
    *  incompleto en vez de parecer bajo. */
   con_monto: number
+}
+
+/**
+ * La misma plata repartida en los tres destinos que la app nunca suma junta.
+ *
+ * Es la regla de `D-063`, que la cobranza había vuelto a romper: mostraba un solo
+ * total por parte y el 38% de esa cifra era de negocios perdidos. Los rótulos los
+ * pone la pantalla porque cambian por dominio --«Ganado / En pipeline / No
+ * concretado» en negocios, «Cobrada / Potencial / No concretada» en canjes--.
+ */
+export type PlataPorEstado = {
+  logrado: number
+  en_curso: number
+  no_concretado: number
 }
 
 export type ParteDeCobranza = {
   tipo: string
   rotulo: string
   casos: number
-  monto_registrado: number
-  monto_esperado: number
+  registrado: PlataPorEstado
+  calculado: PlataPorEstado
   tramos: TramoDeCobranza[]
+}
+
+/** Una liquidación cuya comisión total no cuadra con su reparto. Viene así del
+ *  Excel; la ficha del negocio ya lo avisa y la cobranza lo sumaba en silencio. */
+export type DescuadreDeReparto = {
+  negocio: string
+  liquidacion: string | null
+  diferencia: number
 }
 
 /** Las dos mitades separadas a propósito: la plata de negocios es de ViveProp y
@@ -124,6 +145,11 @@ export type ParteDeCobranza = {
 export type Cobranza = {
   negocios: ParteDeCobranza[]
   canjes: ParteDeCobranza[]
+  /** El rebate del concentrador. No es una obligación --nadie lo factura-- pero
+   *  entra en la comisión real VP sin salir de ninguna otra parte, así que sin él
+   *  la resta hacia abajo no cierra. */
+  rebate: PlataPorEstado
+  descuadres: DescuadreDeReparto[]
   liquidaciones_sin_registrar: number
   canjes_sin_registrar: number
 }

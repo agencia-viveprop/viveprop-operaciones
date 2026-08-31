@@ -59,7 +59,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.canje import Canje, CanjeEstado
-from app.models.catalogo import Catalogo, TipoCatalogo
+from app.models.catalogo import Catalogo, EstadoNegocio, TipoCatalogo
 from app.models.negocio import Negocio, NegocioHito
 from app.models.obligacion import (
     OBLIGACION_LABELS,
@@ -342,22 +342,61 @@ class TramoDeCobranza(BaseModel):
     estado_codigo: str | None
     estado_nombre: str | None
     casos: int
-    # Los dos por separado y nunca mezclados: uno es lo que se registró y el otro
-    # lo que el motor calculó. Sumarlos en una sola cifra inventaría plata.
+    # Lo registrado en ese estado. El calculado **no** va por tramo: se suma sobre
+    # todo el universo --ver `_partes`-- y repartirlo por estado de facturación
+    # daría cifras que no se pueden sumar entre sí.
     monto_registrado: Decimal
-    monto_esperado: Decimal
     # De cuántos de esos casos se registró monto. Con esto se lee si el registrado
     # está incompleto en vez de parecer bajo.
     con_monto: int
+
+
+class PlataPorEstado(BaseModel):
+    """La misma plata repartida en los tres destinos que la app nunca suma junta.
+
+    **Es la regla de `D-063`**, que ya estaba tomada en el listado de negocios y
+    que esta pantalla había vuelto a romper: lo ganado, lo que está en curso y lo
+    que no se concretó son tres cosas distintas, y un total que las suma engaña.
+
+    El usuario lo detectó comparando dos pantallas de la misma app: la cobranza
+    decía $14.663.624 de comisión real VP y el listado de negocios decía
+    $8.087.862 ganados más $1.824.272 en pipeline. La diferencia --$4.751.491--
+    era la plata de los 10 negocios perdidos, sumada sin decirlo.
+
+    Los rótulos los pone la pantalla, porque cambian por dominio: en negocios son
+    «Ganado / En pipeline / No concretado» y en canjes «Cobrada / Potencial / No
+    concretada».
+    """
+
+    logrado: Decimal = CERO
+    en_curso: Decimal = CERO
+    no_concretado: Decimal = CERO
 
 
 class ParteDeCobranza(BaseModel):
     tipo: str
     rotulo: str
     casos: int
-    monto_registrado: Decimal
-    monto_esperado: Decimal
+    # Los dos por separado y nunca mezclados: uno es lo que se registró y el otro
+    # lo que el motor calculó. Y cada uno repartido en los tres destinos.
+    registrado: PlataPorEstado
+    calculado: PlataPorEstado
     tramos: list[TramoDeCobranza]
+
+
+class DescuadreDeReparto(BaseModel):
+    """Una liquidación cuya comisión total no cuadra con su reparto.
+
+    La ficha del negocio ya avisa esto en rojo desde el sprint 8 --viene así del
+    Excel-- pero la cobranza lo sumaba en silencio, y ahí el descuadre se lee como
+    un error de la pantalla y no del dato. En el histórico es uno: VVP-2, con
+    $903.803 de diferencia.
+    """
+
+    negocio: str
+    liquidacion: str | None
+    # Positiva si la comisión total es mayor que su reparto, negativa al revés.
+    diferencia: Decimal
 
 
 class Cobranza(BaseModel):
@@ -369,6 +408,14 @@ class Cobranza(BaseModel):
 
     negocios: list[ParteDeCobranza]
     canjes: list[ParteDeCobranza]
+    # El rebate del concentrador, aparte de las seis partes y **sin estado**: no es
+    # una obligación --nadie lo factura-- sino plata que el concentrador comparte
+    # con ViveProp. Va igual porque entra en la comisión real VP y no sale de
+    # ninguna otra parte, así que sin esta fila la resta hacia abajo no cierra por
+    # esos pesos (`D-095`).
+    rebate: PlataPorEstado
+    # Las liquidaciones cuyo reparto no cuadra con su comisión total.
+    descuadres: list[DescuadreDeReparto]
     # Entidades sin ninguna parte registrada, para que la vista no parezca completa
     # cuando lo que pasa es que casi nada se registró todavía.
     liquidaciones_sin_registrar: int
@@ -383,18 +430,70 @@ def _orden_de_estado(codigo: str | None) -> tuple[int, str]:
     return (len(CIRCUITO), codigo or "")
 
 
+def _destino_de_negocio(estado) -> str:
+    """En cuál de los tres destinos cae una liquidación, por su estado."""
+    if estado == EstadoNegocio.CERRADO:
+        return "logrado"
+    if estado == EstadoNegocio.ACTIVO:
+        return "en_curso"
+    # PERDIDO y DESISTIDO. Su plata está calculada y no se va a cobrar; se informa
+    # aparte en vez de sumarse con lo pendiente.
+    return "no_concretado"
+
+
+def _destino_de_canje(estado) -> str:
+    if estado == CanjeEstado.CERRADO:
+        return "logrado"
+    if estado == CanjeEstado.ACTIVO:
+        return "en_curso"
+    return "no_concretado"
+
+
+def _sumar(destinos: dict[str, Decimal]) -> PlataPorEstado:
+    return PlataPorEstado(**{k: v for k, v in destinos.items()})
+
+
 def _partes(
     tipos: tuple[TipoObligacion, ...],
-    filas: list[tuple[Obligacion, Decimal | None]],
+    filas: list[tuple[Obligacion, str]],
+    esperados: dict[int, dict[TipoObligacion, Decimal | None]],
+    destinos: dict[int, str],
     catalogos: dict[int, Catalogo],
 ) -> list[ParteDeCobranza]:
+    """Las partes de un dominio, con su plata en los tres destinos.
+
+    **`calculado` se suma sobre todas las entidades del universo, no sobre las
+    filas registradas de esa parte.** Los dos son universos distintos a propósito:
+
+    - `registrado` es un **hecho** y solo puede salir de las filas que existen.
+    - `calculado` es lo que dice el motor, y existe con o sin fila.
+
+    Sumarlo solo sobre lo registrado hacía que las seis partes describieran
+    poblaciones distintas, y entonces la tabla cerraba **por casualidad**: en el
+    histórico las 19 liquidaciones traen las seis obligaciones desde el Excel, así
+    que coincidían. Con un negocio nuevo, registrar solo «Facturación comisión
+    total» dejaba las otras cinco en cero y la resta no daba. Ahora las seis
+    hablan de la misma población y la tabla se puede comprobar sumando (`D-095`).
+    """
     salida = []
     for tipo in tipos:
-        del_tipo = [(o, e) for o, e in filas if o.tipo == tipo]
-        por_estado: dict[str | None, list[tuple[Obligacion, Decimal | None]]] = {}
-        for o, esperado in del_tipo:
-            estado = catalogos.get(o.estado_id) if o.estado_id else None
-            por_estado.setdefault(estado.codigo if estado else None, []).append((o, esperado))
+        del_tipo = [(o, d) for o, d in filas if o.tipo == tipo]
+
+        registrado = {"logrado": CERO, "en_curso": CERO, "no_concretado": CERO}
+        for obligacion, destino in del_tipo:
+            if obligacion.monto is not None:
+                registrado[destino] += Decimal(obligacion.monto)
+
+        calculado = {"logrado": CERO, "en_curso": CERO, "no_concretado": CERO}
+        for entidad_id, por_tipo in esperados.items():
+            monto = por_tipo.get(tipo)
+            if monto is not None:
+                calculado[destinos[entidad_id]] += Decimal(monto)
+
+        por_estado: dict[str | None, list[tuple[Obligacion, str]]] = {}
+        for fila in del_tipo:
+            estado = catalogos.get(fila[0].estado_id) if fila[0].estado_id else None
+            por_estado.setdefault(estado.codigo if estado else None, []).append(fila)
 
         tramos = []
         for codigo in sorted(por_estado, key=_orden_de_estado):
@@ -408,7 +507,6 @@ def _partes(
                     estado_nombre=nombre,
                     casos=len(items),
                     monto_registrado=sum((Decimal(o.monto) for o, _ in items if o.monto), CERO),
-                    monto_esperado=sum((Decimal(e) for _, e in items if e is not None), CERO),
                     con_monto=sum(1 for o, _ in items if o.monto is not None),
                 )
             )
@@ -417,12 +515,49 @@ def _partes(
                 tipo=tipo.value,
                 rotulo=OBLIGACION_LABELS[tipo],
                 casos=len(del_tipo),
-                monto_registrado=sum((t.monto_registrado for t in tramos), CERO),
-                monto_esperado=sum((t.monto_esperado for t in tramos), CERO),
+                registrado=_sumar(registrado),
+                calculado=_sumar(calculado),
                 tramos=tramos,
             )
         )
     return salida
+
+
+def _rebate_y_descuadres(
+    hitos: dict[int, NegocioHito], usados: set[int]
+) -> tuple[PlataPorEstado, list[DescuadreDeReparto]]:
+    """El rebate del concentrador y los repartos que no cuadran.
+
+    Las dos cosas salen del mismo recorrido y las dos existen por la misma razón:
+    que la columna de plata se pueda comprobar sumando. El rebate entra en la
+    comisión real VP sin salir de ninguna parte, y el descuadre hace que el
+    reparto sume más que la comisión total.
+    """
+    rebate = {"logrado": CERO, "en_curso": CERO, "no_concretado": CERO}
+    descuadres: list[DescuadreDeReparto] = []
+
+    for hito_id in sorted(usados):
+        hito = hitos[hito_id]
+        destino = _destino_de_negocio(hito.estado)
+        if hito.rebate_concentrador:
+            rebate[destino] += Decimal(hito.rebate_concentrador)
+
+        if hito.comision_total is None:
+            continue
+        reparto = Decimal(hito.comision_broker or 0) + Decimal(hito.comision_vp_bruta or 0)
+        diferencia = Decimal(hito.comision_total) - reparto
+        # Un peso de tolerancia, igual que la alerta de la ficha: los montos son
+        # `numeric(16,2)` y el redondeo no es un descuadre.
+        if abs(diferencia) > 1:
+            descuadres.append(
+                DescuadreDeReparto(
+                    negocio=hito.negocio.codigo,
+                    liquidacion=hito.nombre,
+                    diferencia=diferencia,
+                )
+            )
+
+    return _sumar(rebate), descuadres
 
 
 def obtener_cobranza(db: Session, hoy: date | None = None) -> Cobranza:
@@ -431,13 +566,22 @@ def obtener_cobranza(db: Session, hoy: date | None = None) -> Cobranza:
     **No hay un gran total.** Los seis conceptos de negocios son dos niveles de la
     misma plata, así que se totalizan por parte; y la de canjes es de Dataprop, que
     no se suma con la de ViveProp por definición.
+
+    **Y dentro de cada parte, la plata va repartida en tres** --ganado, en curso y
+    no concretado-- porque el resto de la app nunca las suma juntas (`D-063`) y
+    esta pantalla lo había vuelto a hacer: el 38% de la comisión total que mostraba
+    era de negocios perdidos (`D-095`).
     """
     filas = list(db.scalars(select(Obligacion).options(selectinload(Obligacion.avances))))
 
+    ids_de_hito = {f.hito_id for f in filas if f.hito_id}
     hitos = {
         h.id: h
         for h in db.scalars(
-            select(NegocioHito).where(NegocioHito.id.in_({f.hito_id for f in filas if f.hito_id}))
+            select(NegocioHito)
+            .where(NegocioHito.id.in_(ids_de_hito))
+            # El código del negocio se usa para nombrar los descuadres.
+            .options(selectinload(NegocioHito.negocio))
         )
     }
     canjes = {
@@ -449,12 +593,15 @@ def obtener_cobranza(db: Session, hoy: date | None = None) -> Cobranza:
     esperados_hito = {h.id: montos_esperados_de_hito(h) for h in hitos.values()}
     esperados_canje = {c.id: montos_esperados_de_canje(db, c, hoy) for c in canjes.values()}
 
+    destinos_hito = {h.id: _destino_de_negocio(h.estado) for h in hitos.values()}
+    destinos_canje = {c.id: _destino_de_canje(c.estado) for c in canjes.values()}
+
     de_negocios, de_canjes = [], []
     for f in filas:
         if f.hito_id:
-            de_negocios.append((f, esperados_hito[f.hito_id].get(f.tipo)))
+            de_negocios.append((f, destinos_hito[f.hito_id]))
         else:
-            de_canjes.append((f, esperados_canje[f.canje_id].get(f.tipo)))
+            de_canjes.append((f, destinos_canje[f.canje_id]))
 
     catalogos = _catalogos(db, {f.estado_id for f in filas if f.estado_id})
 
@@ -463,9 +610,17 @@ def obtener_cobranza(db: Session, hoy: date | None = None) -> Cobranza:
     ) or 0
     total_canjes = db.scalar(select(func.count()).select_from(Canje)) or 0
 
+    rebate, descuadres = _rebate_y_descuadres(hitos, ids_de_hito)
+
     return Cobranza(
-        negocios=_partes(TIPOS_DE_NEGOCIO, de_negocios, catalogos),
-        canjes=_partes(TIPOS_DE_CANJE, de_canjes, catalogos),
-        liquidaciones_sin_registrar=total_liquidaciones - len({f.hito_id for f in filas if f.hito_id}),
+        negocios=_partes(
+            TIPOS_DE_NEGOCIO, de_negocios, esperados_hito, destinos_hito, catalogos
+        ),
+        canjes=_partes(
+            TIPOS_DE_CANJE, de_canjes, esperados_canje, destinos_canje, catalogos
+        ),
+        rebate=rebate,
+        descuadres=descuadres,
+        liquidaciones_sin_registrar=total_liquidaciones - len(ids_de_hito),
         canjes_sin_registrar=total_canjes - len({f.canje_id for f in filas if f.canje_id}),
     )

@@ -2573,3 +2573,50 @@ Cada nivel recibe canjes por dos caminos, así que el texto dice los dos: «Venc
 Con compromisos vencidos sembrados en la base de desarrollo a 1, 2, 3 y 30 días, la pantalla mostró los cuatro niveles como corresponde --Vencido, Advertencia, Crítico, Crítico-- con los recuadros sumando el total y la lista ordenada de mayor a menor atraso. En negocios, con 40 y 20 días de atraso, Crítico y Advertencia. Los datos de prueba se borraron después.
 
 **Lo que no se cambió: los colores.** «Vencido» sigue en rojo aunque ahora sea menos severo que «Advertencia», que va en naranja. Un compromiso incumplido es un hecho accionable y el rojo lo dice; el naranja de advertencia es una inferencia. El orden de la lista resuelve qué mirar primero, y el color, de qué tipo de problema se trata.
+
+---
+
+## D-095 · La cobranza se puede comprobar sumando
+
+El usuario dijo «no me cuadran las cifras» de la columna Calculado, y no cuadraban. Tres cosas se estaban sumando sin decirlo, y con las tres identificadas la tabla cierra al peso.
+
+### 1. El 38% de la columna eran negocios perdidos
+
+De los $34.842.292 de «Facturación comisión total», $13.198.585 venían de las 10 liquidaciones PERDIDO. Estaban marcadas «No Aplica - Negocio Caído» --el chip lo decía-- y el total las sumaba igual.
+
+**Él lo detectó comparando dos pantallas de la misma app**, que es la mejor forma de encontrar este defecto: la cobranza decía $14.663.624 de comisión real VP y el listado de negocios decía $8.087.862 ganados más $1.824.272 en pipeline. La diferencia, $4.751.491, era la plata de los perdidos.
+
+Eso **contradecía una decisión ya tomada**: `D-063` puso tres columnas de plata separadas en el listado de negocios --Ganado, En pipeline, No concretado-- justamente porque un total que sumaba los tres estados engañaba. La cobranza los volvió a mezclar. Ahora cada parte lleva las tres columnas, con los rótulos de su dominio: en canjes son «Cobrada / Potencial / No concretada», los mismos de la vista de plata de canjes.
+
+### 2. El rebate del concentrador no tenía fila
+
+$523.674 entran en «Pago comisión real VP» y no salen de ninguna otra parte, porque no son un pedazo de la comisión total: son plata que el concentrador comparte con ViveProp (`D-018`). Sin una fila que lo nombre, la resta hacia abajo no puede cerrar.
+
+Va **fuera de las seis partes y sin estado de facturación**, porque no es una obligación: nadie factura un rebate. Y solo aparece en la vista de lo calculado, porque no existe un rebate «registrado».
+
+### 3. VVP-2 trae un descuadre del Excel
+
+Su comisión total ($3.260.207) es menor que su reparto ($2.623.339 + $1.540.671 = $4.164.010): $903.803 de diferencia. La ficha del negocio ya lo avisa en rojo desde el sprint 8 --«Viene así del Excel y hay que resolverlo»-- pero la cobranza lo sumaba callada, y ahí la diferencia se lee como un error de la pantalla en vez de un dato que hay que corregir. Ahora la cobranza lo avisa arriba, con el código del negocio y el monto.
+
+La tolerancia es de un peso, la misma que la alerta de la ficha: los montos son `numeric(16,2)` y el redondeo no es un descuadre.
+
+### Un defecto de fondo que apareció al escribir los tests
+
+`calculado` se sumaba **solo sobre las obligaciones registradas de esa parte**, y así las seis partes describían poblaciones distintas: la tabla cerraba **por casualidad**, porque las 19 liquidaciones del Excel traen las seis obligaciones. Con un negocio nuevo, registrar solo «Facturación comisión total» dejaba las otras cinco en cero y la resta no daba.
+
+Ahora `calculado` se suma sobre **todas** las entidades del universo --las que tienen al menos una obligación-- y `registrado` sigue saliendo solo de las filas que existen. Son universos distintos a propósito: el registrado es un hecho y solo puede salir de lo que se registró; el calculado es lo que dice el motor, y existe con o sin fila. Un test lo fija.
+
+Como consecuencia, `TramoDeCobranza` perdió su `monto_esperado`: repartir el calculado por estado de facturación daría cifras que no se pueden sumar entre sí.
+
+### Registrado y Calculado, con un selector
+
+Seis columnas de plata --tres destinos por dos medidas-- no se leen. Van con un selector arriba y tres columnas a la vez. Arranca en Calculado porque es lo que hay: las 114 obligaciones que vinieron del Excel traen estado pero no monto, así que Registrado se va a poblar con el uso.
+
+### La comprobación, con los datos reales
+
+| Identidad | Ganado | En pipeline | No concretado |
+|---|---|---|---|
+| total − (partner + corredor VP + captador) | −903.803 (VVP-2) | 0 | 0,04 |
+| corredor VP − equipo + rebate = real VP | exacto | exacto | exacto |
+
+Los cuatro centavos de «No concretado» son redondeo de `numeric(16,2)` acumulado en 10 liquidaciones. Todo lo demás cierra, y lo único que no cierra es lo que la pantalla ahora avisa.

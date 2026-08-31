@@ -126,6 +126,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-31 - La cobranza se puede comprobar sumando
+
+Dijiste que no te cuadraban las cifras del Calculado, y no cuadraban. Habia tres cosas sumadas sin decirlo.
+
+**El 38% de la columna eran negocios perdidos.** De los $34.842.292 de comision total, $13.198.585 venian de las 10 liquidaciones caidas, marcadas «No Aplica - Negocio Caido» y sumadas igual. Lo pillaste comparando dos pantallas: la cobranza decia $14.663.624 de comision real VP y el listado de negocios decia $8.087.862 ganados mas $1.824.272 en pipeline. La diferencia eran los perdidos. Eso contradecia una decision ya tomada --`D-063`, las tres columnas de plata del listado-- que esta pantalla habia vuelto a romper. Ahora cada parte lleva las tres columnas, con los rotulos de su dominio.
+
+**Faltaba la fila del rebate del concentrador:** $523.674 que entran a la comision real VP y no salen de ninguna otra parte, porque no son un pedazo de la comision total. Va fuera de las seis partes y sin estado, porque nadie factura un rebate.
+
+**Y VVP-2 trae un descuadre del Excel de $903.803**, que su ficha ya avisaba en rojo y la cobranza sumaba callada. Ahora la cobranza tambien lo avisa, con el codigo y el monto.
+
+**De paso encontre un defecto de fondo:** el calculado se sumaba solo sobre las partes ya registradas, asi que las seis describian poblaciones distintas y la tabla cerraba por casualidad --las 19 liquidaciones del Excel traen las seis obligaciones--. Con un negocio nuevo no habria cuadrado. Ahora el calculado se suma sobre todas las liquidaciones en vista y el registrado sigue saliendo de las filas que existen.
+
+**Registrado y Calculado** van con un selector arriba: seis columnas de plata no se leen.
+
+**Verificado:** 836 tests --4 nuevos-- y las identidades comprobadas contra tus datos. Cierran exacto en las tres columnas, salvo los $903.803 de VVP-2 que la pantalla ahora avisa y cuatro centavos de redondeo en los perdidos. Ver `D-095`.
+
 ### 2026-08-31 - Un compromiso incumplido deja de proteger
 
 No aceptaste la explicacion del cartel, y tenias razon: *«cualquier fecha puesta de seguimiento oculta la realidad de gestion»*. Con la regla anterior, un canje con el compromiso vencido se quedaba en «Vencido» **para siempre**, da igual si el atraso era de un dia o de un mes. Poner una fecha lo sacaba del semaforo de forma permanente.

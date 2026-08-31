@@ -462,8 +462,13 @@ def test_la_cobranza_totaliza_por_parte_y_nunca_en_una_gran_suma(
     assert not any(k.startswith("total") for k in cuerpo), "no hay ningún total general"
 
     partes = {p["tipo"]: p for p in cuerpo["negocios"]}
-    assert D(partes["FACT_COMISION_TOTAL"]["monto_registrado"]) == D("4835110.00")
-    assert D(partes["PAGO_EQUIPO_VP"]["monto_registrado"]) == D("117497.46")
+    # La liquidación es CERRADO, así que su plata va en «ganado» y no en las otras
+    # dos columnas: lo ganado, lo que está en curso y lo que no se concretó no se
+    # suman (`D-063`, `D-095`).
+    total = partes["FACT_COMISION_TOTAL"]["registrado"]
+    assert D(total["logrado"]) == D("4835110.00")
+    assert D(total["en_curso"]) == 0 and D(total["no_concretado"]) == 0
+    assert D(partes["PAGO_EQUIPO_VP"]["registrado"]["logrado"]) == D("117497.46")
     # Las partes sin nada registrado están igual, en cero y con cero casos.
     assert partes["PAGO_PARTNER_COMERCIAL"]["casos"] == 0
 
@@ -483,10 +488,15 @@ def test_la_cobranza_separa_la_plata_de_dataprop_de_la_de_viveprop(
     cuerpo = cliente.get("/api/reportes/cobranza").json()
 
     de_canjes = {p["tipo"]: p for p in cuerpo["canjes"]}
-    assert D(de_canjes["FACT_CORREDOR_SOLICITANTE"]["monto_registrado"]) == D("500000")
+    # El canje está CERRADO, así que su plata es «cobrada», la primera columna.
+    assert D(de_canjes["FACT_CORREDOR_SOLICITANTE"]["registrado"]["logrado"]) == D("500000")
     # Y en negocios no aparece: son dos mundos.
     assert all(p["tipo"].startswith(("FACT_C", "PAGO_")) for p in cuerpo["negocios"])
-    assert all(D(p["monto_registrado"]) == 0 for p in cuerpo["negocios"])
+    assert all(
+        D(p["registrado"][destino]) == 0
+        for p in cuerpo["negocios"]
+        for destino in ("logrado", "en_curso", "no_concretado")
+    )
 
 
 def test_la_cobranza_dice_cuanto_falta_por_registrar(cliente, liquidacion, canje, estados):
@@ -525,3 +535,121 @@ def test_los_tramos_de_una_parte_vienen_en_el_orden_del_circuito(
     tramos = [t["estado_codigo"] for t in partes["FACT_CAPTADOR_ALIANZA"]["tramos"]]
 
     assert tramos == ["PAGADO", "NO_APLICA_CAPTADOR"]
+
+
+def test_la_cobranza_no_suma_lo_perdido_con_lo_que_se_espera_cobrar(
+    cliente, db, liquidacion, estados
+):
+    """**El defecto que el usuario encontró comparando dos pantallas** (`D-095`).
+
+    La cobranza mostraba un solo total por parte, y el 38% de esa cifra era de
+    negocios perdidos: decía $14.663.624 de comisión real VP mientras el listado
+    de negocios decía $8.087.862 ganados más $1.824.272 en pipeline. La diferencia
+    eran los 10 negocios caídos, sumados sin decirlo.
+
+    Es la regla de `D-063`, que ya estaba tomada para el listado de negocios y que
+    esta pantalla había vuelto a romper.
+    """
+    perdido = Negocio(
+        codigo="VVP-CAIDO",
+        propiedad=Propiedad(direccion="Se cayó 100", comuna="Nunoa"),
+        modelo=ModeloNegocio.MERCADO_PRIMARIO,
+    )
+    perdido.hitos = [
+        NegocioHito(
+            fecha_inicio=date(2026, 1, 1),
+            estado=EstadoNegocio.PERDIDO,
+            comision_total=D("1000000.00"),
+        )
+    ]
+    db.add(perdido)
+    db.commit()
+
+    for negocio in (liquidacion, perdido):
+        r = cliente.post(
+            f"/api/negocios/{negocio.id}/hitos/{negocio.hitos[0].id}/obligaciones",
+            json={"tipo": "FACT_COMISION_TOTAL", "estado_id": estados["POR_FACTURAR"]},
+        )
+        assert r.status_code == 200, r.text
+
+    partes = {p["tipo"]: p for p in cliente.get("/api/reportes/cobranza").json()["negocios"]}
+    calculado = partes["FACT_COMISION_TOTAL"]["calculado"]
+
+    # La cerrada en «ganado», la perdida en «no concretado», y ninguna suma que
+    # las cruce.
+    assert D(calculado["logrado"]) == D("4835110.00")
+    assert D(calculado["no_concretado"]) == D("1000000.00")
+    assert D(calculado["en_curso"]) == 0
+
+
+def test_la_cobranza_muestra_el_rebate_aparte_de_las_seis_partes(
+    cliente, db, liquidacion, estados
+):
+    """Sin la fila del rebate, la resta hacia abajo no puede cerrar.
+
+    El rebate entra en la comisión real VP y **no sale de ninguna otra parte**: no
+    es un pedazo de la comisión total, es plata que el concentrador comparte con
+    ViveProp. Con la fila, la identidad se comprueba: corredor VP − equipo +
+    rebate = comisión real VP.
+    """
+    hito = liquidacion.hitos[0]
+    hito.rebate_concentrador = D("50000.00")
+    hito.comision_real_vp = D("1107477.12")  # bruta − tercero − equipo + rebate
+    db.commit()
+
+    cliente.post(
+        _url(liquidacion),
+        json={"tipo": "FACT_COMISION_TOTAL", "estado_id": estados["POR_FACTURAR"]},
+    )
+    cuerpo = cliente.get("/api/reportes/cobranza").json()
+
+    assert D(cuerpo["rebate"]["logrado"]) == D("50000.00")
+
+    partes = {p["tipo"]: p for p in cuerpo["negocios"]}
+    vp = D(partes["FACT_CORREDOR_VP"]["calculado"]["logrado"])
+    equipo = D(partes["PAGO_EQUIPO_VP"]["calculado"]["logrado"])
+    real = D(partes["PAGO_COMISION_REAL_VP"]["calculado"]["logrado"])
+    # Las cuatro filas cierran entre sí, que es lo que se pedía: poder comprobar
+    # la tabla sumando.
+    assert vp - equipo + D(cuerpo["rebate"]["logrado"]) == real
+
+
+def test_la_cobranza_avisa_cuando_el_reparto_no_cuadra(cliente, db, liquidacion, estados):
+    """El descuadre del Excel se dice, no se suma en silencio.
+
+    En el histórico es uno --VVP-2, con $903.803-- y su ficha ya lo avisa en rojo
+    desde el sprint 8. La cobranza lo sumaba callada, y ahí la diferencia se lee
+    como un error de la pantalla en vez de un dato que hay que corregir.
+    """
+    hito = liquidacion.hitos[0]
+    # Reparto que suma más que la comisión total, como VVP-2.
+    hito.comision_broker = D("4000000.00")
+    db.commit()
+
+    cliente.post(
+        _url(liquidacion),
+        json={"tipo": "FACT_COMISION_TOTAL", "estado_id": estados["POR_FACTURAR"]},
+    )
+    cuerpo = cliente.get("/api/reportes/cobranza").json()
+
+    assert len(cuerpo["descuadres"]) == 1
+    descuadre = cuerpo["descuadres"][0]
+    assert descuadre["negocio"] == "VVP-3"
+    assert descuadre["liquidacion"] == "PROMESA"
+    # 4.835.110 − (4.000.000 + 1.211.314) = −376.204
+    assert D(descuadre["diferencia"]) == D("4835110.00") - D("4000000.00") - D("1211314.00")
+
+
+def test_un_reparto_que_cuadra_no_genera_aviso(cliente, db, liquidacion, estados):
+    """Un peso de tolerancia: los montos son `numeric(16,2)` y el redondeo no es
+    un descuadre."""
+    hito = liquidacion.hitos[0]
+    hito.comision_broker = D("3623796.00")  # total − bruta, al peso
+    db.commit()
+
+    cliente.post(
+        _url(liquidacion),
+        json={"tipo": "FACT_COMISION_TOTAL", "estado_id": estados["POR_FACTURAR"]},
+    )
+
+    assert cliente.get("/api/reportes/cobranza").json()["descuadres"] == []
