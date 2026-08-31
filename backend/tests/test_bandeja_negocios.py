@@ -317,8 +317,13 @@ def test_el_compromiso_manda_sobre_el_semaforo():
     """
     assert clasificar(60, dias_de_atraso=-2) == "agendado"
     assert clasificar(60, dias_de_atraso=0) == "para_hoy"
+    # Tres y cinco días de atraso siguen siendo "vencido": en un proceso que dura
+    # meses eso es recién vencido, y el escalamiento empieza a los 15 (`D-094`).
     assert clasificar(60, dias_de_atraso=3) == "vencido"
     assert clasificar(1, dias_de_atraso=5) == "vencido"
+    # Pero deja de quedarse ahí para siempre.
+    assert clasificar(1, dias_de_atraso=15) == "advertencia"
+    assert clasificar(1, dias_de_atraso=31) == "critico"
     # Sin compromiso sigue mandando el semaforo de 30/14 dias.
     assert clasificar(31, dias_de_atraso=None) == "critico"
     assert clasificar(None, dias_de_atraso=None) == "sin_gestion"
@@ -364,8 +369,18 @@ def test_un_movimiento_sin_compromiso_no_borra_el_anterior(db, tipos):
     assert b.resumen.agendados == 1
 
 
-def test_el_compromiso_vencido_sube_al_tope(db, tipos):
-    """Aunque el negocio se haya tocado ayer."""
+def test_el_compromiso_recien_vencido_no_le_gana_al_abandonado(db, tipos):
+    """El compromiso vencido sigue contando, pero ya no va al tope por serlo.
+
+    Antes este test se llamaba "el compromiso vencido sube al tope" y esperaba
+    `F-1` primero: el compromiso le ganaba al semáforo siempre. Con el
+    escalamiento (`D-094`) el orden es por severidad, y dos días de atraso en un
+    proceso que dura meses es "recién vencido", mientras 40 días sin que nadie
+    toque `V-1` es abandono. Ese es el que hay que mirar primero.
+
+    Lo que **no** cambió: `F-1` se tocó ayer y aun así aparece, porque lo
+    prometido no se cumplió.
+    """
     viejo = _negocio(db, "V-1")
     fresco = _negocio(db, "F-1")
     _mov(db, viejo.id, "NEG_LLAMADA", 40)          # critico por tiempo
@@ -377,8 +392,33 @@ def test_el_compromiso_vencido_sube_al_tope(db, tipos):
 
     b = obtener_bandeja_negocios(db, hoy=HOY)
 
-    assert [f.codigo for f in b.filas] == ["F-1", "V-1"]
-    assert b.filas[0].nivel == "vencido"
-    assert b.filas[0].dias_de_atraso == 2
-    assert b.filas[1].nivel == "critico"
+    assert [f.codigo for f in b.filas] == ["V-1", "F-1"]
+    assert b.filas[0].nivel == "critico"
+    assert b.filas[1].nivel == "vencido"
+    assert b.filas[1].dias_de_atraso == 2
     assert b.resumen.vencido == 1
+
+
+def test_el_atraso_de_un_negocio_escala_con_sus_propios_umbrales(db, tipos):
+    """15 días de atraso son advertencia; 31, crítico. Con un día de gracia.
+
+    Los umbrales son los del dominio --14 y 30 días, no las 48 horas de canjes--
+    porque acá los procesos duran de un mes a varios. Un negocio con el
+    compromiso vencido hace tres días no está abandonado; hace cinco semanas, sí.
+    """
+    casos = {"A-1": 1, "A-2": 15, "A-3": 31, "A-4": 200}
+    for codigo, atraso in casos.items():
+        n = _negocio(db, codigo)
+        _mov(db, n.id, "NEG_LLAMADA", 1)
+        db.query(Movimiento).filter_by(entity_id=n.id).one().proximo_seguimiento = (
+            HOY - timedelta(days=atraso)
+        )
+        db.commit()
+
+    b = obtener_bandeja_negocios(db, hoy=HOY)
+    nivel = {f.codigo: f.nivel for f in b.filas}
+
+    assert nivel["A-1"] == "vencido"
+    assert nivel["A-2"] == "advertencia"
+    assert nivel["A-3"] == "critico"
+    assert nivel["A-4"] == "critico"

@@ -155,16 +155,70 @@ def _con_seguimiento(db, id_canje: int, seguimiento: date | None, horas_atras: i
     ))
 
 
-def test_el_vencido_va_antes_que_el_de_hoy_y_que_el_semaforo(base):
-    _con_seguimiento(base, 10, HOY - timedelta(days=3))   # vencido
+def test_el_compromiso_vencido_escala_por_el_semaforo(base):
+    """**Un compromiso incumplido deja de proteger** (`D-094`).
+
+    Antes este test decía lo contrario: el nivel se quedaba en "vencido" para
+    siempre, con el compromiso ganándole al semáforo. El usuario mostró el
+    problema con sus propios datos --cinco canjes con 3 y 4 días de espera y el
+    recuadro de crítico en cero-- y lo dijo preciso: *"cualquier fecha puesta de
+    seguimiento oculta la realidad de gestión"*.
+
+    Ahora el atraso pasa por los mismos umbrales: tres días vencido son 72 horas
+    efectivas tras el día de gracia, o sea crítico. Y un crítico va antes que un
+    compromiso que vence hoy, porque "para hoy" todavía no se incumplió.
+    """
+    _con_seguimiento(base, 10, HOY - timedelta(days=3))   # vencido → crítico
     _con_seguimiento(base, 11, HOY)                       # para hoy
     _con_seguimiento(base, 12, None, horas_atras=200)     # crítico por semáforo
     base.commit()
 
     b = obtener_bandeja(base, ahora=AHORA)
 
-    assert [f.canje_id for f in b.filas] == [10, 11, 12]
-    assert [f.nivel for f in b.filas] == ["vencido", "para_hoy", "critico"]
+    assert [f.nivel for f in b.filas] == ["critico", "critico", "para_hoy"]
+    # Entre dos críticos manda el atraso: el 10 tiene 3 días, el 12 ninguno.
+    assert [f.canje_id for f in b.filas] == [10, 12, 11]
+
+
+def test_el_atraso_escala_con_un_dia_de_gracia(base):
+    """Recién vencido no es abandonado, y sin la gracia "vencido" no existiría.
+
+    Estar vencido implica **al menos un día** de atraso, y un día son las 24 horas
+    del umbral de advertencia. Sin el día de gracia el nivel "vencido" quedaría
+    vacío por definición y su recuadro sería un cartel que siempre marca cero, que
+    es justo el defecto que se arregló en `D-093`.
+    """
+    _con_seguimiento(base, 30, HOY - timedelta(days=1))   # recién vencido
+    _con_seguimiento(base, 31, HOY - timedelta(days=2))   # 24 h de atraso
+    _con_seguimiento(base, 32, HOY - timedelta(days=3))   # 48 h de atraso
+    _con_seguimiento(base, 33, HOY - timedelta(days=30))
+    base.commit()
+
+    b = obtener_bandeja(base, ahora=AHORA)
+    nivel = {f.canje_id: f.nivel for f in b.filas}
+
+    assert nivel[30] == "vencido"
+    assert nivel[31] == "advertencia"
+    assert nivel[32] == "critico"
+    assert nivel[33] == "critico"
+
+
+def test_lo_agendado_a_futuro_no_escala_aunque_nadie_lo_toque(base):
+    """El compromiso **vigente** sí protege, y tiene que seguir protegiendo.
+
+    Un canje agendado para dentro de diez días no tiene gestión en el intertanto
+    por definición. Someterlo al reloj pondría en rojo todo lo agendado a más de
+    dos días y agendar dejaría de servir. Este canje lleva 200 horas sin gestión y
+    aun así no se lista: se cuenta en `agendados`.
+    """
+    _con_seguimiento(base, 40, HOY + timedelta(days=10), horas_atras=200)
+    base.commit()
+
+    b = obtener_bandeja(base, ahora=AHORA)
+
+    assert [f.canje_id for f in b.filas] == []
+    assert b.resumen.agendados == 1
+    assert b.resumen.critico == 0
 
 
 def test_entre_dos_vencidos_va_primero_el_mas_atrasado(base):
@@ -306,7 +360,9 @@ def test_la_bandeja_devuelve_el_compromiso(cliente, base):
 
     assert "agendados" in cuerpo["resumen"]
     fila = next(f for f in cuerpo["filas"] if f["canje_id"] == 82)
-    assert fila["nivel"] == "vencido"
+    # Dos días de atraso son 24 horas efectivas tras el día de gracia: advertencia
+    # (`D-094`). Antes era "vencido" a secas, sin importar cuánto llevara.
+    assert fila["nivel"] == "advertencia"
     assert fila["dias_de_atraso"] == 2
     assert fila["proximo_seguimiento"] is not None
 

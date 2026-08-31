@@ -7,6 +7,22 @@ advertencia. Son globales y no por tipo de movimiento — `tipos_movimiento` tie
 además un `sla_horas` propio de cada paso, pero eso mide otra cosa: cuánto
 debería demorar *ese* paso, no cuánto lleva el canje sin que nadie lo mire.
 
+**Un compromiso incumplido deja de proteger (`D-094`).** El compromiso vence, y
+desde ahí el semáforo toma el control: el atraso entra a los mismos umbrales que
+las horas sin gestión, con **un día de gracia**. Así, vencido ayer sigue siendo
+"vencido" --recién vencido no es abandonado-- y a partir del segundo día escala a
+advertencia y al tercero a crítico.
+
+Antes el nivel se quedaba en "vencido" para siempre, sin importar si el atraso
+era de un día o de un mes, y el usuario lo dijo con precisión: *"cualquier fecha
+puesta de seguimiento **oculta** la realidad de gestión"*. Tenía razón: poner una
+fecha sacaba al canje del semáforo de forma permanente.
+
+Lo que **sí** sigue protegiendo es el compromiso **vigente**: un canje agendado
+para dentro de diez días no tiene gestión en el intertanto por definición, y
+someterlo al reloj pondría en rojo todo lo agendado a más de dos días. Agendar
+dejaría de servir.
+
 **`sin_gestion` es un nivel aparte, no "crítico".** Hoy los 194 canjes abiertos
 están así, porque el seguimiento se hacía en el Excel. Si se contaran como
 críticos, la bandeja abriría con 194 filas rojas y el color dejaría de informar
@@ -26,16 +42,23 @@ from app.models.movimiento import EntityType, Movimiento
 UMBRAL_CRITICO = 48
 UMBRAL_ADVERTENCIA = 24
 
-# Orden de atención: primero lo que nunca se tocó, después lo más abandonado.
-# Los dos primeros salen de un compromiso registrado --alguien dijo "sigo el
-# jueves"-- y por eso van antes que el semáforo, que es una inferencia sobre
-# cuánto hace que nadie toca el canje.
+# Orden de atención: primero lo que nunca se tocó, después por severidad.
+#
+# Antes los dos niveles de compromiso iban arriba de todo, porque un compromiso
+# registrado vale más que una inferencia. Con el escalamiento (`D-094`) esa
+# separación por origen ya no sirve para ordenar: un compromiso vencido hace tres
+# días **es** un crítico, así que si los compromisos fueran primero los escalados
+# quedarían debajo de "para hoy" y el escalamiento no se vería.
+#
+# "Vencido" pasa a significar **recién vencido** --un día-- y por eso baja: un
+# canje que nadie tocó nunca, o uno abandonado hace una semana, piden atención
+# antes que uno cuyo compromiso venció ayer.
 PRIORIDAD = {
-    "vencido": 0,
-    "para_hoy": 1,
-    "sin_gestion": 2,
-    "critico": 3,
-    "advertencia": 4,
+    "sin_gestion": 0,
+    "critico": 1,
+    "advertencia": 2,
+    "vencido": 3,
+    "para_hoy": 4,
     "al_dia": 5,
 }
 
@@ -98,6 +121,24 @@ def clasificar(horas: float | None) -> str:
     if horas >= UMBRAL_ADVERTENCIA:
         return "advertencia"
     return "al_dia"
+
+
+def clasificar_atraso(dias_de_atraso: int) -> str:
+    """El nivel de un compromiso **incumplido**, según cuánto lleva vencido.
+
+    Mismos umbrales que el semáforo, corridos **un día de gracia**: vencido ayer
+    es "vencido" y recién al segundo día empieza a escalar. Sin la gracia el
+    nivel "vencido" quedaría vacío por definición --estar vencido implica al
+    menos un día de atraso, y un día son las 24 horas del umbral de
+    advertencia-- y ese recuadro pasaría a ser un cartel que siempre marca cero
+    (`D-093`, `D-094`).
+    """
+    horas = (dias_de_atraso - 1) * 24
+    if horas >= UMBRAL_CRITICO:
+        return "critico"
+    if horas >= UMBRAL_ADVERTENCIA:
+        return "advertencia"
+    return "vencido"
 
 
 def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
@@ -183,13 +224,15 @@ def obtener_bandeja(db: Session, ahora: datetime | None = None) -> Bandeja:
         seguimiento = seguimientos.get(canje.id)
         atraso = (hoy - seguimiento).days if seguimiento is not None else None
 
-        # Un compromiso registrado manda sobre el semáforo: el semáforo infiere
+        # El compromiso **vigente** manda sobre el semáforo: el semáforo infiere
         # que algo está abandonado por el tiempo que pasó, y el compromiso dice
-        # qué se prometió. Cuando los dos opinan, gana el que no es una inferencia.
+        # qué se prometió. Cuando los dos opinan, gana el que no es una
+        # inferencia. Pero un compromiso **incumplido** ya no dice nada sobre el
+        # futuro, así que ahí el atraso escala por el semáforo (`D-094`).
         if atraso is None:
             nivel = clasificar(horas)
         elif atraso > 0:
-            nivel = "vencido"
+            nivel = clasificar_atraso(atraso)
         elif atraso == 0:
             nivel = "para_hoy"
         else:

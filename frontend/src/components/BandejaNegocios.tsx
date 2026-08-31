@@ -45,23 +45,26 @@ const NIVELES: Record<NivelNegocio, { texto: string; color: string }> = {
  * viejo y nada fallaría. Un cartel que miente sobre la regla que aplica es peor
  * que no tener cartel.
  *
- * De ahí sale el «y sin próxima acción agendada» de Crítico y Advertencia: el
- * reloj clasifica solo a los negocios sin compromiso registrado, así que sin esa
- * mitad de la frase el recuadro puede decir 0 mientras la tabla muestra semanas
- * sin gestión --están contados en «Vencido»-- (`D-093`).
+ * Cada nivel nombra sus **dos orígenes** (`D-094`): un compromiso incumplido
+ * escala por el semáforo, así que a «Crítico» y «Advertencia» llegan negocios por
+ * los días sin gestión **y** por los días de atraso. Nombrar solo uno es lo que
+ * hacía que el recuadro dijera 0 mientras la tabla mostraba semanas de espera
+ * (`D-093`).
  */
 function ayudaDe(nivel: NivelNegocio, critico: number, advertencia: number): string {
   switch (nivel) {
     case 'vencido':
-      return 'La próxima acción comprometida ya pasó'
+      // El día de gracia hace que el escalamiento empiece al día siguiente, así
+      // que este nivel cubre desde 1 hasta el umbral de advertencia.
+      return `La próxima acción venció hace ${advertencia} días o menos`
     case 'para_hoy':
       return 'La próxima acción es hoy'
     case 'sin_gestion':
       return 'Nunca se registró un movimiento'
     case 'critico':
-      return `Más de ${critico} días sin gestión y sin próxima acción agendada`
+      return `Vencida hace más de ${critico} días, o más de ${critico} días sin gestión`
     case 'advertencia':
-      return `Entre ${advertencia} y ${critico} días, sin próxima acción agendada`
+      return `Vencida hace ${advertencia + 1} a ${critico} días, o ${advertencia} a ${critico} días sin gestión`
     case 'al_dia':
       return `Menos de ${advertencia} días`
   }
@@ -123,7 +126,9 @@ export default function BandejaNegocios({ puedeEditar }: { puedeEditar: boolean 
     <Stack gap="md">
       <Text size="sm" c="dimmed">
         {requieren} de {abiertos} negocios con liquidaciones abiertas requieren atención. Los
-        umbrales son en días, no en horas: acá los procesos duran de un mes a varios.
+        umbrales son en días, no en horas: acá los procesos duran de un mes a varios. La próxima
+        acción comprometida manda mientras está vigente; una vez vencida, el atraso escala igual
+        que los días sin gestión.
       </Text>
 
       {/* **«Al día» incluye los agendados, y los seis recuadros reparten el

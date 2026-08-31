@@ -41,27 +41,31 @@ const NIVELES: Record<NivelSemaforo, { texto: string; color: string }> = {
  * los devolvía en la respuesta. Dos copias del mismo umbral: el día que se
  * ajuste uno, la pantalla seguiría explicando el viejo y nada fallaría.
  *
- * **Crítico y Advertencia dicen «y sin seguimiento agendado», y esa mitad no se
- * puede sacar.** El reloj clasifica solo a los canjes que no tienen un
- * compromiso registrado: el compromiso es un hecho y el reloj una inferencia, y
- * cuando los dos opinan gana el hecho (`bandeja_canjes.py`). Sin esa mitad de la
- * frase el recuadro se contradice con la tabla que tiene debajo --el usuario lo
- * leyó así: «Crítico 0» arriba y «Espera 4 días» en cinco filas, cuando el
- * umbral son 48 horas-- porque esos canjes están contados en «Vencido»
- * (`D-093`).
+ * **Cada nivel nombra sus dos orígenes** (`D-094`). Un compromiso incumplido
+ * escala por el semáforo, así que «Crítico» y «Advertencia» reciben canjes por
+ * dos caminos: los que llevan mucho sin gestión **y** los que tienen el
+ * seguimiento vencido hace días. El cartel tiene que decir los dos, o vuelve a
+ * pasar lo de `D-093`: decía «Más de 48 horas sin gestión» y marcaba cero
+ * mientras la tabla mostraba cinco filas con 3 y 4 días de espera.
  */
 function ayudaDe(nivel: NivelSemaforo, critico: number, advertencia: number): string {
+  // Los umbrales llegan en horas y el atraso se cuenta en días, con un día de
+  // gracia: 48 h de atraso efectivo son 3 días vencido. La conversión va acá y
+  // no escrita a mano para que siga el umbral que manda la API.
+  const diasCritico = Math.round(critico / 24) + 1
+  const diasAdvertencia = Math.round(advertencia / 24) + 1
+
   switch (nivel) {
     case 'vencido':
-      return 'El seguimiento agendado ya pasó'
+      return 'El seguimiento venció ayer'
     case 'para_hoy':
       return 'El seguimiento agendado es hoy'
     case 'sin_gestion':
       return 'Nunca se registró un movimiento en la app'
     case 'critico':
-      return `Más de ${critico} horas sin gestión y sin seguimiento agendado`
+      return `Vencido hace ${diasCritico} días o más, o más de ${critico} horas sin gestión`
     case 'advertencia':
-      return `Entre ${advertencia} y ${critico} horas, sin seguimiento agendado`
+      return `Vencido hace ${diasAdvertencia} días, o entre ${advertencia} y ${critico} horas sin gestión`
     case 'al_dia':
       return `Menos de ${advertencia} horas`
   }
@@ -203,12 +207,26 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
     .filter(Boolean)
     .join(' · ')
 
+  /**
+   * La pestaña «Vencidos» filtra por el **hecho**, no por el nivel.
+   *
+   * Con el escalamiento (`D-094`) el nivel «vencido» quedó reservado al recién
+   * vencido, y los que llevan días son «Advertencia» o «Crítico». Si la pestaña
+   * siguiera filtrando por nivel, apretar «Vencidos» con cuatro compromisos
+   * incumplidos de tres días mostraría cero: el mismo cartel engañoso de
+   * `D-093`, movido a otro lugar. El compromiso vencido es un hecho registrado y
+   * se filtra por él.
+   */
+  const estaVencido = (f: FilaBandeja) => (f.dias_de_atraso ?? -1) > 0
+
   const visibles =
     filtro === 'todos'
       ? filas
       : filtro === 'atencion'
         ? filas.filter((f) => f.nivel !== 'al_dia')
-        : filas.filter((f) => f.nivel === filtro)
+        : filtro === 'vencido'
+          ? filas.filter(estaVencido)
+          : filas.filter((f) => f.nivel === filtro)
 
   const filaSeguida = filas.find((f) => f.canje_id === seguimientoId)
 
@@ -218,8 +236,9 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         title="Qué me toca hoy"
         subtitle={
           `${requierenAtencion} de ${abiertos} canjes abiertos requieren atención. ` +
-          'Manda el seguimiento agendado; donde no hay ninguno, el reloj de horas sin ' +
-          `gestión: ${data.umbral_critico_horas} horas es crítico, ${data.umbral_advertencia_horas} es advertencia.`
+          'El seguimiento agendado manda mientras está vigente; una vez vencido, el atraso ' +
+          'escala igual que el reloj de horas sin gestión: ' +
+          `${data.umbral_critico_horas} horas es crítico, ${data.umbral_advertencia_horas} es advertencia.`
         }
         action={selector}
       />
@@ -269,7 +288,7 @@ export default function Bandeja({ puedeEditar }: { puedeEditar: boolean }) {
         onChange={setFiltro}
         data={[
           { value: 'atencion', label: `Requieren atención (${requierenAtencion})` },
-          { value: 'vencido', label: `Vencidos (${resumen.vencido})` },
+          { value: 'vencido', label: `Vencidos (${filas.filter(estaVencido).length})` },
           { value: 'para_hoy', label: `Para hoy (${resumen.para_hoy})` },
           { value: 'sin_gestion', label: `Sin gestión (${resumen.sin_gestion})` },
           // "Todos" son los que se listan, que no son todos los abiertos: los

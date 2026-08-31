@@ -126,6 +126,29 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-31 - Un compromiso incumplido deja de proteger
+
+No aceptaste la explicacion del cartel, y tenias razon: *«cualquier fecha puesta de seguimiento oculta la realidad de gestion»*. Con la regla anterior, un canje con el compromiso vencido se quedaba en «Vencido» **para siempre**, da igual si el atraso era de un dia o de un mes. Poner una fecha lo sacaba del semaforo de forma permanente.
+
+**Ahora el compromiso protege mientras esta vigente; cuando se incumple, el semaforo toma el control.** El atraso pasa por los mismos umbrales, con un dia de gracia:
+
+| Vencio hace | Nivel |
+|---|---|
+| es hoy | Para hoy |
+| 1 dia | Vencido |
+| 2 dias | Advertencia |
+| 3 dias o mas | Critico |
+
+En negocios lo mismo con sus umbrales de 14 y 30 dias, porque ahi los procesos duran meses.
+
+**El dia de gracia no es un detalle:** sin el, «Vencido» quedaria vacio por definicion --estar vencido implica al menos un dia, y un dia son las 24 horas de advertencia-- y ese recuadro seria otro cartel que siempre marca cero.
+
+**Lo que sigue protegiendo** es el compromiso vigente: lo agendado para mas adelante no entra al semaforo, como elegiste. Un canje agendado para dentro de diez dias no tiene gestion en el intertanto, y someterlo al reloj pondria en rojo todo lo agendado a mas de dos dias.
+
+**Dos cosas que hubo que arreglar de paso:** el orden de la lista --ahora por severidad, porque si los compromisos fueran primero los escalados quedarian debajo de «Para hoy» y no se veria nada-- y la pestaña «Vencidos», que filtraba por nivel y habria mostrado cero con cuatro compromisos incumplidos. Ahora filtra por el hecho de estar vencido.
+
+**Verificado:** 832 tests --3 nuevos, 3 reescritos-- y mirando la pantalla con compromisos vencidos sembrados a 1, 2, 3 y 30 dias: los cuatro niveles salieron como corresponde y los recuadros suman el total. En negocios, con 40 y 20 dias, Critico y Advertencia. Ver `D-094`.
+
 ### 2026-08-31 - El recuadro de «Critico» decia menos de lo que contaba
 
 Preguntaste por que «Critico» marcaba 0 con cinco canjes de 3, 4 y 6 dias de espera justo abajo, siendo que el umbral son 48 horas.

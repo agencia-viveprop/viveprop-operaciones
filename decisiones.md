@@ -2522,3 +2522,54 @@ Se le ofrecieron tres caminos y eligió el primero: solo el texto. Los otros dos
 En la misma tabla la insignia de nivel salía **«CRÍTI…»** y **«PARA H…»**. La regla `[class*='Badge-label']` que evita los puntos suspensivos estaba limitada a `.tabla-una-linea`, y la bandeja de canjes no lleva esa clase --su columna de propiedad es una dirección larga que conviene que parta en dos líneas--. Pasó a aplicar a cualquier tabla, con `white-space: nowrap` en la raíz de la insignia para que la celda ensanche en vez de dejar que el texto se salga de la pastilla.
 
 Importa más de lo que parece: `theme.ts` anota que el coral de acento y el rojo crítico se parecen entre sí, así que **el nivel se lee por su palabra y nunca por el color solo**. Media palabra no es la palabra.
+
+---
+
+## D-094 · Un compromiso incumplido deja de proteger
+
+Después de explicarle por qué «Crítico» marcaba cero (`D-093`), el usuario no aceptó la explicación --y tenía razón--:
+
+> si eso lo entiendo, pero si te fijas en la columna seguimiento, si bien tienen agendada una fecha, ahí mismo dice cuándo venció, entonces debiera pasar a Advertencia o Crítico según corresponda, sino **cualquier fecha puesta de seguimiento «oculta» la realidad de gestión**
+
+El diagnóstico es exacto. Con la regla anterior, el nivel de un canje con compromiso vencido era `vencido` **para siempre**, sin importar si el atraso era de un día o de un mes. O sea: poner una fecha de seguimiento sacaba al canje del semáforo de forma permanente. El compromiso dejaba de ser información y pasaba a ser un escudo.
+
+### La regla nueva
+
+El compromiso protege **mientras está vigente**; cuando se incumple, el semáforo toma el control. El atraso pasa por los mismos umbrales que las horas sin gestión, con **un día de gracia**:
+
+| Venció hace | Nivel |
+|---|---|
+| 0 días (es hoy) | Para hoy |
+| 1 día | Vencido |
+| 2 días (24 h efectivas) | Advertencia |
+| 3 días o más (48 h) | Crítico |
+
+En negocios es lo mismo con sus propios umbrales --14 y 30 días, porque ahí los procesos duran de un mes a varios--: vencida hace 14 días o menos es `vencido`, de 15 a 30 es advertencia, y a los 31 crítico.
+
+### Por qué el día de gracia
+
+Sin él el nivel `vencido` quedaría **vacío por definición**: estar vencido implica al menos un día de atraso, y un día son las 24 horas del umbral de advertencia. Ese recuadro pasaría a ser un cartel que siempre marca cero, que es exactamente el defecto que se acababa de arreglar en `D-093`. Con la gracia, `vencido` significa **recién vencido** y el escalamiento se ve avanzar día a día.
+
+Se le ofrecieron tres variantes y eligió ésta. Las otras dos eran: sin gracia --y entonces el recuadro «Vencido» desaparece de la pantalla-- y que el reloj mandara también sobre «Para hoy», que hubiera pintado en rojo un canje cuyo compromiso es para hoy y todavía no se incumplió.
+
+### Lo que sigue protegiendo: el compromiso vigente
+
+Los agendados **para más adelante** no entran al semáforo, y eso quedó explícito con un test. Un canje agendado para dentro de diez días no tiene gestión en el intertanto por definición; someterlo al reloj pondría en rojo todo lo agendado a más de dos días y agendar dejaría de servir. El usuario lo confirmó al elegir «dejarlos como están».
+
+### Dos consecuencias que hubo que resolver
+
+**El orden de la lista.** Antes los dos niveles de compromiso iban arriba de todo, porque «un compromiso registrado vale más que una inferencia». Con el escalamiento esa separación por origen ya no sirve para ordenar: un compromiso vencido hace tres días **es** un crítico, así que si los compromisos fueran primero, los escalados quedarían debajo de «Para hoy» y el escalamiento no se vería. Ahora el orden es: lo que nunca se tocó, y después por severidad. `Vencido` baja de puesto porque ahora significa recién vencido.
+
+Eso cambió dos tests que afirmaban lo contrario. El de negocios se llamaba `test_el_compromiso_vencido_sube_al_tope` y esperaba que un negocio con dos días de atraso fuera antes que uno con 40 días sin gestión. Se reescribió con su razón: en un proceso que dura meses, dos días de atraso es recién vencido y 40 días sin que nadie lo toque es abandono.
+
+**La pestaña «Vencidos».** Filtraba por nivel, así que con la regla nueva habría mostrado solo los recién vencidos: apretarla con cuatro compromisos incumplidos de tres días habría mostrado cero. El mismo cartel engañoso de `D-093` movido a otro lugar. Ahora filtra por el **hecho** --`dias_de_atraso > 0`--, que es lo que la palabra «vencido» significa para quien la lee.
+
+### Los carteles nombran los dos orígenes
+
+Cada nivel recibe canjes por dos caminos, así que el texto dice los dos: «Vencido hace 3 días o más, **o** más de 48 horas sin gestión». Y la frase de arriba de la pantalla pasó a decir la regla completa: «el seguimiento agendado manda mientras está vigente; una vez vencido, el atraso escala igual que el reloj».
+
+### Verificado mirando
+
+Con compromisos vencidos sembrados en la base de desarrollo a 1, 2, 3 y 30 días, la pantalla mostró los cuatro niveles como corresponde --Vencido, Advertencia, Crítico, Crítico-- con los recuadros sumando el total y la lista ordenada de mayor a menor atraso. En negocios, con 40 y 20 días de atraso, Crítico y Advertencia. Los datos de prueba se borraron después.
+
+**Lo que no se cambió: los colores.** «Vencido» sigue en rojo aunque ahora sea menos severo que «Advertencia», que va en naranja. Un compromiso incumplido es un hecho accionable y el rojo lo dice; el naranja de advertencia es una inferencia. El orden de la lista resuelve qué mirar primero, y el color, de qué tipo de problema se trata.
