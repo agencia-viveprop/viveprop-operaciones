@@ -52,35 +52,33 @@ from app.services.limpieza_canjes import (
 )
 
 
-def _resumen(canjes) -> str:
-    por_anio = Counter(
-        (c.fecha_solicitud or c.creado_en).year for c in canjes
-    )
-    por_estado = Counter(c.estado.value for c in canjes)
-    return (
-        f"  por año   : {dict(sorted(por_anio.items()))}\n"
-        f"  por estado: {dict(por_estado)}"
-    )
+def _informe(lote: list[tuple[int, str, str, bool]]) -> list[str]:
+    """El desglose y los avisos, para los dos transportes.
 
-
-def _avisos(canjes) -> list[str]:
-    """Lo que conviene mirar dos veces antes de borrar.
+    Recibe tuplas `(id, año, estado, gestionado_en_app)` en vez de objetos porque
+    el camino por la API tiene diccionarios y el de la base tiene filas: la
+    información de seguridad es la misma y **tiene que decirse igual en los dos**.
+    Con ella se toma la decisión de borrar, así que un transporte que la omita
+    convierte una decisión informada en un salto al vacío.
 
     Un canje **activo** o **gestionado en la app** es trabajo vivo o trabajo que
     alguien hizo. El corte los alcanza igual --se pidió «todos»-- pero el
-    simulacro tiene que decirlo en voz alta para que la decisión sea informada.
+    simulacro tiene que decirlo en voz alta.
     """
-    avisos = []
-    activos = [c.id for c in canjes if c.estado.value == "ACTIVO"]
+    lineas = [
+        f"  por año   : {dict(sorted(Counter(anio for _, anio, _, _ in lote).items()))}",
+        f"  por estado: {dict(Counter(estado for _, _, estado, _ in lote))}",
+    ]
+    activos = [i for i, _, estado, _ in lote if estado == "ACTIVO"]
     if activos:
-        avisos.append(f"  !! {len(activos)} están ACTIVOS: {activos[:20]}")
-    gestionados = [c.id for c in canjes if c.gestionado_en_app]
+        lineas.append(f"  !! {len(activos)} están ACTIVOS: {activos[:20]}")
+    gestionados = [i for i, _, _, gestionado in lote if gestionado]
     if gestionados:
-        avisos.append(
+        lineas.append(
             f"  !! {len(gestionados)} tienen gestión registrada en la app"
             f" (se borra con ellos): {gestionados[:20]}"
         )
-    return avisos
+    return lineas
 
 
 def contra_la_base(corte: date, aplicar: bool) -> int:
@@ -92,9 +90,11 @@ def contra_la_base(corte: date, aplicar: bool) -> int:
             return 0
 
         print(f"Canjes anteriores a {corte}: {len(canjes)}")
-        print(_resumen(canjes))
-        for aviso in _avisos(canjes):
-            print(aviso)
+        for linea in _informe([
+            (c.id, (c.fecha_solicitud or c.creado_en).year, c.estado.value, c.gestionado_en_app)
+            for c in canjes
+        ]):
+            print(linea)
 
         if not aplicar:
             print("\nSimulacro. Nada se borró. Agregá --aplicar para escribir.")
@@ -145,13 +145,26 @@ def contra_la_api(base: str, cookie: str, corte: date, aplicar: bool) -> int:
         return 1
 
     limite = corte.isoformat()
+    # **Sin fecha no se borra.** Comparando texto, un `None` se volvía "" y ""
+    # es menor que cualquier fecha, así que un canje sin fecha de solicitud
+    # habría caído dentro del corte. Hoy la columna es `NOT NULL` y no puede
+    # pasar, pero el camino por la base ya trata ese caso --nulo en las dos
+    # fechas es "no se sabe cuándo", y eso no autoriza a borrar-- y los dos
+    # transportes tienen que decidir lo mismo.
     objetivo = [
-        f for f in filas if (f.get("fecha_solicitud") or "")[:10] < limite
+        f for f in filas
+        if f.get("fecha_solicitud") and f["fecha_solicitud"][:10] < limite
     ]
     print(f"Canjes anteriores a {corte} en el despliegue: {len(objetivo)}")
     if not objetivo:
         return 0
-    print(f"  ids: {[f['id'] for f in objetivo][:30]}{' ...' if len(objetivo) > 30 else ''}")
+    for linea in _informe([
+        (f["id"], int(f["fecha_solicitud"][:4]), f["estado"], bool(f.get("gestionado_en_app")))
+        for f in objetivo
+    ]):
+        print(linea)
+    ids = sorted(f["id"] for f in objetivo)
+    print(f"  ids: {ids[:30]}{' ...' if len(ids) > 30 else ''}")
 
     if not aplicar:
         print("\nSimulacro. Nada se borró. Agregá --aplicar para escribir.")

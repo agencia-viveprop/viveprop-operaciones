@@ -2655,6 +2655,15 @@ Esto no se puede deshacer. No es como `limpiar_canjes.py`, que cancela y deja la
 
 **No tiene botón en ninguna pantalla, a propósito.** Existe para que el script pueda correr contra un despliegue con una cookie de sesión en vez de con el string de conexión de la base --el mismo criterio de `limpiar_canjes.py`: una cookie vence, se revoca cerrando sesión y no da más permisos que los de su usuario--. Un botón de borrado definitivo al lado del de editar es un accidente esperando.
 
+### Ejecutado el 2026-08-31
+
+Se corrió por la API contra producción, con la cookie de admin del usuario y con respaldo de su lado. **75 canjes y 176 movimientos borrados**, todos cancelados, ninguno activo: 2022: 5, 2023: 17, 2024: 52 y uno de 2025. Quedan 229 canjes y el más antiguo es del 2 de junio de 2025.
+
+Correrlo de verdad dejó dos arreglos:
+
+- **El desglose y los avisos ahora se imprimen en los dos transportes.** Estaban solo en el que va contra la base, y la decisión de borrar se toma con esa información: un transporte que la omite convierte una decisión informada en un salto al vacío. Por eso `_informe` recibe tuplas en vez de objetos --la API tiene diccionarios y la base tiene filas-- y las dos dicen lo mismo.
+- **Sin fecha no se borra, también por la API.** Comparando texto, un `None` se volvía `""`, y `""` es menor que cualquier fecha: un canje sin fecha de solicitud habría caído dentro del corte. Hoy la columna es `NOT NULL` y no puede pasar, pero el camino por la base ya trataba ese caso y los dos transportes tienen que decidir igual.
+
 ### Lo que cambia en los reportes, y que hay que esperar
 
 Los reportes históricos van a cambiar: el reporte mensual, la vista directorio y las tasas de cierre dejan de ver esos 75 canjes. Eso es la consecuencia buscada de un borrado definitivo, no un efecto lateral, pero conviene saberlo antes de comparar una captura vieja con una nueva.

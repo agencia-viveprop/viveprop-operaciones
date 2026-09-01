@@ -126,6 +126,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-31 - La limpieza de canjes antiguos se ejecuto en produccion
+
+Confirmaste los numeros y aplique el borrado por la API, con tu cookie de admin y con respaldo en Neon de tu lado.
+
+**Se borraron 75 canjes y sus 176 movimientos.** Todos estaban cancelados --ninguno activo-- y se reparten en 2022: 5, 2023: 17, 2024: 52 y uno de 2025. De los 75, 52 tenian gestion registrada en la app, que se fue con ellos. Obligaciones de facturacion: ninguna, porque todavia no se registro facturacion en canjes.
+
+**Quedan 229 canjes** --7 activos y 222 cancelados-- y el mas antiguo es del 2 de junio de 2025. Cero anteriores al corte.
+
+**Verificado despues de borrar:** el listado, la bandeja, los reportes de plata, activos, semanal, mensual, directorio y cobranza responden bien; el canje #1 da 404 como corresponde. El reporte semanal no descarta ningun movimiento por carga masiva.
+
+**Y de paso aparecio tu cancelacion:** «Se cayo» del reporte semanal muestra el #344, cancelado hoy, con tu comentario. Aparece porque quedo registrado como movimiento. El hueco que diagnostique --cancelar editando el canje no deja ni movimiento ni fecha, asi que es invisible-- sigue abierto y pendiente de arreglo.
+
+Dos arreglos al script salieron de correrlo de verdad: el desglose por año y los avisos de canjes activos o gestionados ahora se imprimen en los **dos** transportes --antes solo en el que va contra la base, y la decision de borrar se toma con esa informacion-- y en el camino por la API un canje sin fecha de solicitud ya no cae dentro del corte por comparacion de texto vacio. Ver `D-096`.
+
 ### 2026-08-31 - Borrado definitivo de canjes antiguos
 
 Pediste eliminar de la app y de la base todos los canjes con fecha de solicitud o creacion anteriores a junio de 2025.
