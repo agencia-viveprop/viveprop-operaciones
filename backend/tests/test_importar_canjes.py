@@ -6,6 +6,8 @@ reimportacion, y no hay nada en el esquema que la garantice.
 """
 import pytest
 
+from datetime import datetime
+
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
 from app.services.importar_canjes import COLUMNAS_REQUERIDAS, importar_canjes
 
@@ -153,3 +155,45 @@ def test_un_id_repetido_en_el_archivo_no_rompe_el_lote(db, fila, construir_xlsx)
     # Una alta y una actualizacion, no dos altas ni un error.
     assert (resumen.nuevas, resumen.actualizadas) == (1, 1)
     assert db.get(Canje, 950).comuna == "Ñuñoa"
+
+
+# --------------------------------------------------------- el corte historico
+
+
+def test_la_importacion_no_repone_lo_que_el_corte_dejo_fuera(db, fila, construir_xlsx):
+    """**Sin esta guarda el borrado dura hasta la próxima carga** (`D-096`).
+
+    El importador crea cualquier canje cuyo ID no esté en la base. Se borraron
+    definitivamente los anteriores a junio de 2025, y el export de Dataprop sigue
+    trayéndolos: sin el corte acá, volverían a entrar como nuevos y el trabajo se
+    desharía solo.
+    """
+    vieja = dict(fila(301), FECHA_SOLICITUD=datetime(2025, 5, 31))
+    nueva = dict(fila(302), FECHA_SOLICITUD=datetime(2025, 6, 1))
+
+    resumen = importar_canjes(db, construir_xlsx([vieja, nueva]))
+
+    assert (resumen.nuevas, resumen.antiguas) == (1, 1)
+    assert db.get(Canje, 301) is None, "la anterior al corte no entra"
+    assert db.get(Canje, 302) is not None, "la del día del corte sí entra"
+
+
+def test_las_antiguas_se_cuentan_aparte_de_las_ignoradas(db, fila, construir_xlsx):
+    """Son dos razones distintas para no tocar una fila y la pantalla dice las dos.
+
+    `ignoradas` es «esta la gestiona la app, no la piso»; `antiguas` es «esta no
+    va a existir nunca». Contarlas juntas dejaría al usuario sin saber por qué su
+    archivo de 300 filas cargó 20.
+    """
+    importar_canjes(db, construir_xlsx([fila(401)]))
+    db.get(Canje, 401).gestionado_en_app = True
+    db.commit()
+
+    resumen = importar_canjes(
+        db,
+        construir_xlsx([fila(401), dict(fila(402), FECHA_SOLICITUD=datetime(2024, 1, 1))]),
+    )
+
+    assert resumen.ignoradas == 1
+    assert resumen.antiguas == 1
+    assert resumen.nuevas == 0

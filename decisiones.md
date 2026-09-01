@@ -2620,3 +2620,41 @@ Seis columnas de plata --tres destinos por dos medidas-- no se leen. Van con un 
 | corredor VP − equipo + rebate = real VP | exacto | exacto | exacto |
 
 Los cuatro centavos de «No concretado» son redondeo de `numeric(16,2)` acumulado en 10 liquidaciones. Todo lo demás cierra, y lo único que no cierra es lo que la pantalla ahora avisa.
+
+---
+
+## D-096 · Borrar canjes antiguos, y el corte que evita que vuelvan
+
+El usuario pidió *«eliminar definitivamente de la app y su base de datos, todos los canjes con fecha de solicitud o creación menores a junio 2025»*. Antes había preguntado qué hacer y se le ofrecieron tres caminos --archivar, borrar, o solo filtrar el listado--; eligió borrar, explícitamente y en firme.
+
+### Lo que hacía falta resolver junto con el borrado
+
+**La importación repone lo borrado.** El importador crea cualquier canje cuyo ID no esté en la base, y el export de Dataprop sigue trayendo los antiguos. Sin una guarda, el borrado habría durado hasta la siguiente carga. Por eso el corte no vive en el script: vive en `app/services/limpieza_canjes.py` como `CORTE_HISTORICO`, y lo usan las dos cosas. **Es una política, no un parámetro de una corrida.**
+
+La importación ahora cuenta esas filas aparte --`antiguas`, distinto de `ignoradas`-- y la pantalla lo dice cuando pasa. Son dos razones distintas para no tocar una fila: `ignoradas` es «esta la gestiona la app, no la piso» y `antiguas` es «esta no va a existir nunca». Contarlas juntas dejaría a alguien sin entender por qué su archivo de 300 filas cargó 20.
+
+**Los movimientos no se van solos.** `obligaciones.canje_id` tiene `ON DELETE CASCADE` --y `obligacion_avances` cuelga de ella igual-- así que esas se borran por la base. `movimientos` no tiene clave foránea: usa `entity_type` + `entity_id` (`D-002`), que es lo que le permite servir a canjes y negocios con una tabla, y el costo es que la base no puede limpiarlos. Sin el borrado explícito quedarían movimientos huérfanos apuntando a canjes inexistentes, y **el reporte semanal los seguiría contando en «Se cayó»**. Verificado contra Postgres, no solo en SQLite: se van el canje, sus movimientos, sus obligaciones y los avances de esas obligaciones.
+
+### El criterio
+
+`COALESCE(fecha_solicitud, creado_en) < 2025-06-01`, que es literalmente lo que pidió: «fecha de solicitud o creación». El respaldo por creación cubre un canje cargado a mano sin fecha de solicitud --hoy no hay ninguno así, pero un nulo no debería salvarlo del corte por accidente--. Con las dos fechas nulas **no** cae: nulo en las dos es «no se sabe cuándo», y eso no autoriza a borrarlo.
+
+En el borde no hay ambigüedad: en los datos, el último canje anterior al corte es de marzo de 2025 y el primero posterior es de junio.
+
+### Simulacro por defecto, y respaldo antes
+
+Esto no se puede deshacer. No es como `limpiar_canjes.py`, que cancela y deja la línea de tiempo: acá el canje sale de la base. Por eso:
+
+- el script corre en **simulacro** salvo que se le pase `--aplicar`;
+- el simulacro imprime el conteo por año y por estado, y **avisa en voz alta** cuando algún canje del lote está ACTIVO o tiene gestión registrada en la app. El corte los alcanza igual --se pidió «todos»-- pero la decisión tiene que ser informada. En la copia de desarrollo son 75 canjes, todos CANCELADO, con 182 movimientos, y 52 de ellos tienen gestión hecha en la app;
+- antes de aplicarlo conviene una rama de Neon o confiar en su restauración a un punto en el tiempo. Es la diferencia entre un error recuperable y uno definitivo.
+
+### Un endpoint de borrado, sin botón
+
+`DELETE /api/canjes/{id}`, **solo admin**. Es la única operación de la app que destruye datos sin dejar rastro, y el rol más alto es la guarda barata para algo que no tiene deshacer.
+
+**No tiene botón en ninguna pantalla, a propósito.** Existe para que el script pueda correr contra un despliegue con una cookie de sesión en vez de con el string de conexión de la base --el mismo criterio de `limpiar_canjes.py`: una cookie vence, se revoca cerrando sesión y no da más permisos que los de su usuario--. Un botón de borrado definitivo al lado del de editar es un accidente esperando.
+
+### Lo que cambia en los reportes, y que hay que esperar
+
+Los reportes históricos van a cambiar: el reporte mensual, la vista directorio y las tasas de cierre dejan de ver esos 75 canjes. Eso es la consecuencia buscada de un borrado definitivo, no un efecto lateral, pero conviene saberlo antes de comparar una captura vieja con una nueva.

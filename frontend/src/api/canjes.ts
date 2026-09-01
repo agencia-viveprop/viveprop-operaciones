@@ -88,6 +88,10 @@ export type ImportarResumen = {
   nuevas: number
   actualizadas: number
   ignoradas: number
+  /** Filas anteriores al corte histórico, que no se cargan nunca: esos canjes se
+   *  borraron a propósito y el export de Dataprop los sigue trayendo (`D-096`).
+   *  Van aparte de `ignoradas` porque son dos razones distintas. */
+  antiguas: number
   errores: string[]
 }
 

@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+from app.services.limpieza_canjes import es_anterior_al_corte
 
 # Nombres de columna esperados = mismos alias de la query SQL validada contra Dataprop.
 COLUMNAS_REQUERIDAS = [
@@ -50,6 +51,10 @@ class ImportarCanjesResumen(BaseModel):
     nuevas: int = 0
     actualizadas: int = 0
     ignoradas: int = 0
+    # Las que quedan fuera por ser anteriores al corte histórico. Se cuentan
+    # aparte de `ignoradas` --que son las gestionadas en la app-- porque son dos
+    # razones distintas y la pantalla dice las dos (`D-096`).
+    antiguas: int = 0
     errores: list[str] = []
 
 
@@ -153,6 +158,14 @@ def _aplicar(
     del mismo archivo actualiza la fila anterior en vez de intentar insertarla
     dos veces --que en el lote habria hecho fallar el commit entero.
     """
+    # **El corte histórico manda antes que todo lo demás.** Los canjes anteriores
+    # se borraron a propósito, y el importador crea cualquier ID que no esté en la
+    # base: sin esta guarda, la próxima carga del mismo export los repondría y el
+    # borrado duraría hasta entonces (`D-096`).
+    if es_anterior_al_corte(datos.fecha_solicitud, None):
+        resumen.antiguas += 1
+        return
+
     canje = existentes.get(datos.id)
 
     if canje is None:

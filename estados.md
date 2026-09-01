@@ -126,6 +126,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-31 - Borrado definitivo de canjes antiguos
+
+Pediste eliminar de la app y de la base todos los canjes con fecha de solicitud o creacion anteriores a junio de 2025.
+
+**Esta listo el mecanismo; el borrado en produccion no lo corri yo.** Es irreversible y la decision de apretar el gatillo es tuya. El script corre en simulacro salvo que le pases `--aplicar`, e imprime que va a borrar antes de tocar nada.
+
+**Lo que habia que resolver junto con el borrado:** la importacion repone cualquier canje cuyo ID no este en la base, y el export de Dataprop sigue trayendo los antiguos. Sin una guarda, el borrado duraba hasta la siguiente carga. Ahora el corte vive en un solo lugar y lo usan el borrado y la importacion; la pantalla de importar dice cuantas filas dejo fuera por antiguas.
+
+**Lo que se va con cada canje:** sus movimientos --que hay que borrar a mano, porque la tabla de movimientos no tiene clave foranea-- y sus obligaciones de facturacion con sus avances, que se van por cascada. Verificado contra Postgres, no solo en SQLite.
+
+**En la copia de desarrollo el corte alcanza 75 canjes**, todos cancelados, con 182 movimientos. 52 tienen gestion registrada en la app, que se borra con ellos: el simulacro lo avisa. En produccion los numeros van a ser algo distintos --tiene 303 canjes y la copia 297-- y el simulacro los informa.
+
+**Hay un endpoint nuevo, `DELETE /api/canjes/{id}`, solo admin y sin boton en ninguna pantalla.** Existe para poder correr la limpieza contra produccion con una cookie de sesion en vez del string de conexion de la base. Un boton de borrado definitivo al lado del de editar es un accidente esperando.
+
+**Ojo con los reportes:** el mensual, la vista directorio y las tasas de cierre dejan de ver esos canjes. Es lo que se pidio, pero conviene saberlo antes de comparar con una captura vieja.
+
+**Verificado:** 845 tests --11 nuevos--. Dos siguen fallando y **ya fallaban antes de este cambio** (`test_sin_ningun_dato_la_historica_no_se_cae` y `test_el_umbral_de_estancado_se_puede_cambiar_desde_la_query`), lo comprobe con `git stash`: son de las que dependen de la hora del dia y quedan pendientes de arreglar. Ver `D-096`.
+
 ### 2026-08-31 - La cobranza se puede comprobar sumando
 
 Dijiste que no te cuadraban las cifras del Calculado, y no cuadraban. Habia tres cosas sumadas sin decirlo.

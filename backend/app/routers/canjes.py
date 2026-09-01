@@ -29,6 +29,7 @@ from app.services.obligaciones import (
     obligaciones_del_canje,
     registrar_avance,
 )
+from app.services.limpieza_canjes import borrar_canje
 from app.services.importar_canjes import ImportarCanjesResumen, importar_canjes
 from app.services.movimientos import (
     MovimientoError,
@@ -502,3 +503,29 @@ def registrar_obligacion(
         db.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return obligaciones_del_canje(db, canje)
+
+
+@router.delete("/{canje_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar(
+    canje_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.admin)),
+):
+    """Borra un canje con sus movimientos y sus obligaciones. **Irreversible.**
+
+    **Solo admin**, y es la única operación de la app que destruye datos sin
+    dejar rastro: cancelar deja el canje con su línea de tiempo, esto lo saca de
+    la base. El rol más alto es la guarda barata para algo que no tiene deshacer.
+
+    **No tiene botón en la pantalla, a propósito.** Existe para que el script de
+    limpieza pueda correr contra un despliegue con una cookie de sesión en vez de
+    con el string de conexión de la base --una cookie vence, se revoca cerrando
+    sesión y no da más permisos que los de su usuario, el mismo criterio de
+    `limpiar_canjes.py`--. Un botón de borrado definitivo al lado del de editar es
+    un accidente esperando (`D-096`).
+    """
+    canje = db.get(Canje, canje_id)
+    if canje is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Canje no encontrado")
+    borrar_canje(db, canje)
+    db.commit()

@@ -500,6 +500,8 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
           <Text size="sm" c="dimmed">
             Sube el .xlsx exportado de la query contra la base de Dataprop. Se agregan las solicitudes nuevas y se
             actualizan las que aún no se están gestionando en la app; las que ya tienen movimientos no se tocan.
+            Las solicitudes <strong>anteriores a junio de 2025</strong> no se cargan: ese historial se borró
+            de la app a propósito y el export de Dataprop lo sigue trayendo.
           </Text>
 
           <EstructuraArchivo consulta={estructura} />
@@ -527,6 +529,13 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               <Text size="sm">
                 {resumenImport.nuevas} nuevas · {resumenImport.actualizadas} actualizadas · {resumenImport.ignoradas} ignoradas
                 (ya gestionadas) · {resumenImport.errores.length} con error
+                {/* Se dice solo cuando pasó: en un archivo sin filas viejas, un
+                    «0 antiguas» es ruido. Y cuando pasa hay que decirlo, porque
+                    si no un archivo de 300 filas que carga 20 se lee como un
+                    error de la importación. */}
+                {resumenImport.antiguas > 0 && (
+                  <> · {resumenImport.antiguas} anteriores a junio 2025 (no se cargan)</>
+                )}
               </Text>
               {resumenImport.errores.length > 0 && (
                 <List size="xs" mt="xs">
