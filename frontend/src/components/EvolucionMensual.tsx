@@ -133,6 +133,10 @@ const ESTRUCTURA = {
 
 /** 'ago 26' desde '2026-08'. El eje no aguanta el año completo con doce meses. */
 function rotuloCorto(etiqueta: string): string {
+  // Las semanas llegan como «S1 1-7» y ya vienen listas para el eje. Sin esta
+  // guarda, el `split('-')` las partía por el guion del rango y el eje mostraba
+  // «14 8» y «21 15»: dos números sin relación con nada (`D-098`).
+  if (!/^\d{4}-\d{2}$/.test(etiqueta)) return etiqueta
   const [anio, mes] = etiqueta.split('-')
   const nombres = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
   return `${nombres[Number(mes) - 1] ?? mes} ${anio.slice(2)}`
@@ -157,6 +161,16 @@ const CAMPO_TOTAL = '__total'
  * curva necesita un valor por mes, y la forma de darle uno por mes a Recharts
  * cuando el eje X es categórico es meterla en el mismo arreglo de datos. */
 const CAMPO_CURVA = '__curva'
+
+/**
+ * El total del período con el que se compara, punto por punto.
+ *
+ * Va **una sola línea y no una por serie**: en un gráfico apilado de tres
+ * segmentos, tres líneas grises encima son ilegibles, y lo que se quiere comparar
+ * es la cifra del período --el alto de la barra-- contra la del período anterior.
+ * Por eso es el total de los campos dibujados, igual que `CAMPO_TOTAL`.
+ */
+const CAMPO_COMPARACION = '__comparacion'
 
 /**
  * El globo del gráfico apilado, con el total arriba de sus partes.
@@ -254,6 +268,8 @@ export default function EvolucionMensual({
   apilado = false,
   etiquetaTotal = 'Total',
   tendencia,
+  serieComparacion,
+  rotuloComparacion,
 }: {
   titulo: string
   subtitulo?: string
@@ -281,6 +297,12 @@ export default function EvolucionMensual({
   /** La recta de tendencia sobre la ventana, tal como la calcula el backend.
    *  Sus montos llegan como texto --son `Decimal`-- y se convierten acá. */
   tendencia?: Tendencia
+  /** La serie del período con el que se compara, alineada **por posición**: el
+   *  primer punto de una contra el primero de la otra. Se dibuja como una línea
+   *  gris punteada con el total de los campos, no una línea por serie. */
+  serieComparacion?: MetricasMes[]
+  /** «2026-03 a 2026-05», para la leyenda de esa línea. */
+  rotuloComparacion?: string
 }) {
   const modo = useComputedColorScheme('light')
   const paleta = PALETA[modo]
@@ -299,6 +321,20 @@ export default function EvolucionMensual({
     // apagar un segmento dejó de sacarlo de la pila.
     [CAMPO_TOTAL]: series.reduce((a, s) => a + Number(m[s.campo]), 0),
   }))
+
+  // La comparación se alinea por posición y no por etiqueta: los rótulos son de
+  // meses distintos --junio contra marzo-- así que emparejarlos por nombre no
+  // tiene sentido. Si la otra serie es más corta --febrero tiene cuatro semanas y
+  // agosto cinco-- los puntos que faltan quedan sin valor y la línea se corta ahí.
+  const comparando = serieComparacion !== undefined && serieComparacion.length > 0
+  if (comparando) {
+    datos.forEach((fila, i) => {
+      const otro = serieComparacion![i]
+      if (otro) {
+        fila[CAMPO_COMPARACION] = series.reduce((a, s) => a + Number(otro[s.campo]), 0)
+      }
+    })
+  }
 
   const ultimo = datos.length - 1
   const unaSola = series.length === 1
@@ -444,6 +480,40 @@ export default function EvolucionMensual({
             />
           )}
 
+          {/* La comparación, en gris punteado y por debajo de las barras en la
+              leyenda: es la referencia, no el dato. Con `connectNulls` en falso,
+              una serie de comparación más corta se corta en vez de inventar el
+              tramo que falta. */}
+          {comparando && (
+            <Line
+              // **Recta y no `monotone`.** Con pocos puntos, la interpolación
+              // suave sobrepasa: en una ventana de seis meses con tres valores
+              // dibujaba una loma que subía por encima del máximo real y sugería
+              // un mes que nunca existió. La tendencia sí puede ser curva porque
+              // es un ajuste; esto son valores, y entre dos valores no hubo nada.
+              type="linear"
+              dataKey={CAMPO_COMPARACION}
+              name={rotuloComparacion ?? 'Período anterior'}
+              // **El índigo de la serie principal, distinguido por el trazo y no
+              // por el color.** Un color propio para esta línea no pasó el
+              // validador: el más cercano que se leía como «lo mismo, antes» daba
+              // ΔE 14,5 contra el teal de la tendencia --dos líneas del mismo
+              // gráfico que no se distinguen ni con visión de color completa-- y
+              // además caía bajo el piso de croma y de contraste. Con el índigo,
+              // lo que la separa de las barras es que es una línea partida con
+              // puntos, y lo que la separa de la tendencia es el color. La leyenda
+              // la nombra con su período, así que la identidad nunca depende del
+              // color solo.
+              stroke={paleta.principal}
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={{ r: 3, fill: paleta.principal, strokeWidth: 0 }}
+              activeDot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          )}
+
           {series.map((s) => (
             <Bar
               key={s.campo}
@@ -501,7 +571,7 @@ export default function EvolucionMensual({
           Solicitados", al revés de las barras-- y en la versión 3 ya no acepta un
           `payload` propio para corregirlo. El orden de la leyenda es el que
           explica el gráfico, así que no puede quedar a criterio de la librería. */}
-      {(!unaSola || dibujaTendencia) && (
+      {(!unaSola || dibujaTendencia || comparando) && (
         <Group gap="lg" justify="center" mt={4}>
           {!unaSola &&
             series.map((s) => (
@@ -555,6 +625,23 @@ export default function EvolucionMensual({
                 }}
               />
               <Text size="xs">Promedio de la ventana</Text>
+            </Group>
+          )}
+          {/* La comparación se nombra con su período: sin eso, la línea partida
+              se lee como una meta o un umbral, que es lo que pasa con cualquier
+              línea sin explicación sobre un gráfico de barras. */}
+          {comparando && (
+            <Group gap={6} wrap="nowrap">
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 0,
+                  borderTop: `2px dashed ${paleta.principal}`,
+                  display: 'inline-block',
+                }}
+              />
+              <Text size="xs">{rotuloComparacion ?? 'Período anterior'}</Text>
             </Group>
           )}
         </Group>

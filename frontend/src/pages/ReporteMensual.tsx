@@ -5,7 +5,9 @@ import {
   Badge,
   Group,
   Paper,
+  Progress,
   SegmentedControl,
+  Select,
   SimpleGrid,
   Stack,
   Table,
@@ -19,6 +21,9 @@ import {
   rotuloVentana,
   serieDelDominio,
   VENTANAS,
+  type Comparar,
+  type ConteoDeEtapa,
+  type DuracionEtapa,
   type Dominio,
   type Comparacion,
   type Variacion,
@@ -28,11 +33,152 @@ import { clp } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
 import PlataDeNegocios from '../components/PlataDeNegocios'
 import EvolucionMensual, { Veredicto } from '../components/EvolucionMensual'
+import { rotuloEtapa } from '../components/canjesEtiquetas'
+import { obtenerCatalogos } from '../api/catalogos'
 
 const MESES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]
+
+/**
+ * De lo que entró en la ventana, cómo está hoy.
+ *
+ * **Es la foto de hoy y no la del cierre del período**, y el subtítulo lo dice:
+ * reconstruir en qué etapa estaba cada canje al 30 de junio pide recorrer sus
+ * movimientos uno por uno, y ese dato existe solo desde que el pipeline se usa en
+ * la app (`D-098`).
+ */
+function PanelEtapas({
+  titulo,
+  subtitulo,
+  conteos,
+  rotularEtapa,
+}: {
+  titulo: string
+  subtitulo: string
+  conteos: ConteoDeEtapa[]
+  rotularEtapa: (codigo: string | null) => string
+}) {
+  const total = conteos.reduce((a, c) => a + c.cantidad, 0)
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Title order={5}>{titulo}</Title>
+      <Text size="xs" c="dimmed" mb="sm">
+        {subtitulo}
+      </Text>
+      {total === 0 ? (
+        <Text size="sm" c="dimmed">
+          Nada entró en esta ventana.
+        </Text>
+      ) : (
+        <Stack gap={6}>
+          {conteos.map((c) => (
+            <Group key={c.etapa ?? 'sin'} gap="sm" wrap="nowrap">
+              <Text size="sm" w={220} style={{ flexShrink: 0 }}>
+                {rotularEtapa(c.etapa)}
+              </Text>
+              {/* La barra da la proporción de un vistazo; el número la precisa.
+                  Con cuatro o cinco etapas una tabla de números pide comparar de
+                  cabeza. */}
+              <Progress
+                value={(c.cantidad / total) * 100}
+                size="lg"
+                radius="sm"
+                style={{ flex: 1, minWidth: 60 }}
+              />
+              <Text size="sm" ff="monospace" w={70} ta="right" style={{ flexShrink: 0 }}>
+                {c.cantidad}
+                <Text span size="xs" c="dimmed">
+                  {' '}
+                  {Math.round((c.cantidad / total) * 100)}%
+                </Text>
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      )}
+    </Paper>
+  )
+}
+
+/**
+ * Cuánto llevan los abiertos en la etapa en que están.
+ *
+ * **El `n` va en la tabla, no escondido.** Con siete canjes repartidos en cuatro
+ * etapas, el promedio de una etapa puede ser un solo caso: sin el `n` un «54 días»
+ * se lee como una tendencia cuando es una anécdota.
+ *
+ * **Es una foto y no depende de la ventana**, y hace falta decirlo: está en una
+ * pantalla donde todo lo demás sí depende. Los abiertos son los de hoy.
+ */
+function PanelDuraciones({
+  duraciones,
+  rotularEtapa,
+  vacio,
+}: {
+  duraciones: DuracionEtapa[]
+  rotularEtapa: (codigo: string | null) => string
+  /** Qué decir cuando no hay nada. No es lo mismo «no hay abiertos» que «no hay
+   *  historia de etapas», y en negocios es lo segundo. */
+  vacio: string
+}) {
+  const sinHistoria = duraciones.reduce((a, d) => a + d.sin_historia, 0)
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Title order={5}>Cuánto llevan en su etapa</Title>
+      <Text size="xs" c="dimmed" mb="sm">
+        De los que están abiertos hoy. <strong>No depende de la ventana</strong>: los abiertos
+        son los de hoy, así que esta foto es la misma en cualquier período.
+      </Text>
+      {duraciones.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          {vacio}
+        </Text>
+      ) : (
+        <>
+          <div className="tabla-scroll-x">
+            <Table withRowBorders={false} verticalSpacing={4} miw={420}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Etapa</Table.Th>
+                  <Table.Th ta="right">Casos</Table.Th>
+                  <Table.Th ta="right">Promedio</Table.Th>
+                  <Table.Th ta="right">Rango</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {duraciones.map((d) => (
+                  <Table.Tr key={d.etapa ?? 'sin'}>
+                    <Table.Td>{rotularEtapa(d.etapa)}</Table.Td>
+                    <Table.Td ta="right" ff="monospace">
+                      {d.n}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace">
+                      {d.dias_promedio} d
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" c="dimmed">
+                      {d.dias_min === d.dias_max ? '—' : `${d.dias_min}–${d.dias_max} d`}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </div>
+          {sinHistoria > 0 && (
+            <Text size="xs" c="dimmed" mt="xs">
+              {sinHistoria === 1 ? 'Uno' : sinHistoria} sin movimiento que registre la entrada a
+              la etapa: ahí el reloj se cuenta desde el inicio, que no es lo mismo que haberlo
+              medido.
+            </Text>
+          )}
+        </>
+      )}
+    </Paper>
+  )
+}
 
 /** Las métricas que son plata se muestran como plata; el resto, como cuenta. */
 function rotulo(etiqueta: string): string {
@@ -207,6 +353,19 @@ export default function ReporteMensual() {
   const ahora = new Date()
   const [desplazamiento, setDesplazamiento] = useState(0)
   const [ventana, setVentana] = useState('6')
+  // Contra qué se compara la serie superpuesta. Arranca en el tramo anterior
+  // porque siempre tiene datos; la interanual depende de que exista ese tramo del
+  // año pasado, y en negocios está casi vacío (`D-098`).
+  const [comparacion, setComparacion] = useState<Comparar>('anterior')
+
+  // Los nombres de las etapas de negocio viven en el catálogo. La consulta ya
+  // está en caché para toda la app, así que pedirla acá no cuesta una llamada.
+  const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
+  const rotuloEtapaNegocio = (codigo: string | null) => {
+    if (!codigo) return 'sin etapa'
+    const etapa = catalogos?.etapas.find((e) => e.codigo === codigo)
+    return etapa ? `${codigo} · ${etapa.nombre}` : codigo
+  }
   // Arranca en negocios: es donde está la plata, y el reporte de cierre se lee
   // por ahí. Canjes es volumen de gestión, no resultado.
   const [dominio, setDominio] = useState<Dominio>('negocios')
@@ -216,8 +375,8 @@ export default function ReporteMensual() {
   const mes = cursor.getMonth() + 1
 
   const consulta = useQuery({
-    queryKey: ['reporte-mensual', anio, mes, ventana],
-    queryFn: () => obtenerReporteMensual(anio, mes, Number(ventana)),
+    queryKey: ['reporte-mensual', anio, mes, ventana, comparacion],
+    queryFn: () => obtenerReporteMensual(anio, mes, Number(ventana), comparacion),
   })
   const { data } = consulta
 
@@ -273,18 +432,47 @@ export default function ReporteMensual() {
                 { value: 'canjes', label: 'Canjes' },
               ]}
             />
+            {/* La ventana pasó a ser un desplegable: son trece opciones --1 a 12
+                meses y la histórica-- y en botones en fila no caben (`D-098`). */}
             <Group gap="xs">
               <Text size="xs" c="dimmed">
                 Ventana móvil de
               </Text>
-              <SegmentedControl
+              <Select
                 size="xs"
-                color="accent"
+                w={170}
                 value={ventana}
-                onChange={setVentana}
+                onChange={(v) => setVentana(v ?? '6')}
                 data={VENTANAS.map((v) => ({ value: String(v), label: rotuloVentana(v) }))}
+                allowDeselect={false}
               />
+              {/* Las semanas del mes elegido. Es la base variable que se pidió, y
+                  va como dato y no como control: con la ventana en un mes el
+                  desglose ya viene por semanas. */}
+              <Text size="xs" c="dimmed">
+                · {MESES[mes - 1]} tiene {data.semanas_del_mes} semanas
+              </Text>
             </Group>
+
+            {/* La comparación superpone otra serie en el gráfico, en gris. No
+                agrega un control nuevo por métrica: es una sola decisión para
+                toda la pantalla. */}
+            {!data.es_historico && (
+              <Group gap="xs">
+                <Text size="xs" c="dimmed">
+                  Comparar con
+                </Text>
+                <SegmentedControl
+                  size="xs"
+                  value={comparacion}
+                  onChange={(v) => setComparacion(v as Comparar)}
+                  data={[
+                    { value: 'anterior', label: 'período anterior' },
+                    { value: 'anio_anterior', label: 'año anterior' },
+                  ]}
+                />
+              </Group>
+            )}
           </Group>
 
           {/* Los tiles muestran la **ventana**, no el mes.
@@ -345,6 +533,8 @@ export default function ReporteMensual() {
                 titulo="Comisión real ViveProp por mes"
                 subtitulo="La línea punteada es el promedio de la ventana. El mes que se está mirando es la última barra, y su valor va arriba a la derecha."
                 serie={serie}
+                serieComparacion={data.serie_comparacion}
+                rotuloComparacion={rotulo(data.rotulo_comparacion)}
                 series={[{ campo: 'comision_real_vp', nombre: 'Comisión real VP', tono: 'principal' }]}
                 promedio={Number(data.promedio.comision_real_vp)}
                 tendencia={data.tendencias.comision_real_vp}
@@ -359,11 +549,31 @@ export default function ReporteMensual() {
                 titulo="Liquidaciones y negocios por mes"
                 subtitulo="Cuántos cerraron y cuántos entraron. Van en un gráfico aparte del de plata: un mismo eje para montos y unidades deja elegir la escala a gusto."
                 serie={serie}
+                serieComparacion={data.serie_comparacion}
+                rotuloComparacion={rotulo(data.rotulo_comparacion)}
                 series={[
                   { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
                   { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
                 ]}
                 tendencia={data.tendencias.hitos_cerrados}
+              />
+
+              <PanelEtapas
+                titulo="Negocios por etapa"
+                subtitulo="De los negocios iniciados en la ventana, en qué etapa están hoy."
+                conteos={data.negocios_por_etapa}
+                rotularEtapa={rotuloEtapaNegocio}
+              />
+              <PanelEtapas
+                titulo="Liquidaciones por estado"
+                subtitulo="Van por liquidación y no por negocio: el estado vive en la liquidación, y un negocio con la promesa cerrada y la escritura activa está en los dos."
+                conteos={data.hitos_por_estado}
+                rotularEtapa={(c) => c ?? 'sin estado'}
+              />
+              <PanelDuraciones
+                duraciones={data.duracion_negocios_por_etapa}
+                rotularEtapa={rotuloEtapaNegocio}
+                vacio="Todavía no se puede medir: el pipeline de negocios no tiene ningún movimiento registrado, así que no existe historia de cuándo entró cada negocio a su etapa. Aparece en cuanto se empiece a registrar el avance."
               />
             </>
           ) : (
@@ -376,10 +586,11 @@ export default function ReporteMensual() {
                   tendencia={data.tendencias.canjes_solicitados}
                 />
                 <Text size="xs" c="dimmed" mt={6}>
-                  Canjes no tiene eje de plata todavía. Sí genera comisión --la de
-                  administración de Dataprop, 6/5/4% en venta según el tramo en UF u 8% en
-                  arriendo-- pero se calcula sobre la comisión de los corredores, y ese dato
-                  está sin cargar en todas las filas.
+                  La comisión de Dataprop se calcula con la regla del contrato: 6/5/4% del
+                  corretaje en venta según el tramo en UF, 8% en arriendo. Es{' '}
+                  <strong>plata de Dataprop, no de ViveProp</strong>, y no se suma nunca con la
+                  de negocios. Los canjes cuya fecha queda fuera de la serie de UF no se pueden
+                  valorizar y se informan aparte: un monto bajo por eso no es poca plata.
                 </Text>
               </Paper>
               {/* Apilado y no lado a lado: los tres estados suman exactamente
@@ -393,6 +604,8 @@ export default function ReporteMensual() {
                 titulo="Solicitudes por mes, y qué pasó con ellas"
                 subtitulo="El alto de la barra es lo que entró en el mes; los segmentos, en qué terminó. Los cancelados se cuentan por su mes de solicitud, no de cancelación: la base no guarda cuándo se canceló."
                 serie={serie}
+                serieComparacion={data.serie_comparacion}
+                rotuloComparacion={rotulo(data.rotulo_comparacion)}
                 apilado
                 etiquetaTotal="Solicitados"
                 series={[
@@ -409,6 +622,8 @@ export default function ReporteMensual() {
                 titulo="Canjes activos por mes"
                 subtitulo="Los mismos activos, en su propia escala. En el gráfico de arriba son un segmento chico sobre el total; acá se ve su forma."
                 serie={serie}
+                serieComparacion={data.serie_comparacion}
+                rotuloComparacion={rotulo(data.rotulo_comparacion)}
                 series={[{ campo: 'canjes_activos', nombre: 'Activos', tono: 'principal' }]}
                 promedio={Number(data.promedio.canjes_activos)}
                 tendencia={data.tendencias.canjes_activos}
@@ -419,6 +634,18 @@ export default function ReporteMensual() {
                 en «Cerrado» están todos cancelados, así que un canje que no está cancelado
                 está activo, y por eso los dos segmentos suman el total.
               </Text>
+
+              <PanelEtapas
+                titulo="Canjes por etapa"
+                subtitulo="De los canjes solicitados en la ventana, en qué etapa están hoy."
+                conteos={data.canjes_por_etapa}
+                rotularEtapa={(c) => (c ? rotuloEtapa(c) : 'sin etapa')}
+              />
+              <PanelDuraciones
+                duraciones={data.duracion_canjes_por_etapa}
+                rotularEtapa={(c) => (c ? rotuloEtapa(c) : 'sin etapa')}
+                vacio="No hay canjes abiertos."
+              />
             </>
           )}
 

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-31 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
+**Última actualización:** 2026-09-01 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
 
 ---
 
@@ -125,6 +125,32 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-01 - Un solo reporte por periodo (primera entrega)
+
+Pediste rehacer el reporte semanal: dos pestañas, selector de mes, ventana basada en el mes y variable segun sus semanas, filtro de 1 a 12 meses hacia atras, y cinco metricas por dominio.
+
+**Antes de construirlo verifique algo que cambio el plan: el reporte mensual ya hacia el 80% de eso.** Elegiste ampliarlo y retirar el semanal en vez de quedar con dos pantallas casi iguales. Esta es la primera entrega: **el reporte nuevo funcionando, con el semanal todavia en su lugar** para que puedas comparar antes de que lo saque.
+
+**Lo que ya podes ver en Reporte mensual:**
+
+- La ventana pasa de 3/6/12 a **1 a 12 meses** mas la historica, en un desplegable.
+- **El grano se deriva de la ventana**, no es un segundo control: con un mes el desglose son las semanas de ese mes --contadas desde el dia 1, cuatro o cinco segun el mes-- y con dos o mas, mes a mes. Al lado del selector dice cuantas semanas tiene el mes elegido.
+- **Comparar con**: superpone el periodo anterior o el mismo periodo del año pasado, como una linea partida con su propio rotulo en la leyenda.
+- **Canjes ya tiene plata**: monto de ventas, monto de arriendos --separados, nunca sumados-- y comision de Dataprop con la regla del contrato. No la tenia porque las monedas de `valor_prop` estaban mal en ~138 filas; corregidas, 228 de los 229 canjes de produccion tienen magnitud plausible.
+- **Dos paneles nuevos por dominio**: cuantos hay en cada etapa o estado de lo que entro en la ventana, y cuanto llevan los abiertos en la etapa en que estan.
+
+**Tres cosas que quiero que sepas de antemano:**
+
+1. **En negocios el panel de duraciones sale vacio.** El pipeline de negocios no tiene ni un movimiento registrado, asi que no hay historia de cuando entro cada negocio a su etapa. Lo deje construido y explicando por que, en vez de esconderlo.
+2. **La comision de canjes no se puede calcular para 103 de los 222 cancelados.** La serie de UF de produccion arranca el 2026-01-01 y esos canjes son de 2025. El contador de «sin valorizar» va a la vista. Si querés, cargo la UF de 2025 y se resuelve.
+3. **Los promedios de duracion son de uno o dos casos**: siete canjes abiertos repartidos en cuatro etapas. El `n` va en la tabla justamente para que no se lea como una tendencia.
+
+**Un arreglo de rendimiento que hizo falta:** el reporte tardaba 56 segundos, porque valoriza cada canje con la UF de su propia fecha y las pedia una por una. Trayendo la serie entera en una consulta quedo en 6,8 segundos desde mi maquina, contra un baseline de 4 del reporte anterior.
+
+**Verificado:** 863 tests --8 nuevos-- y mirando la pantalla: los dos dominios, la ventana de un mes con el eje en semanas, la comparacion superpuesta y los dos paneles. Dos defectos salieron de mirar y no de razonar: el eje mostraba «14 8» y «21 15» porque el formateador partia la etiqueta de semana por su guion, y el color que habia elegido para la linea de comparacion no pasaba el validador de paleta --ΔE 14,5 contra el teal de la tendencia-- asi que la distingue el trazo y no el color.
+
+Falta la segunda entrega: retirar el semanal y redirigir su ruta. Ver `D-098`.
 
 ### 2026-08-31 - El comentario del historial ya no se corta
 
