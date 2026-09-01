@@ -126,6 +126,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-08-31 - El comentario del historial ya no se corta
+
+Mostraste el historial de un canje con el comentario cortado por el borde. La causa era el `nowrap` que existe para que los nombres de corredor no partan la fila en dos: el selector alcanzaba a cualquier celda descendiente, incluidas las del historial que se despliega dentro de la fila, donde el contenido no es una columna sino prosa.
+
+**Ahora envuelve.** Y hubo que acotar el ancho, porque la tabla vive en un contenedor que se ajusta al contenido: un comentario largo en una sola linea estiraba la tabla hasta el largo del comentario, asi que permitir el envolvimiento no alcanzaba. El tope tiene dos partes: una de legibilidad --una linea de prosa de 1.500 px no se lee aunque haya lugar-- y una por ancho de ventana, que es la que la hace caber en pantalla chica.
+
+**En el telefono la linea se apila:** la fecha arriba, el texto al medio con el ancho completo y el autor abajo. Con la fecha en una columna de 110 px la prosa arrancaba a 150 px del borde y seguia cortandose.
+
+**Verificado mirando**, a 1600 px y a 500 px: el comentario de cuatro renglones entra completo en los dos. Un detalle salio solo de la captura: `100vw` incluye la barra de desplazamiento y el area visible no, asi que faltaba descontar sus 15 px.
+
+**Nota:** para probarlo sembre un comentario largo en un movimiento de la base de desarrollo y lo devolvi al patron de sus hermanos. Es la copia de desarrollo, no produccion, pero el texto exacto que tenia antes no lo guarde. Ver `D-097`.
+
 ### 2026-08-31 - La limpieza de canjes antiguos se ejecuto en produccion
 
 Confirmaste los numeros y aplique el borrado por la API, con tu cookie de admin y con respaldo en Neon de tu lado.

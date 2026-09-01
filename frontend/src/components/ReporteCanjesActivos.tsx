@@ -95,8 +95,10 @@ function Linea({ m }: { m: MovimientoDelListado }) {
             </Text>
           )}
         </Group>
+        {/* `prosa` le pone el tope de ancho de lectura: es el texto que alguien
+            escribió y puede tener tres renglones. */}
         {m.comentario && (
-          <Text size="xs" c="dimmed" mt={2}>
+          <Text size="xs" c="dimmed" mt={2} className="prosa">
             {m.comentario}
           </Text>
         )}
@@ -146,7 +148,7 @@ function Historial({ fila }: { fila: FilaCanjeActivo }) {
           </>
         )}
       </Text>
-      <Table withRowBorders={false} verticalSpacing={4}>
+      <Table withRowBorders={false} verticalSpacing={4} className="detalle-envuelto">
         <Table.Tbody>
           {movimientos.map((m) => (
             <Linea key={m.id} m={m} />

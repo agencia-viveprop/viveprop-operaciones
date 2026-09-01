@@ -2667,3 +2667,25 @@ Correrlo de verdad dejó dos arreglos:
 ### Lo que cambia en los reportes, y que hay que esperar
 
 Los reportes históricos van a cambiar: el reporte mensual, la vista directorio y las tasas de cierre dejan de ver esos 75 canjes. Eso es la consecuencia buscada de un borrado definitivo, no un efecto lateral, pero conviene saberlo antes de comparar una captura vieja con una nueva.
+
+---
+
+## D-097 · El comentario del historial envuelve, y en el teléfono se apila
+
+El usuario mostró el historial de un canje con un comentario cortado por el borde de la pantalla: *«los textos deben ajustarse a la pantalla, aunque sea en más de una línea»*.
+
+**La causa era el `nowrap` de otra cosa.** `.tabla-una-linea` pone `white-space: nowrap` para que los nombres de corredor --que llegan a 30 caracteres-- no dejen cada fila de doble alto. El selector era `td` a secas, así que alcanzaba a **cualquier** celda descendiente, incluidas las de la tabla del historial que se despliega dentro de una fila. Ahí el contenido no es una columna: es la prosa que alguien escribió, y puede tener tres renglones. Ahora la regla usa hijos directos --`> tbody > tr > td`-- y el detalle anidado queda libre de envolver.
+
+**Y había un segundo motivo, menos visible.** La tabla vive en un contenedor con `min-width: max-content`, así que un comentario largo en una sola línea estiraba la tabla hasta el largo del comentario. Con eso, permitir el envolvimiento no alcanzaba: había que **acotar** la prosa o seguía definiendo el ancho de la tabla.
+
+El tope es `min(90ch, 88vw)`. Los `ch` son de legibilidad --una línea de prosa de 1.500 px no se lee, aunque haya lugar-- y el `vw` es lo que la hace caber en pantalla chica. **`100%` no servía**: dentro de una tabla que se desplaza, el `100%` es el ancho de la tabla y no el de la pantalla, que es justo la diferencia que dejaba el texto saliéndose.
+
+### En pantalla angosta la línea se apila
+
+Con la fecha y el autor en columnas de 110 y 130 px, la prosa arranca a unos 150 px del borde, y un tope por ancho de ventana no sabe de ese desplazamiento: en 500 px le quedaban 350 y seguía cortándose. Bajo el corte `sm` --el mismo 48em de la barra lateral-- las tres celdas pasan a `display: block`: fecha arriba, prosa al medio usando el ancho completo, autor abajo. Lo que separa una gestión de la siguiente pasa a ser el aire, porque sin bordes de tabla el historial se leía como un bloque continuo.
+
+**El margen descuenta la barra de desplazamiento.** `calc(100vw - 5rem)` y no `- 3rem`: `100vw` incluye la barra vertical y el área visible no, así que las últimas letras de cada línea quedaban cortadas por unos 15 px --exactamente su ancho--. Se vio mirando la captura, no razonando.
+
+### Lo que **no** se cambió
+
+El «Qué pasó» del reporte semanal sigue recortado con tooltip: ahí el recorte es deliberado (`D-076`), porque son cuatro casillas en paralelo y una prosa de tres renglones en cada fila rompe la comparación. La diferencia es que ese texto tiene su versión completa a un mouse de distancia, y el del historial no tenía ninguna.

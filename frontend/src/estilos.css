@@ -19,8 +19,14 @@
  * La tabla vive dentro de un `Table.ScrollContainer` con ancho mínimo, así que
  * cuando la ventana es más angosta se desplaza en vez de apretar las columnas.
  */
-.tabla-una-linea th,
-.tabla-una-linea td {
+/* **Solo las filas propias de la tabla, no las anidadas.** Con `td` a secas la
+ * regla alcanzaba a cualquier celda descendiente, incluidas las de la tabla del
+ * historial que se despliega dentro de una fila: ahí el comentario de una gestión
+ * son dos o tres renglones de prosa y quedaba en una sola línea, cortado por el
+ * borde de la pantalla. Los hijos directos son los que hay que mantener en una
+ * línea --los nombres de corredor-- y el detalle desplegado tiene que envolver. */
+.tabla-una-linea > thead > tr > th,
+.tabla-una-linea > tbody > tr > td {
   white-space: nowrap;
 }
 
@@ -44,6 +50,63 @@ table [class*='Badge-root'] {
 table [class*='Badge-label'] {
   overflow: visible;
   text-overflow: clip;
+}
+
+/* El detalle que se despliega dentro de una fila: prosa, no columnas.
+ *
+ * Tiene que **envolver** --lo pidió el usuario: «los textos deben ajustarse a la
+ * pantalla, aunque sea en más de una línea»-- y además no puede ensanchar la
+ * tabla que lo contiene. Eso último no es obvio: la tabla vive en un contenedor
+ * con `min-width: max-content`, así que un comentario largo en una sola línea
+ * estiraba la tabla hasta el largo del comentario.
+ *
+ * El tope en `ch` es de legibilidad --una línea de prosa de 1.500 px no se lee--
+ * y el de `vw` es el que lo hace caber en un teléfono. **`100%` no sirve acá**:
+ * el detalle vive dentro de la tabla que se desplaza, así que su `100%` es el
+ * ancho de la tabla y no el de la pantalla, y a 500 px el texto seguía saliéndose
+ * por el costado. El ancho de la ventana es el único que sabe lo que se ve.
+ */
+.detalle-envuelto,
+.detalle-envuelto td {
+  white-space: normal;
+}
+
+.detalle-envuelto .prosa {
+  max-width: min(90ch, 88vw);
+}
+
+/* En pantalla angosta la línea del historial se apila.
+ *
+ * La fecha y el autor viven en columnas de 110 y 130 px, así que la prosa arranca
+ * a unos 150 px del borde izquierdo: en un teléfono de 390 px le quedaban 200, y
+ * el tope por ancho de ventana no alcanzaba porque no sabe de ese desplazamiento.
+ * Apiladas, la prosa empieza pegada al borde y puede usar el ancho completo.
+ *
+ * El corte es el mismo `sm` de Mantine --48em-- que usa la barra lateral: un solo
+ * valor manda en dónde empieza «pantalla chica».
+ */
+@media (max-width: 47.99em) {
+  .detalle-envuelto,
+  .detalle-envuelto tbody,
+  .detalle-envuelto tr,
+  .detalle-envuelto td {
+    display: block;
+    width: auto;
+  }
+
+  /* Sin el borde de la tabla, lo que separa una gestión de la siguiente es el
+     aire. Sin esto el historial se lee como un solo bloque continuo. */
+  .detalle-envuelto tr + tr {
+    margin-top: 0.75rem;
+  }
+
+  /* El margen descuenta los rellenos de la página, de la celda y de la caja del
+     detalle, **más la barra de desplazamiento vertical**, que `100vw` incluye y
+     el área visible no. Sin eso las últimas letras de cada línea quedaban
+     cortadas por unos 15 px, que es justo el ancho de la barra. */
+  .detalle-envuelto .prosa {
+    max-width: calc(100vw - 5rem);
+  }
 }
 
 /* Contenedor de tabla con desplazamiento horizontal cuando hace falta.
