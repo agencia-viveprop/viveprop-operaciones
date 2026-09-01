@@ -409,10 +409,12 @@ def test_la_tendencia_del_directorio_es_la_misma_del_reporte_mensual(db):
 
 
 def test_una_ventana_invalida_se_rechaza(db):
+    """La vista comparte el conjunto de ventanas con el reporte, que pasó a
+    aceptar de 1 a 12 meses (`D-098`). La invalida ahora es 13, no 5."""
     import pytest as _pytest
 
     with _pytest.raises(ValueError, match="ventana"):
-        _vista(db, ventana=5)
+        _vista(db, ventana=13)
 
 
 # ------------------------------------------------------------ endpoint

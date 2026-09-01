@@ -13,6 +13,8 @@ from app.auth import get_current_user
 from app.db import get_db
 from app.models.usuario import Usuario
 from app.services.reporte_mensual import (
+    COMPARACIONES_VALIDAS,
+    COMPARAR_ANTERIOR,
     VENTANA_DEFECTO,
     VENTANAS_VALIDAS,
     ReporteMensual,
@@ -78,7 +80,17 @@ def mensual(
     mes: int | None = Query(None, ge=1, le=12, description="Mes. Por defecto, el actual."),
     ventana: int = Query(
         VENTANA_DEFECTO,
-        description=f"Largo de la ventana móvil, en meses. Uno de {list(VENTANAS_VALIDAS)}.",
+        description=(
+            f"Largo de la ventana móvil, en meses. Uno de {list(VENTANAS_VALIDAS)}, "
+            "donde 0 es la histórica. Con 1 el desglose viene por semanas del mes."
+        ),
+    ),
+    comparacion: str = Query(
+        COMPARAR_ANTERIOR,
+        description=(
+            "Con qué se compara la ventana: 'anterior' es el tramo inmediatamente "
+            "anterior del mismo largo, 'anio_anterior' es el mismo tramo del año pasado."
+        ),
     ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
@@ -89,6 +101,10 @@ def mensual(
     procesos duran de un mes a varios, un mes en cero no es un mes malo, y la
     comparación mes contra mes mide ruido. Sobre los datos reales, 4 de 11 meses
     estuvieron vacíos.
+
+    **La ventana decide el grano del desglose** (`D-098`): con un mes, la serie
+    viene por semanas de ese mes --cuatro o cinco según el mes-- y con dos o más,
+    por mes. No son dos controles: semanas por doce meses serían 52 barras.
     """
     if (anio is None) != (mes is None):
         raise HTTPException(
@@ -102,7 +118,12 @@ def mensual(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             f"La ventana tiene que ser una de {list(VENTANAS_VALIDAS)}.",
         )
-    return obtener_reporte_mensual(db, anio, mes, ventana)
+    if comparacion not in COMPARACIONES_VALIDAS:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"La comparación tiene que ser una de {list(COMPARACIONES_VALIDAS)}.",
+        )
+    return obtener_reporte_mensual(db, anio, mes, ventana, comparacion=comparacion)
 
 
 @router.get("/directorio", response_model=VistaDirectorio)
