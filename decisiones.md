@@ -2795,6 +2795,10 @@ Peor par en claro ΔE 10,8 protan y 21,2 en visión normal; en oscuro 10,8 y 15,
 
 ### Del cuarto mes en adelante: la franja de los anteriores
 
+> **Esta parte la reemplazó `D-101`:** ahora va una barra por cada mes
+> seleccionado y la franja se retiró. Lo de abajo es el razonamiento original,
+> que se conserva porque explica qué resolvía la franja.
+
 | Meses comparados | Qué se dibuja |
 |---|---|
 | 1 | las barras del mes |
@@ -2848,4 +2852,44 @@ Vale el `mostrar` que ya traía el ajuste: si la recta queda plana y sin amplitu
 ### El color: un neutro, y por qué no el teal
 
 En el resto de la app la tendencia va en el **teal de `info`**, con el argumento de que es una lectura y no una categoría (`D-089`). Acá el teal **ya es un mes** desde `D-099`, así que el neutro es lo que queda libre: casi negro en claro, casi blanco en oscuro. Un cuarto tono se leería como un cuarto mes. Del promedio de la franja se distingue por el **trazo partido**, no por el color.
+
+---
+
+## D-101 · Una barra por cada mes seleccionado, y el color cambia de trabajo
+
+El usuario lo pidió en una línea: *«igual sería bueno ver tantas barras como meses se hayan seleccionado»*. Con eso se retira la franja de mínimo-máximo que resumía los meses de la cuarta en adelante (`D-099`): con doce meses ahora hay **doce barras por semana**.
+
+### Doce tonos distinguibles no existen, así que el color cambia de trabajo
+
+Esto no es una opinión, está medido:
+
+- **Hasta tres meses el color identifica el mes.** El trío categórico de `D-099` --navy, coral, teal-- pasa las cinco comprobaciones con `--pairs all` en los dos modos.
+- **De cuatro en adelante el color codifica recencia.** La escala pasa a ser **ordinal**: un solo tono, el mes elegido en el extremo fuerte y los anteriores cada vez más suaves. Se valida con `validateOrdinal`, que pide luminosidad monótona, un salto visible entre pasos (ΔL ≥ 0,06) y que el paso más suave siga leyéndose contra la superficie (≥ 2:1).
+
+**Un intento previo lo confirmó por el lado malo.** La primera rampa que probé tenía doce pasos entre extremos fijos y el validador la rechazó por `Adjacent ΔL` en los once pares: `0,034` contra un piso de `0,06`. Y una paleta categórica de doce no era alternativa, porque el trío ya estaba al límite.
+
+### Hasta seis meses el paso es identificable; de siete el color es un gradiente
+
+El salto mínimo entra **seis veces** en el rango útil de cada modo. Con más meses los pasos quedan más juntos que el piso y el validador lo marca. **Se dibujan igual, y la razón es que el color deja de ser el canal de identidad:**
+
+- el color dice **una** cosa, la dirección: fuerte es reciente, suave es antiguo;
+- **quién es cada barra lo dice la posición** en el grupo, que es fija --la primera de cada semana es siempre el mes elegido--;
+- el globo nombra cada mes con su cifra;
+- y la tabla de «Los mismos números» trae todos los números exactos.
+
+Es codificación compuesta, que es lo que corresponde cuando las series pasan de lo que el color aguanta. La alternativa era negarle las doce barras, y el dato existe.
+
+### Las rampas están calculadas, y hay una por cantidad de meses
+
+Un script las generó en OKLCH sobre el tono del navy y las pasó por el validador, **una rampa por cantidad de meses** (de 4 a 12). Así una ventana de cuatro meses usa todo el rango disponible en cuatro pasos bien separados, en vez de tomar los cuatro primeros de una rampa de doce, que serían los cuatro más parecidos entre sí.
+
+**En oscuro la rampa corre al revés y arranca más arriba.** Sobre fondo oscuro la marca fuerte es la que más se despega del fondo, así que el extremo fuerte es el **más claro**. Y arranca en L 0,78 y no en el navy del trío: con el navy el rango quedaba en 0,195 --solo cuatro pasos-- y doce meses salían casi del mismo azul. Estirado entran seis, los mismos que en claro.
+
+### Y la pantalla les hace espacio
+
+Tres gráficos en fila con doce barras por semana dejan barras de cuatro píxeles. La grilla se acomoda a la ventana elegida: **de siete meses en adelante baja a dos columnas y de diez a una**. El aire entre barras baja de 2 px a 1 px, pero no llega a cero --sin separación, dos meses de tonos vecinos se leen como una sola barra ancha-- y el aire entre semanas no se toca, porque es el que separa los grupos.
+
+### Lo que se perdió con la franja, y dónde quedó
+
+La franja decía de una mirada si el mes iba dentro de lo normal: su mínimo, su máximo y su promedio. Con las barras eso se ve directamente --están todas ahí-- y el promedio de la ventana sigue dibujado, porque es lo que sostiene la línea de tendencia (`D-100`).
 

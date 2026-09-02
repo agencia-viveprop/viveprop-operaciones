@@ -27,96 +27,112 @@ import type { FlujoDelMes, Semana, TendenciaSemanal } from '../api/reportes'
  * anteriores se perdían --el usuario lo dijo: *«tienden a enredar la lectura, y
  * los periodos anteriores se pierden»*--.
  *
+ * **Una barra por cada mes seleccionado, siempre** (`D-101`). Lo pidió así --«sería
+ * bueno ver tantas barras como meses se hayan seleccionado»-- y reemplazó la franja
+ * de mínimo-máximo que resumía los meses de la cuarta en adelante. Con doce meses
+ * son doce barras por semana, y lo que cambia con la cantidad no es cuántas se
+ * dibujan sino **qué codifica el color**: ver `CATEGORICOS` y `RAMPAS`.
+ *
  * **Barras agrupadas, nunca apiladas.** Apilar suma, y la S1 de agosto más la S1
  * de julio no es la cantidad de nada: el alto del apilado sería un número
  * inventado. Apilar sirve donde las partes componen un todo real, como el reparto
  * de la comisión en el reporte mensual.
  *
- * **Tres modos según cuántos meses se comparan**, porque un grupo de doce barras
- * por semana no se lee:
- *
- * | Meses | Qué se dibuja |
- * |---|---|
- * | 1 | las barras del mes |
- * | 2 o 3 | una barra por mes dentro de cada semana, cada mes con su color |
- * | 4 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
- *
- * La tabla de abajo lista **todos** los meses en cualquier modo, así que ningún
- * número se pierde por el modo del gráfico.
- *
  * **Y una sola línea de tendencia, ajustada con toda la ventana comparada**
- * (`D-100`). No es una por mes --serían tres curvas sobre tres pares de barras--
- * sino una que dice cómo se mueve el mes por dentro: el promedio de cada semana en
- * los meses que se están comparando. Se dibuja solo sobre las semanas completas,
+ * (`D-100`). No es una por mes --serían doce curvas sobre doce barras-- sino una
+ * que dice cómo se mueve el mes por dentro: el promedio de cada semana en los
+ * meses que se están comparando. Se dibuja solo sobre las semanas completas,
  * porque la parcial bajaría la curva al final siempre, y solo si tiene algo que
  * decir (`mostrar`).
+ *
+ * La tabla de «Los mismos números» lista los meses con sus cifras exactas, que es
+ * donde se lee lo que un grupo de doce barras no puede decir al detalle.
  */
 
 /**
- * Tres colores para los meses, asignados por recencia: **el mes elegido en azul
- * navy**, el anterior en el coral de la marca, y el tercero en teal. Es lo que
- * pidió el usuario --«en Azul Navy la del mes actual y las otras en colores
- * distintos»--.
+ * El color cambia de trabajo según cuántos meses haya, y es la única forma de
+ * dibujar doce barras sin mentir.
  *
- * **Los tres salieron de recorrer el espacio de color con el validador, no de
- * elegirlos a ojo.** El trío que tenía la app (`#3D3EA8, #0891B2, #F4545A`)
- * **falla con `--pairs all` en modo oscuro**: el índigo claro contra el teal queda
- * en ΔE 4,3 deutan y 11,8 en visión normal, bajo el piso de 15. Y `--pairs all`
- * es la comprobación que corresponde: las tres barras se ven juntas dentro del
- * grupo, así que el par que puede confundirse es *cualquiera* de ellos y no solo
- * los vecinos en la lista.
+ * **Hasta tres meses: el color identifica el mes.** Es el trío categórico que
+ * salió de recorrer el espacio de color con el validador (`D-099`): navy para el
+ * elegido, coral para el anterior, teal para el de antes. Pasa las cinco
+ * comprobaciones con `--pairs all` en los dos modos --peor par ΔE 10,8 protan y
+ * 21,2 en visión normal-- y contraste sobre 3:1 sin excepciones.
  *
- * La búsqueda recorrió tonos y luminosidades en OKLCH pidiendo el azul más oscuro
- * que pase las cinco comprobaciones en los dos modos. Resultado:
+ * **De cuatro en adelante: el color codifica recencia.** No hay doce tonos
+ * distinguibles y no existe paleta categórica que lo resuelva, así que la escala
+ * pasa a ser **ordinal**: el mes elegido en el navy fuerte y los anteriores cada
+ * vez más suaves, un solo tono. Se validó con `validateOrdinal`, que pide
+ * luminosidad monótona, un salto visible entre pasos (ΔL ≥ 0,06) y que el paso más
+ * suave siga leyéndose contra la superficie (≥ 2:1).
  *
- * | | claro | oscuro |
- * |---|---|---|
- * | mes elegido | `#024d9d` | `#066eda` |
- * | mes anterior | `#F4545A` | `#F4545A` |
- * | el de antes | `#1794a0` | `#1794a0` |
+ * **Hasta dónde el paso es identificable, medido:** el salto mínimo entra **6
+ * veces** en el rango útil, en los dos modos. Con más meses que eso los pasos
+ * quedan más juntos que el piso y el validador lo marca. **Se dibujan igual, y por
+ * qué:** ahí el color ya no es el canal de identidad sino un
+ * gradiente que dice una sola cosa --oscuro es reciente, claro es antiguo--. Quién
+ * es cada barra lo dice **la posición** en el grupo, que es fija: la primera de
+ * cada semana es siempre el mes elegido. El globo nombra cada mes con su cifra, y
+ * la tabla de abajo trae todos los números. Es codificación compuesta, que es lo
+ * que corresponde cuando las series pasan de lo que el color aguanta.
  *
- * Peor par en claro: ΔE 10,8 protan y 21,2 en visión normal. En oscuro: 10,8
- * protan y 15,6 normal. Contraste contra la superficie ≥ 3:1 en los dos modos, sin
- * excepciones ni relief.
- *
- * **Por qué el navy cambia de paso en oscuro.** `#024d9d` contra el fondo oscuro
- * no llega a 3:1 --queda en 2,3-- así que en oscuro sube a `#066eda`, que da 3,5:1.
- * Es el mismo criterio que usa `EvolucionMensual` con su índigo. Con el mismo hex
- * en los dos modos el azul no puede bajar de L 0,48, y ahí ya no se lee como navy.
- *
- * Del cuarto mes en adelante el gráfico cambia de modo --la franja de los
- * anteriores-- así que nunca hacen falta más de tres colores de mes.
+ * Las rampas están calculadas, no elegidas: un script las generó en OKLCH sobre el
+ * tono del navy y las pasó por el validador, una por cantidad de meses, para que
+ * cada ventana use todo el rango disponible en vez de recortar una rampa fija.
  */
-const PALETA = {
+const CATEGORICOS = {
+  light: ['#024d9d', '#F4545A', '#1794a0'],
+  dark: ['#066eda', '#F4545A', '#1794a0'],
+} as const
+
+/** Del mes elegido --el paso fuerte-- al más antiguo. Una rampa por cantidad de
+ *  meses, para que la ventana use todo el rango que el modo permite. */
+const RAMPAS: Record<'light' | 'dark', Record<number, string[]>> = {
   light: {
-    meses: ['#024d9d', '#F4545A', '#1794a0'],
-    // La franja de los meses anteriores es una **referencia**, no un mes: gris de
-    // cero croma, para que no se lea como una cuarta categoría.
-    franja: '#dee2e6',
-    borde: '#adb5bd',
-    promedio: '#495057',
-    // La tendencia es una lectura y no una categoría, así que va en un neutro:
-    // un cuarto tono se leería como un cuarto mes. En el resto de la app la
-    // tendencia usa el teal de `info`, pero acá el teal ya es un mes, así que el
-    // neutro es lo que queda libre. Se distingue del promedio de la franja por el
-    // trazo partido, no por el color.
+    4: ['#024d9d', '#1f6dcb', '#5a92dc', '#8db5ec'],
+    5: ['#024d9d', '#0564c7', '#3f80d4', '#679be0', '#8db5ec'],
+    6: ['#024d9d', '#035fbf', '#2d75cf', '#4f8bd9', '#6ea0e2', '#8db5ec'],
+    7: ['#024d9d', '#075cb8', '#1f6dcb', '#3f80d4', '#5a92dc', '#73a4e4', '#8db5ec'],
+    8: ['#024d9d', '#065ab4', '#1368c9', '#3278d0', '#4b87d7', '#6197de', '#77a6e5', '#8db5ec'],
+    9: ['#024d9d', '#0058b3', '#0564c7', '#2872cd', '#3f80d4', '#538dda', '#679be0', '#7aa8e6', '#8db5ec'],
+    10: ['#024d9d', '#0357af', '#0361c3', '#1f6dcb', '#357ad1', '#4886d7', '#5a92dc', '#6b9ee1', '#7ca9e7', '#8db5ec'],
+    11: ['#024d9d', '#0656ac', '#035fbf', '#1769c9', '#2d75cf', '#3f80d4', '#4f8bd9', '#5f95de', '#6ea0e2', '#7eabe7', '#8db5ec'],
+    12: ['#024d9d', '#0355ac', '#045dbb', '#0f66c8', '#2671cd', '#377bd2', '#4685d6', '#558edb', '#6398df', '#71a2e3', '#7face8', '#8db5ec'],
+  },
+  // En oscuro el extremo fuerte es el **más claro**: sobre fondo oscuro la marca
+  // fuerte es la que más se despega del fondo, así que la rampa corre al revés que
+  // en claro. Y arranca más arriba --L 0,78-- porque con el arranque en el navy del
+  // trío el rango quedaba en 0,195 y solo entraban cuatro pasos: doce meses salían
+  // casi del mismo azul. Estirado entran seis, los mismos que en claro.
+  dark: {
+    4: ['#88bafd', '#5093ec', '#3d70b4', '#2b4f7f'],
+    5: ['#88bafd', '#549dfb', '#4682d0', '#3868a6', '#2b4f7f'],
+    6: ['#88bafd', '#5da2fe', '#4c8ce1', '#4177bf', '#36639e', '#2b4f7f'],
+    7: ['#88bafd', '#64a6fe', '#5093ec', '#4682d0', '#3d70b4', '#345f99', '#2b4f7f'],
+    8: ['#88bafd', '#69a9ff', '#5299f5', '#4a89dc', '#427ac4', '#3a6bac', '#335d95', '#2b4f7f'],
+    9: ['#88bafd', '#6cabff', '#549dfb', '#4d8fe5', '#4682d0', '#3f75bb', '#3868a6', '#325b92', '#2b4f7f'],
+    10: ['#88bafd', '#70adff', '#59a0fd', '#5093ec', '#4988d9', '#437cc6', '#3d70b4', '#3765a2', '#315a90', '#2b4f7f'],
+    11: ['#88bafd', '#73aefe', '#5da2fe', '#5197f2', '#4c8ce1', '#4682d0', '#4177bf', '#3b6daf', '#36639e', '#30598e', '#2b4f7f'],
+    12: ['#88bafd', '#74afff', '#61a5fe', '#539af7', '#4e90e7', '#4986d8', '#447dc8', '#3f73b9', '#3a6aaa', '#35619b', '#30588d', '#2b4f7f'],
+  },
+}
+
+const ESTRUCTURA = {
+  light: {
+    // La tendencia es una lectura y no una categoría, así que va en un neutro: un
+    // tono más se leería como un mes más. En el resto de la app la tendencia usa el
+    // teal de `info`, pero acá el teal ya es un mes (`D-099`).
     tendencia: '#212529',
     superficie: '#fcfcfb',
   },
   dark: {
-    meses: ['#066eda', '#F4545A', '#1794a0'],
-    franja: '#373A40',
-    borde: '#5c5f66',
-    promedio: '#c1c2c5',
     tendencia: '#f8f9fa',
     superficie: '#1f1f22',
   },
 } as const
 
-/** Cuántos meses se dibujan como barra propia antes de pasar a la franja. Tres es
- *  el tope de series categóricas del proyecto, y también donde deja de leerse: un
- *  grupo de cuatro barras finitas por semana ya no se compara. */
-const MAXIMO_DE_BARRAS = 3
+/** Hasta cuántos meses el color identifica el mes en vez de ordenarlo. */
+const TOPE_CATEGORICO = 3
 
 export type Señal = 'entraron' | 'avanzaron' | 'se_cayeron'
 
@@ -134,90 +150,10 @@ type Fila = {
   semana: string
   dias: number
   parcial: boolean
-  promedio: number | null
-  minimo: number | null
-  maximo: number | null
   /** El punto de la curva de tendencia, o `null` en la semana parcial, que queda
    *  fuera del ajuste. */
   tendencia: number | null
   [mes: string]: string | number | boolean | null
-}
-
-type FormaDeBarra = {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-  payload?: Fila
-}
-
-/**
- * La franja de los meses anteriores: del mínimo al máximo, con el promedio como
- * raya dentro.
- *
- * **Se dibuja a mano y no con el `<ErrorBar>` de Recharts.** El bigote de la
- * librería se probó primero y dibujaba un rango que no era el del dato --toma el
- * valor como distancia y termina mostrando otra cosa-- así que quedaba mintiendo.
- * Acá la barra lleva el máximo como valor, y de su alto en píxeles salen las tres
- * posiciones: la escala es lineal desde cero, así que un píxel vale
- * `alto / máximo` unidades.
- *
- * **Por qué franja y no solo el promedio.** Un promedio de 3,2 no dice si eso es
- * lo normal o la casualidad de dos meses raros. Con la franja, la barra del mes
- * elegido se lee contra ella: adentro es «vamos como siempre», y asomando arriba
- * es una semana buena de verdad.
- */
-function FranjaDeAnteriores({
-  x,
-  y,
-  width,
-  height,
-  payload,
-  colores,
-  rayado,
-}: FormaDeBarra & {
-  colores: { franja: string; borde: string; promedio: string }
-  rayado: string
-}) {
-  if (x === undefined || y === undefined || width === undefined || height === undefined) return null
-  const minimo = payload?.minimo
-  const maximo = payload?.maximo
-  const promedio = payload?.promedio
-  if (minimo === null || minimo === undefined) return null
-  if (maximo === null || maximo === undefined) return null
-  if (promedio === null || promedio === undefined) return null
-
-  // Con máximo cero no hay alto del que sacar la escala, y tampoco hay nada que
-  // mostrar: las semanas en cero ya se leen en el eje.
-  if (maximo === 0) return null
-
-  const porUnidad = height / maximo
-  const yMinimo = y + (maximo - minimo) * porUnidad
-  const yPromedio = y + (maximo - promedio) * porUnidad
-  const alto = Math.max(yMinimo - y, 2)
-
-  return (
-    <g>
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={alto}
-        rx={2}
-        fill={payload?.parcial ? `url(#${rayado})` : colores.franja}
-        stroke={colores.borde}
-        strokeWidth={1}
-      />
-      <line
-        x1={x}
-        y1={yPromedio}
-        x2={x + width}
-        y2={yPromedio}
-        stroke={colores.promedio}
-        strokeWidth={2}
-      />
-    </g>
-  )
 }
 
 export default function FlujoSemanal({
@@ -232,7 +168,7 @@ export default function FlujoSemanal({
   titulo: string
   subtitulo: string
   semanas: Semana[]
-  /** El mes elegido primero y después los anteriores. */
+  /** El mes elegido primero y después los anteriores. Se dibujan todos. */
   flujo: FlujoDelMes[]
   señal: Señal
   /** La curva sobre las semanas, ajustada con toda la ventana. Se dibuja solo si
@@ -244,7 +180,7 @@ export default function FlujoSemanal({
   sinDatos?: string
 }) {
   const modo = useComputedColorScheme('light')
-  const paleta = PALETA[modo]
+  const estructura = ESTRUCTURA[modo]
 
   if (sinDatos) {
     return (
@@ -257,10 +193,12 @@ export default function FlujoSemanal({
     )
   }
 
-  const [actual, ...previos] = flujo
-  const unoPorUno = previos.slice(0, MAXIMO_DE_BARRAS - 1)
-  const conFranja = previos.length > MAXIMO_DE_BARRAS - 1
-  const series = conFranja ? [actual] : [actual, ...unoPorUno]
+  const [actual] = flujo
+  const n = flujo.length
+  const ordinal = n > TOPE_CATEGORICO
+  const colores = ordinal
+    ? (RAMPAS[modo][Math.min(n, 12)] ?? RAMPAS[modo][12])
+    : CATEGORICOS[modo].slice(0, n)
 
   // La curva viaja alineada con las primeras semanas --la parcial queda fuera del
   // ajuste-- así que el índice de la semana sirve de índice de la curva.
@@ -274,26 +212,13 @@ export default function FlujoSemanal({
       // baja y hay que poder saber por qué.
       dias: s.dias,
       parcial: s.dias < 7,
-      promedio: null,
-      minimo: null,
-      maximo: null,
-      tendencia:
-        curva !== null && i < curva.length ? Number(curva[i]) : null,
+      tendencia: curva !== null && i < curva.length ? Number(curva[i]) : null,
     }
-    for (const f of series) fila[f.mes] = f[señal][i] ?? 0
-    if (conFranja) {
-      const valores = previos.map((f) => f[señal][i]).filter((v) => v !== undefined)
-      if (valores.length > 0) {
-        fila.promedio = valores.reduce((a, b) => a + b, 0) / valores.length
-        fila.minimo = Math.min(...valores)
-        fila.maximo = Math.max(...valores)
-      }
-    }
+    for (const f of flujo) fila[f.mes] = f[señal][i] ?? 0
     return fila
   })
 
   const rayado = (i: number) => `rayado-${señal}-${i}`
-  const rayadoFranja = `rayado-${señal}-franja`
 
   return (
     <Paper withBorder radius="md" p="md">
@@ -315,22 +240,26 @@ export default function FlujoSemanal({
         <ComposedChart
           data={datos}
           margin={{ top: 8, right: 8, left: 0, bottom: 4 }}
-          barGap={2}
-          barCategoryGap="18%"
+          // El aire entre barras baja con la cantidad, pero no llega a cero: sin
+          // separación dos meses de tonos vecinos se leen como una sola barra
+          // ancha. El aire entre semanas --`barCategoryGap`-- es el que separa los
+          // grupos y ese no se toca.
+          barGap={n > 6 ? 1 : 2}
+          barCategoryGap="16%"
         >
           <defs>
-            {/* La semana parcial va rayada a 45°: es textura y no color, así que
-                no gasta un tono ni se confunde con otro mes. */}
-            {[...series.map((_, i) => paleta.meses[i]), paleta.borde].map((color, i) => (
+            {/* La semana parcial va rayada a 45°: es textura y no color, así que no
+                gasta un tono ni se confunde con otro mes. */}
+            {colores.map((color, i) => (
               <pattern
                 key={i}
-                id={i < series.length ? rayado(i) : rayadoFranja}
+                id={rayado(i)}
                 width={6}
                 height={6}
                 patternUnits="userSpaceOnUse"
                 patternTransform="rotate(45)"
               >
-                <rect width={6} height={6} fill={paleta.superficie} />
+                <rect width={6} height={6} fill={estructura.superficie} />
                 <rect width={3} height={6} fill={color} />
               </pattern>
             ))}
@@ -358,9 +287,9 @@ export default function FlujoSemanal({
                     {fila.semana}
                     {fila.parcial ? ` · ${fila.dias} días` : ''}
                   </Text>
-                  {series.map((f, i) => (
+                  {flujo.map((f, i) => (
                     <Text key={f.mes} size="xs">
-                      <Cuadro color={paleta.meses[i]} /> {rotuloMes(f.mes)}:{' '}
+                      <Cuadro color={colores[i]} /> {rotuloMes(f.mes)}:{' '}
                       <Text span fw={700}>
                         {numero(Number(fila[f.mes]))}
                       </Text>
@@ -371,69 +300,36 @@ export default function FlujoSemanal({
                       tendencia {numero(fila.tendencia)}
                     </Text>
                   )}
-                  {conFranja && fila.promedio !== null && (
-                    <>
-                      <Text size="xs">
-                        <Cuadro color={paleta.franja} borde={paleta.borde} /> {previos.length} meses
-                        anteriores: de{' '}
-                        <Text span fw={700}>
-                          {numero(fila.minimo ?? 0)}
-                        </Text>{' '}
-                        a{' '}
-                        <Text span fw={700}>
-                          {numero(fila.maximo ?? 0)}
-                        </Text>
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        promedio {numero(fila.promedio)}
-                      </Text>
-                    </>
-                  )}
                 </Paper>
               )
             }}
           />
-          {series.map((f, i) => (
+          {flujo.map((f, i) => (
             <Bar
               key={f.mes}
               dataKey={f.mes}
               name={rotuloMes(f.mes)}
-              fill={paleta.meses[i]}
-              radius={[3, 3, 0, 0]}
+              fill={colores[i]}
+              radius={n > 6 ? [1, 1, 0, 0] : [3, 3, 0, 0]}
               maxBarSize={38}
               isAnimationActive={false}
             >
               {datos.map((d) => (
                 <Cell
                   key={d.semana}
-                  fill={d.parcial ? `url(#${rayado(i)})` : paleta.meses[i]}
-                  stroke={d.parcial ? paleta.meses[i] : undefined}
+                  fill={d.parcial ? `url(#${rayado(i)})` : colores[i]}
+                  stroke={d.parcial ? colores[i] : undefined}
                   strokeWidth={d.parcial ? 1 : 0}
                 />
               ))}
             </Bar>
           ))}
-          {conFranja && (
-            <Bar
-              dataKey="maximo"
-              name={`${previos.length} meses anteriores`}
-              maxBarSize={38}
-              isAnimationActive={false}
-              shape={(props: object) => (
-                <FranjaDeAnteriores
-                  {...(props as FormaDeBarra)}
-                  colores={paleta}
-                  rayado={rayadoFranja}
-                />
-              )}
-            />
-          )}
           {curva !== null && (
             <Line
               type="monotone"
               dataKey="tendencia"
               name="tendencia"
-              stroke={paleta.tendencia}
+              stroke={estructura.tendencia}
               strokeWidth={2}
               strokeDasharray="5 4"
               dot={false}
@@ -448,27 +344,30 @@ export default function FlujoSemanal({
           `EvolucionMensual`: la librería la ordena por `dataKey` y el orden que
           explica el gráfico es el mes elegido primero. */}
       <Group gap="lg" justify="center" mt={4}>
-        {series.map((f, i) => (
-          <Leyenda key={f.mes} color={paleta.meses[i]} texto={rotuloMes(f.mes)} />
-        ))}
-        {conFranja && (
-          <Group gap={6} wrap="nowrap">
-            <svg width={13} height={13} aria-hidden>
-              <rect
-                x={0.5}
-                y={0.5}
-                width={12}
-                height={12}
-                rx={2}
-                fill={paleta.franja}
-                stroke={paleta.borde}
-              />
-              <line x1={0.5} y1={7} x2={12.5} y2={7} stroke={paleta.promedio} strokeWidth={2} />
-            </svg>
-            <Text size="xs">
-              los {previos.length} anteriores: el rango, y la raya es el promedio
+        {ordinal ? (
+          // Con cuatro meses o más, nombrar doce chips llenaría la tarjeta de
+          // leyenda. Va la rampa entera con sus dos extremos rotulados, que es lo
+          // que hay que saber para leer el gradiente: el orden dentro del grupo.
+          <Group gap={8} wrap="nowrap">
+            <Text size="xs">{rotuloMes(actual.mes)}</Text>
+            <Group gap={1} wrap="nowrap">
+              {colores.map((color) => (
+                <span
+                  key={color}
+                  aria-hidden
+                  style={{ width: 10, height: 12, background: color, display: 'inline-block' }}
+                />
+              ))}
+            </Group>
+            <Text size="xs">{rotuloMes(flujo[flujo.length - 1].mes)}</Text>
+            <Text size="xs" c="dimmed">
+              · en ese orden dentro de cada semana
             </Text>
           </Group>
+        ) : (
+          flujo.map((f, i) => (
+            <Leyenda key={f.mes} color={colores[i]} texto={rotuloMes(f.mes)} />
+          ))
         )}
         {curva !== null && (
           <Group gap={6} wrap="nowrap">
@@ -477,7 +376,7 @@ export default function FlujoSemanal({
               style={{
                 width: 14,
                 height: 0,
-                borderTop: `2px dashed ${paleta.tendencia}`,
+                borderTop: `2px dashed ${estructura.tendencia}`,
                 display: 'inline-block',
               }}
             />
@@ -495,8 +394,8 @@ export default function FlujoSemanal({
                 width: 12,
                 height: 12,
                 borderRadius: 2,
-                border: `1px solid ${paleta.meses[0]}`,
-                backgroundImage: `repeating-linear-gradient(45deg, ${paleta.meses[0]} 0 3px, transparent 3px 6px)`,
+                border: `1px solid ${colores[0]}`,
+                backgroundImage: `repeating-linear-gradient(45deg, ${colores[0]} 0 3px, transparent 3px 6px)`,
                 display: 'inline-block',
               }}
             />
@@ -508,7 +407,7 @@ export default function FlujoSemanal({
   )
 }
 
-function Cuadro({ color, borde }: { color: string; borde?: string }) {
+function Cuadro({ color }: { color: string }) {
   return (
     <span
       aria-hidden
@@ -517,7 +416,6 @@ function Cuadro({ color, borde }: { color: string; borde?: string }) {
         height: 8,
         borderRadius: 2,
         background: color,
-        border: borde ? `1px solid ${borde}` : undefined,
         display: 'inline-block',
       }}
     />

@@ -472,7 +472,14 @@ export default function ReporteSemanal() {
           </Alert>
 
           {/* ── 1. El flujo, semana a semana ─────────────────────────── */}
-          <SimpleGrid cols={{ base: 1, lg: 3 }} spacing="md">
+          {/* Con muchos meses el grupo de cada semana tiene una barra por mes
+              (`D-101`), así que los tres gráficos en fila dejarían barras de
+              cuatro píxeles: de siete meses en adelante bajan a dos columnas y de
+              diez a una, para que cada barra siga siendo una barra. */}
+          <SimpleGrid
+            cols={{ base: 1, lg: Number(meses) > 9 ? 1 : Number(meses) > 6 ? 2 : 3 }}
+            spacing="md"
+          >
             {SEÑALES.map((s) => (
               <FlujoSemanal
                 key={s.campo}

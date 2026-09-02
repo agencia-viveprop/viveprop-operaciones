@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal en barras, con una tendencia por gráfico sobre la ventana comparada)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal con una barra por mes seleccionado y una tendencia por gráfico)
 
 ---
 
@@ -125,6 +125,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - Una barra por cada mes seleccionado
+
+Lo pediste así --*«sería bueno ver tantas barras como meses se hayan seleccionado»*-- y con eso se retiró la franja de mínimo-máximo que resumía los meses de la cuarta en adelante. Con 12 meses ahora hay 12 barras por semana.
+
+**El color cambia de trabajo, y eso está medido, no elegido.** Hasta 3 meses sigue identificando el mes --navy, coral, teal--. De 4 en adelante pasa a codificar recencia: un solo tono, el mes elegido en el extremo fuerte y los anteriores cada vez más suaves. Doce tonos distinguibles no existen: la primera rampa que probé la rechazó el validador en los once pares, con saltos de 0,034 contra un piso de 0,06.
+
+**Hasta 6 meses el paso es identificable; de 7 en adelante el color es un gradiente** que dice una sola cosa --fuerte es reciente, suave es antiguo--. Quién es cada barra lo dice **la posición**: la primera de cada semana es siempre el mes elegido. El globo nombra cada mes con su cifra y la tabla de abajo trae los números exactos.
+
+**Las rampas están calculadas, una por cantidad de meses.** Un script las generó en OKLCH sobre el tono del navy y las validó una por una, para que una ventana de 4 meses use todo el rango en 4 pasos bien separados en vez de tomar los 4 más parecidos de una rampa de 12. En oscuro la rampa corre al revés --sobre fondo oscuro la marca fuerte es la más clara-- y arranca más arriba, porque con el navy el rango daba para 4 pasos y 12 meses salían casi del mismo azul.
+
+**Y la pantalla les hace espacio:** de 7 meses en adelante los gráficos bajan a dos columnas y de 10 a una. Tres en fila con 12 barras por semana dejaban barras de 4 píxeles.
+
+**Verificado en pantalla** con 6 y 12 meses, en claro y en oscuro. `npm run build` en cero errores y oxlint limpio. Sin cambios en el backend (`D-101`).
 
 ### 2026-09-02 - Una tendencia por gráfico en el flujo semanal
 
