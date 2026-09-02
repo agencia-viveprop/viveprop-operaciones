@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal con una barra por mes seleccionado y una tendencia por gráfico)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; la comisión de Dataprop es la de los canjes activos)
 
 ---
 
@@ -125,6 +125,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - La comisión de Dataprop es la de los canjes activos
+
+Mostraste el bloque del Centro de Control: *«las comisiones dataprop en canje deben ser solo por canjes activos en cualquier etapa»*.
+
+**El cálculo estaba bien; el problema era la jerarquía.** Las tres cifras iban en tres tarjetas iguales --cobrada $0 sobre 0 cerrados, potencial $1.660.095 sobre 5 activos, no concretada $39.789.250 sobre 224 cancelados-- así que la más grande de la fila era la de los cancelados: veinticuatro veces la comisión real en juego, en el mismo tamaño. El potencial ya cubría los 5 activos en cualquier etapa, así que en el backend no había nada que cambiar y ningún test se movió.
+
+**Ahora solo una cifra se llama comisión:** «Comisión de los activos», en una tarjeta sola, con el pie «N canjes activos, en cualquier etapa». Cuadra con la tarjeta de **Activos** que está tres bloques más arriba, que era la consistencia que pedías.
+
+**Las otras dos no se borraron, bajaron de nivel:** van en un renglón de referencia, rotuladas «Ya facturado» y «No se llegó a cobrar». Borrarlas habría escondido la plata facturada, que hoy es $0 solo porque no hay ningún canje cerrado y que es el número que importa en cuanto cierre uno.
+
+**En Cobranza se rotularon las columnas**, que era el equivalente ahí: «Cobrada / Potencial / No concretada» pasó a «Ya facturado / Comisión de activos / No se llegó a cobrar», con una nota debajo que dice cuál es la comisión y que las tres no se suman.
+
+**Y apareció un bug de texto al hacerlo:** el helper de los pies ponía el sustantivo solo en el caso de cero, así que la frase nueva imprimía «ningún canje canje cerrado». Se vio en la captura y quedó arreglado.
+
+**Verificado en pantalla** en el Centro de Control y en Cobranza. `npm run build` en cero errores y oxlint limpio. Sin cambios en el backend (`D-102`).
 
 ### 2026-09-02 - Una barra por cada mes seleccionado
 

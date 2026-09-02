@@ -2893,3 +2893,44 @@ Tres gráficos en fila con doce barras por semana dejan barras de cuatro píxele
 
 La franja decía de una mirada si el mes iba dentro de lo normal: su mínimo, su máximo y su promedio. Con las barras eso se ve directamente --están todas ahí-- y el promedio de la ventana sigue dibujado, porque es lo que sostiene la línea de tendencia (`D-100`).
 
+---
+
+## D-102 · La comisión de Dataprop es la de los canjes activos; las otras dos cifras bajan de nivel
+
+El usuario mostró el bloque «Comisión de Dataprop» del Centro de Control y dijo qué estaba mal: *«las comisiones dataprop en canje deben ser solo por canjes activos en cualquier etapa, debieran ser consistentes con lo que se ve en la imagen»*.
+
+**Tenía razón, y el problema era de jerarquía, no de cálculo.** Las tres cifras estaban en tres tarjetas iguales, al mismo nivel:
+
+| Tarjeta | Población | Monto |
+|---|---|---|
+| Cobrada | 0 cerrados | $0 |
+| Potencial | 5 activos | $1.660.095 |
+| No concretada | 224 cancelados | **$39.789.250** |
+
+Con 5 activos contra 224 cancelados, **la cifra más grande de la fila era la de los cancelados**: veinticuatro veces la comisión real en juego, en la misma tipografía y el mismo tamaño. Quien mira el bloque se lleva «Dataprop tiene 39 millones» cuando lo que hay son 1,6. La «consistencia con lo que se ve en la imagen» que pedía es contra la tarjeta de **Activos: 5**, que está en la misma pantalla, tres bloques más arriba.
+
+**El cálculo estaba bien.** El potencial ya cubría los 5 activos en cualquier etapa --el pie decía «5 abiertos», sin ninguno sin valorizar-- así que no había nada que arreglar en `plata_canjes`: el backend sigue devolviendo las tres bolsas por estado y ningún test cambió.
+
+### Se rotulan por lo que son, y no se borran
+
+Se le ofrecieron tres caminos y eligió el tercero: **las tres cifras se quedan, pero solo la de los activos se llama comisión**. Las otras dos bajan a un renglón de referencia, en texto y no en tarjetas:
+
+- **Ya facturado** --lo que se registró a mano al cerrar un canje--, que es un hecho y no una estimación;
+- **No se llegó a cobrar** --lo de los cancelados--, con la nota de cuántos no se pudieron valorizar.
+
+**Borrarlas era la otra opción y no se tomó.** «Ya facturado» hoy marca $0 solo porque no hay ningún canje cerrado: en cuanto cierre uno, ese es el número que importa, y esconderlo habría dejado la pantalla sin la única cifra que es plata de verdad.
+
+### Y la tarjeta va sola, sin agrandarla
+
+Queda una tarjeta a un tercio del ancho, en la misma grilla de tres columnas que antes. **No hace falta que sea más grande**: estar sola ya la deja mandando, y estirarla habría cambiado el ritmo del resto de la pantalla, donde todas las casillas de cifra miden lo mismo.
+
+El pie de la tarjeta dice **«4 canjes activos, en cualquier etapa»**, y esa última parte va porque es exactamente lo que se preguntó: que la comisión no dependa de en qué etapa esté el canje.
+
+### En Cobranza se rotulan las columnas
+
+El usuario pidió el mismo criterio en Cobranza, que mostraba las mismas tres poblaciones como columnas de una tabla. Ahí no se puede bajar dos cifras a un renglón, así que el equivalente es el rótulo: **«Cobrada / Potencial / No concretada» pasa a «Ya facturado / Comisión de activos / No se llegó a cobrar»**. Tres nombres de comisión para tres poblaciones distintas era el mismo error con otra forma. Debajo de la tabla queda dicho cuál de las tres es la comisión y que las tres no se suman entre sí, que es la regla de `D-063`.
+
+### Un bug de texto que apareció al hacerlo
+
+El helper que arma los pies --«5 abiertos», «Ningún canje cerrado»-- ponía el sustantivo **solo en el caso de cero**. Llamarlo con «canje cerrado», que es lo que pedía la frase completa del renglón nuevo, imprimía **«ningún canje canje cerrado»**. Se vio en la captura. Ahora el sustantivo lo pone el helper en los dos casos y quien llama pasa solo el adjetivo.
+

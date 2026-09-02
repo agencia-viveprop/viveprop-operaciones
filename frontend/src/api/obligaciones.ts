@@ -115,7 +115,8 @@ export type TramoDeCobranza = {
  * Es la regla de `D-063`, que la cobranza había vuelto a romper: mostraba un solo
  * total por parte y el 38% de esa cifra era de negocios perdidos. Los rótulos los
  * pone la pantalla porque cambian por dominio --«Ganado / En pipeline / No
- * concretado» en negocios, «Cobrada / Potencial / No concretada» en canjes--.
+ * concretado» en negocios, y en canjes «Ya facturado / Comisión de activos / No se
+ * llegó a cobrar», donde solo la del medio es comisión de Dataprop (`D-102`).
  */
 export type PlataPorEstado = {
   logrado: number

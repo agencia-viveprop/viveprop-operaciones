@@ -14,11 +14,20 @@ import StatCard from './StatCard'
  * no percibe nada de él: sumar estos montos con los de negocios sería contar como
  * ingreso propio la comisión de otro.
  *
- * **Las tres cifras no son el mismo número en tres estados.** La cobrada es un
- * hecho registrado; las otras dos son proyecciones que salen de la regla. Van con
- * colores distintos y con el conteo de sobre cuántos canjes se calculó cada una,
- * porque una comisión estimada sobre 118 de 296 cancelados no dice lo mismo que
- * sobre los 296.
+ * **Solo una de las tres cifras es «la comisión», y es la de los canjes activos**
+ * (`D-102`). Las tres estaban al mismo nivel, en tres tarjetas iguales, y con 5
+ * activos contra 224 cancelados la más grande de la fila --$39,7 millones-- era la
+ * de los cancelados: una plata que no es comisión de nadie y que dominaba el
+ * bloque. El usuario lo pidió así: *«las comisiones dataprop en canje deben ser
+ * solo por canjes activos en cualquier etapa»*.
+ *
+ * **Las otras dos no se borran, bajan de nivel.** Son ciertas y hacen falta --una
+ * ya se facturó, la otra no se va a cobrar-- así que van en un renglón aparte,
+ * rotuladas por lo que son y no como comisión. Borrarlas habría escondido la plata
+ * facturada, que es el número que importa en cuanto cierre un canje.
+ *
+ * Cada cifra viaja con el conteo de sobre cuántos canjes se calculó, porque una
+ * comisión estimada sobre 121 de 224 cancelados no dice lo mismo que sobre los 224.
  */
 
 /** Un plazo con su dispersión. `null` es "no hay casos", no cero. */
@@ -69,12 +78,63 @@ function Plazo({
 }
 
 /** El pie de un tile: sobre cuántos canjes se calculó, y cuántos quedaron afuera. */
-function detalle(b: BolsaDeCanjes, singular: string, plural: string): string {
-  if (b.canjes === 0) return `Ningún canje ${singular}`
+/** «4 canjes activos», «ningún canje cerrado», con la nota de los que no se
+ *  pudieron valorizar cuando hay alguno.
+ *
+ *  **El sustantivo lo pone el helper y quien llama pasa solo el adjetivo.** Antes
+ *  lo ponía solo en el caso de cero, y llamarlo con «canje cerrado» --que es lo que
+ *  pedía la frase completa-- imprimía «ningún canje canje cerrado». */
+function cuantos(b: BolsaDeCanjes, singular: string, plural: string): string {
+  if (b.canjes === 0) return `ningún canje ${singular}`
   const faltan = b.canjes - b.con_monto
-  const base = `${b.canjes} ${b.canjes === 1 ? singular : plural}`
+  const base = b.canjes === 1 ? `1 canje ${singular}` : `${b.canjes} canjes ${plural}`
   return faltan > 0 ? `${base} · ${faltan} sin poder valorizar` : base
 }
+
+/**
+ * Lo que no es comisión en juego, en un renglón y no en tarjetas.
+ *
+ * Las dos cifras son ciertas y hacen falta, pero ninguna es plata que Dataprop
+ * esté por cobrar: una ya se facturó y la otra se perdió con el canje. Al mismo
+ * nivel que la comisión, la de los cancelados la tapaba por tamaño (`D-102`).
+ */
+function FueraDeLaComision({
+  cobrada,
+  noConcretada,
+}: {
+  cobrada: BolsaDeCanjes
+  noConcretada: BolsaDeCanjes
+}) {
+  const sinValorizar = noConcretada.canjes - noConcretada.con_monto
+
+  return (
+    <Stack gap={2}>
+      <Text size="xs" c="dimmed">
+        Fuera de la comisión, para referencia:
+      </Text>
+      <Text size="xs" c="dimmed">
+        <strong>Ya facturado</strong> {clp(cobrada.comision_dataprop)} ·{' '}
+        {cuantos(cobrada, 'cerrado', 'cerrados')}. Se registra a mano
+        al cerrar el canje, así que es lo que se facturó y no una estimación.
+      </Text>
+      <Text size="xs" c="dimmed">
+        <strong>No se llegó a cobrar</strong> {clp(noConcretada.comision_dataprop)} ·{' '}
+        {cuantos(noConcretada, 'cancelado', 'cancelados')}.
+        {sinValorizar > 0 && (
+          <>
+            {' '}
+            {sinValorizar === 1
+              ? 'El que no se pudo valorizar no tiene'
+              : `Los ${sinValorizar} que no se pudieron valorizar no tienen`}{' '}
+            valor de propiedad cargado, o se solicitaron antes de donde empieza la serie de UF:
+            no se valorizan con la UF de otro día, se informan como no calculados.
+          </>
+        )}
+      </Text>
+    </Stack>
+  )
+}
+
 
 function Plazos({ p }: { p: PlazosCanjes }) {
   return (
@@ -143,43 +203,30 @@ export default function PlataDeCanjes() {
         </Alert>
       </Stack>
 
+      {/* Una sola tarjeta, y a un tercio del ancho: es la única cifra del bloque
+          que es comisión, y ponerla sola la deja mandando sin necesidad de que
+          sea más grande. */}
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
         <StatCard
-          label="Cobrada"
-          value={clp(data.cobrada.comision_dataprop)}
-          color="good"
-          caption={detalle(data.cobrada, 'cerrado', 'cerrados')}
-        />
-        <StatCard
-          label="Potencial"
+          label="Comisión de los activos"
           value={clp(data.potencial.comision_dataprop)}
           color="brand"
-          caption={detalle(data.potencial, 'abierto', 'abiertos')}
-        />
-        <StatCard
-          label="No concretada"
-          value={clp(data.no_concretada.comision_dataprop)}
-          color="critical"
-          caption={detalle(data.no_concretada, 'cancelado', 'cancelados')}
+          caption={
+            data.potencial.canjes === 0
+              ? 'Ningún canje activo'
+              : `${cuantos(data.potencial, 'activo', 'activos')}, en cualquier etapa`
+          }
         />
       </SimpleGrid>
 
       <Text size="xs" c="dimmed">
-        La <strong>cobrada</strong> se registra a mano al cerrar el canje: es lo que se facturó,
-        no una estimación. Las otras dos salen de la regla —2% por corredor en venta, medio mes
-        cada uno en arriendo, y sobre eso el 6/5/4% según el tramo en UF o el 8% en arriendo—
-        aplicada al valor de la propiedad. Todo neto, sin IVA.
+        Es la comisión de los canjes <strong>activos, en cualquier etapa</strong>, y es una
+        estimación: sale de la regla —2% por corredor en venta, medio mes cada uno en arriendo,
+        y sobre eso el 6/5/4% según el tramo en UF o el 8% en arriendo— aplicada al valor de la
+        propiedad, con la UF de hoy. Todo neto, sin IVA.
       </Text>
 
-      {data.no_concretada.canjes > data.no_concretada.con_monto && (
-        <Text size="xs" c="dimmed">
-          {data.no_concretada.canjes - data.no_concretada.con_monto === 1
-            ? 'El cancelado que no se pudo valorizar es uno que no tiene'
-            : `Los ${data.no_concretada.canjes - data.no_concretada.con_monto} cancelados que no se pudieron valorizar son los que no tienen`}{' '}
-          valor de propiedad cargado, o se solicitaron antes de donde empieza la serie de UF: no
-          se valorizan con la UF de otro día, se informan como no calculados.
-        </Text>
-      )}
+      <FueraDeLaComision cobrada={data.cobrada} noConcretada={data.no_concretada} />
 
       <Plazos p={data.plazos} />
     </Stack>

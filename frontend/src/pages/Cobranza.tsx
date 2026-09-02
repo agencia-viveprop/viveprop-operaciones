@@ -52,10 +52,19 @@ const COLOR_ESTADO: Record<string, string> = {
 }
 
 /** Los rótulos de los tres destinos, que cambian por dominio: en negocios es la
- *  plata de ViveProp y en canjes la comisión que Dataprop cobra. */
+ *  plata de ViveProp y en canjes la comisión que Dataprop cobra.
+ *
+ *  **En canjes solo la columna del medio es comisión** (`D-102`): las otras dos se
+ *  rotulan por lo que son --lo ya facturado y lo que se perdió con el canje-- para
+ *  que no se lean como plata por cobrar. Antes decían «Cobrada / Potencial / No
+ *  concretada», tres nombres de comisión para tres poblaciones distintas. */
 const ROTULOS = {
   negocios: { logrado: 'Ganado', en_curso: 'En pipeline', no_concretado: 'No concretado' },
-  canjes: { logrado: 'Cobrada', en_curso: 'Potencial', no_concretado: 'No concretada' },
+  canjes: {
+    logrado: 'Ya facturado',
+    en_curso: 'Comisión de activos',
+    no_concretado: 'No se llegó a cobrar',
+  },
 } as const
 
 type Medida = 'calculado' | 'registrado'
@@ -291,6 +300,12 @@ export default function Cobranza() {
               Esta plata no se suma nunca con la de negocios.
             </Text>
             <TablaDePartes partes={data.canjes} dominio="canjes" medida={medida} />
+            <Text size="xs" c="dimmed">
+              La comisión de Dataprop es la columna del medio: la de los canjes{' '}
+              <strong>activos, en cualquier etapa</strong>. «Ya facturado» es lo que se registró
+              al cerrar un canje y «No se llegó a cobrar» es lo de los cancelados; ninguna de las
+              dos es plata por cobrar, y las tres no se suman entre sí.
+            </Text>
           </Paper>
         </Stack>
       )}
