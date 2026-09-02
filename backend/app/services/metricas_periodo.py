@@ -38,6 +38,9 @@ from sqlalchemy.orm import Session
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa, OperacionTipo
 from app.models.catalogo import Catalogo, EstadoNegocio
 from app.models.movimiento import EntityType, Movimiento
+# El mismo ajuste que usa la tendencia del reporte mensual: dos gráficos de la
+# misma app no pueden decir «sube» con criterios distintos (`D-100`).
+from app.services.reporte_mensual import ajustar_serie
 from app.models.negocio import Negocio, NegocioHito
 from app.services.comisiones_canjes import calcular
 from app.services.plata_canjes import uf_del_canje
@@ -71,6 +74,82 @@ class FlujoDelMes(BaseModel):
     avanzaron: list[int]
     se_cayeron: list[int]
     comision_entraron: list[Decimal]
+
+
+# Cuántos días tiene una semana entera. Los tramos del mes se cortan cada siete
+# días, así que el único que puede venir corto es el último.
+LARGO_DE_SEMANA = 7
+
+
+class TendenciaSemanal(BaseModel):
+    """Una sola curva por gráfico: cómo se mueve el mes por dentro, semana a semana.
+
+    **Se ajusta sobre el promedio de cada semana en toda la ventana comparada**, no
+    sobre el mes elegido solo: es lo que pidió el usuario --«debería considerar la
+    ventana de comparación que se está mirando»--. Con tres meses, el punto de la
+    S2 es el promedio de las tres S2. Así una semana rara de un mes no define la
+    forma, y ampliar la ventana hace la curva más firme en vez de agregarle líneas.
+
+    **La semana parcial queda fuera del ajuste, y por eso `semanas` puede ser menor
+    que los tramos del mes.** La última tiene tres días en un mes de 31, así que su
+    nivel es más bajo por calendario: metiéndola, la curva bajaría al final
+    *siempre*, en todos los meses y todas las métricas, y eso no es una tendencia
+    sino el artefacto de un mes que no se divide en siete. Normalizarla a «ritmo de
+    siete días» era la otra salida y se descartó: pondría en el gráfico un valor
+    proyectado al lado de barras de días reales, y quien compare la curva con la
+    barra de esa semana leería un número que no ocurrió.
+
+    Con eso quedan cuatro semanas completas en cualquier mes, y el grado que
+    sostienen cuatro puntos es **1**: una recta (ver `_grado_de_tendencia`). Con
+    cuatro, una curva pasa por todos los puntos y deja de ser una tendencia --es el
+    dato redibujado--. Es la misma regla que ya rige la del reporte mensual
+    (`D-089`), y por eso las dos usan `ajustar_serie`.
+
+    `curva` trae un valor por semana completa, en orden desde la primera.
+    """
+
+    # Cuántas semanas completas sostienen el ajuste.
+    semanas: int
+    # Cuántos meses de la ventana entraron en el promedio de cada semana.
+    meses: int
+    grado: int
+    curva: list[Decimal]
+    # sube | baja | plana
+    direccion: str
+    pct_por_semana: Decimal | None
+    mostrar: bool
+
+
+def tendencia_de_las_semanas(
+    semanas: list[Semana],
+    flujo: list[FlujoDelMes],
+    señal: str,
+) -> TendenciaSemanal:
+    """El promedio de cada semana completa en la ventana, ajustado.
+
+    `flujo` viene con el mes elegido primero y los anteriores después; los usa a
+    todos, porque la ventana que se está mirando es la que tiene que pesar.
+    """
+    completas = [i for i, s in enumerate(semanas) if s.dias >= LARGO_DE_SEMANA]
+
+    promedios: list[Decimal] = []
+    for i in completas:
+        # Un mes puede tener menos tramos que otro --febrero tiene cuatro-- así que
+        # se salta el que no llega a esa semana en vez de contarla como cero.
+        valores = [getattr(f, señal)[i] for f in flujo if i < len(getattr(f, señal))]
+        if valores:
+            promedios.append(Decimal(sum(valores)) / len(valores))
+
+    ajuste = ajustar_serie(promedios)
+    return TendenciaSemanal(
+        semanas=ajuste.puntos,
+        meses=len(flujo),
+        grado=ajuste.grado,
+        curva=ajuste.curva,
+        direccion=ajuste.direccion,
+        pct_por_semana=ajuste.pct_por_paso,
+        mostrar=ajuste.mostrar,
+    )
 
 
 class EtapaDelEmbudo(BaseModel):

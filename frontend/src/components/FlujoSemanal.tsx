@@ -1,15 +1,16 @@
 import { Group, Paper, Text, Title, useComputedColorScheme } from '@mantine/core'
 import {
   Bar,
-  BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import type { FlujoDelMes, Semana } from '../api/reportes'
+import type { FlujoDelMes, Semana, TendenciaSemanal } from '../api/reportes'
 
 /**
  * Cómo se movió el mes semana a semana, con los meses anteriores al lado.
@@ -42,6 +43,13 @@ import type { FlujoDelMes, Semana } from '../api/reportes'
  *
  * La tabla de abajo lista **todos** los meses en cualquier modo, así que ningún
  * número se pierde por el modo del gráfico.
+ *
+ * **Y una sola línea de tendencia, ajustada con toda la ventana comparada**
+ * (`D-100`). No es una por mes --serían tres curvas sobre tres pares de barras--
+ * sino una que dice cómo se mueve el mes por dentro: el promedio de cada semana en
+ * los meses que se están comparando. Se dibuja solo sobre las semanas completas,
+ * porque la parcial bajaría la curva al final siempre, y solo si tiene algo que
+ * decir (`mostrar`).
  */
 
 /**
@@ -87,6 +95,12 @@ const PALETA = {
     franja: '#dee2e6',
     borde: '#adb5bd',
     promedio: '#495057',
+    // La tendencia es una lectura y no una categoría, así que va en un neutro:
+    // un cuarto tono se leería como un cuarto mes. En el resto de la app la
+    // tendencia usa el teal de `info`, pero acá el teal ya es un mes, así que el
+    // neutro es lo que queda libre. Se distingue del promedio de la franja por el
+    // trazo partido, no por el color.
+    tendencia: '#212529',
     superficie: '#fcfcfb',
   },
   dark: {
@@ -94,6 +108,7 @@ const PALETA = {
     franja: '#373A40',
     borde: '#5c5f66',
     promedio: '#c1c2c5',
+    tendencia: '#f8f9fa',
     superficie: '#1f1f22',
   },
 } as const
@@ -122,6 +137,9 @@ type Fila = {
   promedio: number | null
   minimo: number | null
   maximo: number | null
+  /** El punto de la curva de tendencia, o `null` en la semana parcial, que queda
+   *  fuera del ajuste. */
+  tendencia: number | null
   [mes: string]: string | number | boolean | null
 }
 
@@ -208,6 +226,7 @@ export default function FlujoSemanal({
   semanas,
   flujo,
   señal,
+  tendencia,
   sinDatos,
 }: {
   titulo: string
@@ -216,6 +235,9 @@ export default function FlujoSemanal({
   /** El mes elegido primero y después los anteriores. */
   flujo: FlujoDelMes[]
   señal: Señal
+  /** La curva sobre las semanas, ajustada con toda la ventana. Se dibuja solo si
+   *  `mostrar`: una recta plana pegada al promedio no dice nada y tapa barras. */
+  tendencia?: TendenciaSemanal
   /** Por qué esta señal no tiene datos, si no los tiene. Se explica en vez de
    *  dibujar una barra en cero, que diría «no pasó nada» cuando lo que pasa es
    *  «no se sabe». */
@@ -240,6 +262,10 @@ export default function FlujoSemanal({
   const conFranja = previos.length > MAXIMO_DE_BARRAS - 1
   const series = conFranja ? [actual] : [actual, ...unoPorUno]
 
+  // La curva viaja alineada con las primeras semanas --la parcial queda fuera del
+  // ajuste-- así que el índice de la semana sirve de índice de la curva.
+  const curva = tendencia?.mostrar ? tendencia.curva : null
+
   const datos: Fila[] = semanas.map((s, i) => {
     const fila: Fila = {
       semana: s.etiqueta,
@@ -251,6 +277,8 @@ export default function FlujoSemanal({
       promedio: null,
       minimo: null,
       maximo: null,
+      tendencia:
+        curva !== null && i < curva.length ? Number(curva[i]) : null,
     }
     for (const f of series) fila[f.mes] = f[señal][i] ?? 0
     if (conFranja) {
@@ -284,7 +312,7 @@ export default function FlujoSemanal({
       </Text>
 
       <ResponsiveContainer width="100%" height={200}>
-        <BarChart
+        <ComposedChart
           data={datos}
           margin={{ top: 8, right: 8, left: 0, bottom: 4 }}
           barGap={2}
@@ -338,6 +366,11 @@ export default function FlujoSemanal({
                       </Text>
                     </Text>
                   ))}
+                  {fila.tendencia !== null && (
+                    <Text size="xs" c="dimmed">
+                      tendencia {numero(fila.tendencia)}
+                    </Text>
+                  )}
                   {conFranja && fila.promedio !== null && (
                     <>
                       <Text size="xs">
@@ -395,7 +428,20 @@ export default function FlujoSemanal({
               )}
             />
           )}
-        </BarChart>
+          {curva !== null && (
+            <Line
+              type="monotone"
+              dataKey="tendencia"
+              name="tendencia"
+              stroke={paleta.tendencia}
+              strokeWidth={2}
+              strokeDasharray="5 4"
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
 
       {/* La leyenda va acá y no con el `<Legend>` de Recharts, igual que en
@@ -421,6 +467,23 @@ export default function FlujoSemanal({
             </svg>
             <Text size="xs">
               los {previos.length} anteriores: el rango, y la raya es el promedio
+            </Text>
+          </Group>
+        )}
+        {curva !== null && (
+          <Group gap={6} wrap="nowrap">
+            <span
+              aria-hidden
+              style={{
+                width: 14,
+                height: 0,
+                borderTop: `2px dashed ${paleta.tendencia}`,
+                display: 'inline-block',
+              }}
+            />
+            <Text size="xs">
+              tendencia de las {tendencia?.semanas} semanas completas
+              {(tendencia?.meses ?? 0) > 1 ? `, sobre los ${tendencia?.meses} meses` : ''}
             </Text>
           </Group>
         )}

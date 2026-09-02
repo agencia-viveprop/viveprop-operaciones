@@ -36,8 +36,11 @@ import { rotuloEtapa } from '../components/canjesEtiquetas'
  * **Cuatro bloques y cada título es la pregunta que responde.** Es la restricción
  * que puso el usuario --«que quien lo vea pueda entender lo que está viendo»-- y
  * la que decidió qué **no** va: ni área apilada de composición por etapa (el dato
- * no existe hacia atrás), ni curva de tendencia sobre cinco semanas, ni la plata
- * en el gráfico semanal (`D-098`).
+ * no existe hacia atrás) ni la plata en el gráfico semanal (`D-098`).
+ *
+ * **El gráfico semanal sí lleva tendencia, una sola** (`D-100`): la de las semanas
+ * completas, ajustada con toda la ventana comparada. La del bloque mensual es otra
+ * --va sobre meses-- y las dos conviven porque responden preguntas distintas.
  *
  * | Bloque | La pregunta |
  * |---|---|
@@ -285,8 +288,10 @@ function Abiertos({
 
 /** Mes a mes: los totales y la plata, con la tendencia sobre los meses.
  *
- * **Acá vive la tendencia y no en el gráfico semanal**: cinco puntos con el último
- * de tres días no sostienen una curva. */
+ * **Esta tendencia va sobre meses y es otra que la del gráfico semanal** (`D-100`).
+ * Esa dice cómo se mueve el mes por dentro --semana a semana-- y esta hacia dónde
+ * va el período. Con cinco semanas y la última de tres días, una sola curva no
+ * podía responder las dos. */
 function MesAMes({
   totales,
   tendencias,
@@ -476,6 +481,7 @@ export default function ReporteSemanal() {
                 semanas={reporte.semanas}
                 flujo={reporte.flujo}
                 señal={s.campo}
+                tendencia={reporte.tendencia_semanal[s.campo]}
                 sinDatos={
                   reporte.sin_datos.includes(s.campo) ? POR_QUE_FALTA[s.campo] : undefined
                 }

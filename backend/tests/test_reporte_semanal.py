@@ -422,7 +422,11 @@ def test_el_endpoint_devuelve_los_dos_dominios(cliente, db, tipos):
     cuerpo = r.json()
     assert set(cuerpo) == {"anio", "mes", "meses", "canjes", "negocios"}
     assert set(cuerpo["canjes"]) == {
-        "semanas", "flujo", "embudo", "abiertos", "totales", "tendencias", "sin_datos",
+        "semanas", "flujo", "embudo", "abiertos", "totales", "tendencias",
+        "tendencia_semanal", "sin_datos",
+    }
+    assert set(cuerpo["canjes"]["tendencia_semanal"]) == {
+        "entraron", "avanzaron", "se_cayeron",
     }
 
 
@@ -432,3 +436,78 @@ def test_el_endpoint_rechaza_un_tope_de_meses_invalido(cliente):
 
 def test_el_endpoint_exige_anio_y_mes_juntos(cliente):
     assert cliente.get("/api/reportes/semanal", params={"anio": 2026}).status_code == 400
+
+
+# ------------------------------------------------- tendencia de las semanas
+
+
+def test_la_tendencia_semanal_promedia_toda_la_ventana(db, tipos):
+    """El punto de cada semana es el promedio de esa semana en todos los meses.
+
+    Es lo que se pidió --«debería considerar la ventana de comparación que se está
+    mirando»--: con tres meses, la S1 de la curva sale de las tres S1.
+    """
+    # Agosto: 4 en la S1. Julio: 0. Junio: 2. Promedio de la S1 = 2.
+    for i in range(4):
+        _canje(db, 100 + i, dia=2)
+    for i in range(2):
+        _canje(db, 200 + i, dia=2, mes=6)
+    db.commit()
+
+    r = obtener_reporte_semanal(db, 2026, 8, meses=3, hoy=date(2026, 8, 31))
+    tend = r.canjes.tendencia_semanal["entraron"]
+
+    # Cuatro semanas completas: la quinta --del 29 al 31-- queda fuera.
+    assert tend.semanas == 4
+    assert tend.meses == 3
+    # El promedio de la S1 es 2, y el ajuste de una recta sobre (2, 0, 0, 0)
+    # arranca arriba y baja: lo que importa es que el primer punto salga del
+    # promedio de los tres meses y no del mes elegido solo, que sería 4.
+    assert tend.curva[0] < D("4")
+    assert tend.direccion == "baja"
+
+
+def test_la_tendencia_semanal_deja_fuera_la_semana_parcial(db, tipos):
+    """La última semana tiene tres días: metida en el ajuste, la curva bajaría
+    siempre por calendario y no por actividad."""
+    _canje(db, 1, dia=30)
+    db.commit()
+
+    r = obtener_reporte_semanal(db, 2026, 8, meses=1, hoy=date(2026, 8, 31))
+    tend = r.canjes.tendencia_semanal["entraron"]
+
+    # Agosto tiene cinco tramos y solo cuatro entran al ajuste.
+    assert len(r.canjes.semanas) == 5
+    assert tend.semanas == 4
+    assert len(tend.curva) == 4
+    # El único canje cayó en la semana que quedó fuera, así que el ajuste es plano
+    # en cero y no se dibuja.
+    assert tend.direccion == "plana"
+    assert tend.mostrar is False
+
+
+def test_la_tendencia_semanal_es_una_recta(db, tipos):
+    """Cuatro puntos no sostienen una curva: una pasaría por todos y sería el dato
+    redibujado. Es la misma regla que la del reporte mensual (`D-089`)."""
+    for dia, cuantos in ((2, 1), (9, 2), (16, 3), (23, 4)):
+        for i in range(cuantos):
+            _canje(db, dia * 10 + i, dia=dia)
+    db.commit()
+
+    r = obtener_reporte_semanal(db, 2026, 8, meses=1, hoy=date(2026, 8, 31))
+    tend = r.canjes.tendencia_semanal["entraron"]
+
+    assert tend.grado == 1
+    assert tend.direccion == "sube"
+    assert tend.mostrar is True
+
+
+def test_en_febrero_la_tendencia_usa_sus_cuatro_semanas(db, tipos):
+    """Febrero no tiene quinto tramo, y sus cuatro son todos completos."""
+    _canje(db, 1, dia=3, mes=2)
+    db.commit()
+
+    r = obtener_reporte_semanal(db, 2026, 2, meses=1, hoy=date(2026, 2, 28))
+
+    assert len(r.canjes.semanas) == 4
+    assert r.canjes.tendencia_semanal["entraron"].semanas == 4

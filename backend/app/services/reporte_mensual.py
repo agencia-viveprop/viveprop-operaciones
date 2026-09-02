@@ -775,34 +775,43 @@ def _coeficientes(ys: list[float], grado: int) -> list[float]:
     return coef
 
 
-def _tendencia(
-    serie: list[MetricasMes],
-    campo: str,
-    nombre: str,
-    inicio: tuple[int, int] | None = None,
-    dominio: str | None = None,
-) -> Tendencia:
-    """La curva de mínimos cuadrados sobre los meses de la ventana.
+class Ajuste(BaseModel):
+    """El resultado de ajustar una serie, sin decir de qué es la serie.
+
+    **Existe para que haya un solo ajuste en el proyecto.** La tendencia mensual
+    va sobre meses y la del flujo semanal sobre las semanas del mes (`D-100`): son
+    preguntas distintas, pero el ajuste --grado según los puntos, mínimos cuadrados
+    normalizados, recorte en cero, umbral de «plana»-- tiene que ser el mismo o
+    dos gráficos de la misma app dirían «sube» con criterios distintos.
+
+    `pendiente` y `pct_por_paso` son **por paso de la serie**: por mes en la
+    mensual y por semana en la semanal. Quien lo consume le pone el nombre.
+    """
+
+    puntos: int
+    grado: int
+    pendiente: Decimal
+    pct_por_paso: Decimal | None
+    direccion: str
+    curva: list[Decimal]
+    mostrar: bool
+
+
+def ajustar_serie(ys: list[Decimal]) -> Ajuste:
+    """Mínimos cuadrados sobre la serie, con el grado que sus puntos sostienen.
 
     Con un solo punto no hay curva: se devuelve plana en su propio valor, que es
     lo único cierto.
     """
-    # Igual que el promedio: la recta arranca donde arranca el dominio. Ajustarla
-    # sobre 34 meses en cero seguidos de 12 con datos daría una pendiente que
-    # describe el nacimiento del negocio, no su tendencia.
-    serie = _desde_el_inicio(serie, inicio)
-    n = len(serie)
-    ys = [Decimal(getattr(m, campo)) for m in serie]
+    n = len(ys)
     media_y = sum(ys, CERO) / n if n else CERO
 
     if n < 2:
-        return Tendencia(
-            metrica=nombre,
-            dominio=dominio or DOMINIOS[campo],
+        return Ajuste(
             puntos=n,
             grado=0,
             pendiente=CERO,
-            pct_por_mes=None,
+            pct_por_paso=None,
             direccion="plana",
             curva=[media_y.quantize(CENTAVO)] * n,
             mostrar=False,
@@ -812,7 +821,7 @@ def _tendencia(
     coef = _coeficientes([float(y) for y in ys], grado)
 
     # `t` recorre [-1, 1] igual que en el ajuste, así que la curva se evalúa en los
-    # mismos meses que la sostienen.
+    # mismos puntos que la sostienen.
     def _en(t: float) -> float:
         return sum(c * t**k for k, c in enumerate(coef))
 
@@ -823,10 +832,10 @@ def _tendencia(
 
     # **La pendiente es la del final de la ventana, no la del promedio.** Es la
     # derivada de la curva en su último punto, pasada de "por unidad de `t`" a "por
-    # mes" con la regla de la cadena: `dt/di = 2/(n-1)`.
+    # paso" con la regla de la cadena: `dt/di = 2/(n-1)`.
     derivada_en_t = sum(k * c * 1.0 ** (k - 1) for k, c in enumerate(coef) if k >= 1)
-    por_mes = derivada_en_t * 2 / (n - 1)
-    pendiente = Decimal(str(round(por_mes, 2)))
+    por_paso = derivada_en_t * 2 / (n - 1)
+    pendiente = Decimal(str(round(por_paso, 2)))
 
     pct = None if media_y == CERO else (pendiente / media_y * 100).quantize(DECIMA)
     if pct is None or abs(pct) < UMBRAL_PLANA:
@@ -838,13 +847,11 @@ def _tendencia(
     amplitud = max(curva) - min(curva)
     pct_amplitud = None if media_y == CERO else (amplitud / media_y * 100)
 
-    return Tendencia(
-        metrica=nombre,
-        dominio=dominio or DOMINIOS[campo],
+    return Ajuste(
         puntos=n,
         grado=grado,
         pendiente=pendiente.quantize(CENTAVO),
-        pct_por_mes=pct,
+        pct_por_paso=pct,
         direccion=direccion,
         curva=curva,
         # **Se dibuja si tiene algo que decir: pendiente al final o forma.** La
@@ -854,6 +861,32 @@ def _tendencia(
         # su vértice y tener toda la forma que mostrar.
         mostrar=direccion != "plana"
         or (pct_amplitud is not None and pct_amplitud >= UMBRAL_PLANA),
+    )
+
+
+def _tendencia(
+    serie: list[MetricasMes],
+    campo: str,
+    nombre: str,
+    inicio: tuple[int, int] | None = None,
+    dominio: str | None = None,
+) -> Tendencia:
+    """La curva de mínimos cuadrados sobre los meses de la ventana."""
+    # Igual que el promedio: la recta arranca donde arranca el dominio. Ajustarla
+    # sobre 34 meses en cero seguidos de 12 con datos daría una pendiente que
+    # describe el nacimiento del negocio, no su tendencia.
+    serie = _desde_el_inicio(serie, inicio)
+    ajuste = ajustar_serie([Decimal(getattr(m, campo)) for m in serie])
+    return Tendencia(
+        metrica=nombre,
+        dominio=dominio or DOMINIOS[campo],
+        puntos=ajuste.puntos,
+        grado=ajuste.grado,
+        pendiente=ajuste.pendiente,
+        pct_por_mes=ajuste.pct_por_paso,
+        direccion=ajuste.direccion,
+        curva=ajuste.curva,
+        mostrar=ajuste.mostrar,
     )
 
 

@@ -54,6 +54,8 @@ from app.services.metricas_periodo import (
     flujo_de_negocios_por_tramo,
     instantes_de_carga,
     semanas_del_mes,
+    tendencia_de_las_semanas,
+    TendenciaSemanal,
 )
 from app.services.reporte_mensual import (
     Tendencia,
@@ -70,6 +72,10 @@ CERO = Decimal("0")
 MESES_VALIDOS = tuple(range(1, 13))
 MESES_DEFECTO = 3
 
+# Las tres señales del flujo, en el orden en que se leen: qué entró, qué se movió,
+# qué se perdió. Es el mismo orden de la pantalla.
+SEÑALES_DEL_FLUJO = ("entraron", "avanzaron", "se_cayeron")
+
 class ReporteDeDominio(BaseModel):
     semanas: list[Semana]
     # El mes elegido primero y después los anteriores, del más nuevo al más viejo.
@@ -81,6 +87,10 @@ class ReporteDeDominio(BaseModel):
     # tendencia.
     totales: list[TotalDelMes]
     tendencias: dict[str, Tendencia]
+    # Una curva por señal sobre las semanas del mes, ajustada con toda la ventana
+    # comparada (`D-100`). Va aparte de `tendencias`, que es sobre meses: son dos
+    # preguntas --cómo se mueve el mes por dentro, y hacia dónde va el período--.
+    tendencia_semanal: dict[str, TendenciaSemanal]
     # Qué señales no se pueden medir en este dominio, por nombre de campo. La
     # pantalla las explica en vez de dibujar ceros.
     sin_datos: list[str]
@@ -244,13 +254,18 @@ def _armar_dominio(
             )
         )
 
+    semanas = semanas_del_mes(anio, mes)
     return ReporteDeDominio(
-        semanas=semanas_del_mes(anio, mes),
+        semanas=semanas,
         flujo=flujo,
         embudo=_embudo(embudos[-1], embudos[:-1], etapas),
         abiertos=abiertos,
         totales=totales,
         tendencias=_tendencias(totales, dominio),
+        tendencia_semanal={
+            señal: tendencia_de_las_semanas(semanas, flujo, señal)
+            for señal in SEÑALES_DEL_FLUJO
+        },
         sin_datos=sin_datos,
     )
 

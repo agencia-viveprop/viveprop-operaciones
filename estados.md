@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal pasó a barras, con la franja de los meses anteriores)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal en barras, con una tendencia por gráfico sobre la ventana comparada)
 
 ---
 
@@ -125,6 +125,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - Una tendencia por gráfico en el flujo semanal
+
+Pediste *«una sola línea de tendencia»* que *«considere la ventana de comparación que se está mirando»*. Quedó una por gráfico, y el filtro de meses la cambia.
+
+**El punto de cada semana es el promedio de esa semana en toda la ventana.** Con tres meses, la S2 de la curva sale de las tres S2. Así ampliar la ventana no agrega líneas: hace la curva más firme. Y una semana rara de un mes deja de definir la forma. Un mes con menos tramos --febrero tiene cuatro-- se salta esa semana en vez de contarla como cero.
+
+**La semana parcial queda fuera.** Con tres días, metida en el ajuste la curva bajaría al final siempre, en todos los meses y en las tres señales: sería el calendario y no la actividad. La leyenda lo dice --«tendencia de las 4 semanas completas»-- y la línea se corta antes de esa semana.
+
+**Con cuatro semanas completas el ajuste es una recta, y es a propósito.** Con cuatro puntos una curva pasa por todos y deja de ser una tendencia; es la misma regla que ya rige la del reporte mensual (`D-089`). Donde sí hay puntos para una curva es en «Mes a mes», que va sobre meses y llega a doce.
+
+**No se dibuja si no dice nada:** si la recta queda plana y sin amplitud --como «Avanzaron de etapa», que en `dev` está en cero-- el gráfico no la muestra.
+
+**Un solo ajuste para toda la app.** El cálculo estaba dentro de la tendencia mensual y se sacó a `ajustar_serie`, que las dos usan. Copiarlo habría dejado dos gráficos de la misma app diciendo «sube» con criterios distintos. Los 25 tests del reporte mensual pasan sin cambios, que es lo que confirma que la extracción no tocó el cálculo.
+
+**El color es un neutro** --casi negro en claro, casi blanco en oscuro-- con trazo partido. En el resto de la app la tendencia va en teal, pero acá el teal ya es un mes.
+
+**Verificado en pantalla** con 3 y 8 meses, en claro y en oscuro. 4 tests nuevos: que el promedio use toda la ventana y no el mes elegido solo, que la semana parcial quede fuera, que el grado sea 1, y que febrero use sus cuatro semanas. 28 tests en el reporte semanal, `npm run build` en cero errores y oxlint limpio (`D-100`).
 
 ### 2026-09-02 - El flujo semanal pasa a barras
 

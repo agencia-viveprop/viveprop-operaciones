@@ -105,6 +105,23 @@ export type TotalDelMes = {
   valor_arriendo: string
 }
 
+/** Una sola curva por gráfico, sobre las semanas del mes.
+ *
+ *  Se ajusta con **el promedio de cada semana en toda la ventana comparada** y no
+ *  con el mes elegido solo, y deja fuera la semana parcial: con tres días, su
+ *  nivel es más bajo por calendario y la curva bajaría al final siempre (`D-100`).
+ *  Por eso `semanas` puede ser menor que los tramos del mes, y `curva` se alinea
+ *  con las primeras `semanas` de `semanas[]`. */
+export type TendenciaSemanal = {
+  semanas: number
+  meses: number
+  grado: number
+  curva: string[]
+  direccion: 'sube' | 'baja' | 'plana'
+  pct_por_semana: string | null
+  mostrar: boolean
+}
+
 export type ReporteDeDominio = {
   semanas: Semana[]
   /** El mes elegido primero y después los anteriores: la pantalla destaca el
@@ -115,6 +132,10 @@ export type ReporteDeDominio = {
   /** Del más viejo al más nuevo. */
   totales: TotalDelMes[]
   tendencias: Record<string, Tendencia>
+  /** Una curva por señal sobre las semanas del mes. Va aparte de `tendencias`,
+   *  que es sobre meses: son dos preguntas --cómo se mueve el mes por dentro, y
+   *  hacia dónde va el período--. */
+  tendencia_semanal: Record<string, TendenciaSemanal>
   /** Qué señales no tienen de dónde salir en este dominio. La pantalla las
    *  explica en vez de dibujar una serie de ceros, que diría «no pasó nada»
    *  cuando lo que pasa es «no se sabe». */

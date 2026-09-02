@@ -2813,3 +2813,39 @@ La última semana tiene tres días en un mes de 31, así que su barra siempre va
 
 La tabla de «Los mismos números» sigue abajo y sigue listando **todos** los meses comparados, con sus semanas, su total y la variación. Es lo que hace que cortar a dos barras no pierda información: el gráfico compara, la tabla enumera.
 
+---
+
+## D-100 · Una sola tendencia en el flujo semanal, ajustada con toda la ventana
+
+El usuario pidió *«una sola línea de tendencia»* en los gráficos del flujo, y puso la condición que la define: *«debería considerar la ventana de comparación que se está mirando»*.
+
+**Una sola, y no una por mes.** Con tres meses comparados, una tendencia por mes serían tres curvas encima de tres pares de barras: el mismo enredo que hizo botar las líneas (`D-099`). La única que tiene sentido en este eje es la que responde **cómo se mueve el mes por dentro**, y para eso la ventana entera es el dato, no el ruido.
+
+### El punto de cada semana es el promedio de esa semana en toda la ventana
+
+Con tres meses, el punto de la S2 sale de las tres S2. Eso es lo que hace que el filtro de meses **cambie la curva**, que es lo que se pidió: ampliar la ventana no agrega líneas, hace la curva más firme. Y una semana rara de un mes deja de definir la forma.
+
+Un mes puede tener menos tramos que otro --febrero tiene cuatro-- así que el mes que no llega a esa semana **se salta**, no se cuenta como cero: contarlo sería inventar una semana que no existió.
+
+### La semana parcial queda fuera del ajuste
+
+La última semana tiene tres días en un mes de 31. Metiéndola, la curva bajaría al final **siempre** --en todos los meses y en las tres señales-- y eso no es una tendencia: es el artefacto de un mes que no se divide en siete. Por eso la curva se dibuja sobre las semanas completas y se corta antes de la parcial, y la leyenda lo dice: «tendencia de las 4 semanas completas».
+
+**Normalizar la semana parcial a «ritmo de siete días» era la otra salida, y se descartó.** Pondría en el gráfico un valor proyectado justo al lado de barras de días reales: quien compare la curva con la barra de esa semana leería un número que no ocurrió.
+
+### Con cuatro puntos es una recta, y eso no es una omisión
+
+Todo mes deja exactamente cuatro semanas completas, y el grado que sostienen cuatro puntos es **1**. Es la regla que ya rige la tendencia mensual (`D-089`): con cuatro puntos una curva pasa por todos y deja de describir una tendencia --es el dato redibujado--. La preferencia del usuario por curvas polinomiales y no rectas (`D-089`) sigue valiendo donde hay puntos que las sostengan, y el bloque «Mes a mes» es ese lugar: ahí el eje son meses completos y la ventana llega a doce.
+
+### Un solo ajuste para toda la app
+
+`_tendencia` del reporte mensual tenía el ajuste adentro. Se extrajo a **`ajustar_serie`**, que devuelve un `Ajuste` --puntos, grado, curva, pendiente, dirección, `mostrar`-- sin saber de qué es la serie, y las dos tendencias lo llaman. La alternativa era copiar treinta líneas de mínimos cuadrados, y con eso dos gráficos de la misma app podrían decir «sube» con criterios distintos. `pendiente` y `pct_por_paso` son **por paso de la serie**: por mes en la mensual y por semana en la semanal, y quien lo consume le pone el nombre. Los 25 tests del reporte mensual siguen pasando sin cambios, que es lo que dice que la extracción no cambió el cálculo.
+
+### Se dibuja solo si tiene algo que decir
+
+Vale el `mostrar` que ya traía el ajuste: si la recta queda plana y sin amplitud --como «Avanzaron de etapa» en `dev`, que está en cero-- no se dibuja. Una recta plana pegada al promedio no informa y tapa barras.
+
+### El color: un neutro, y por qué no el teal
+
+En el resto de la app la tendencia va en el **teal de `info`**, con el argumento de que es una lectura y no una categoría (`D-089`). Acá el teal **ya es un mes** desde `D-099`, así que el neutro es lo que queda libre: casi negro en claro, casi blanco en oscuro. Un cuarto tono se leería como un cuarto mes. Del promedio de la franja se distingue por el **trazo partido**, no por el color.
+
