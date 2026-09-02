@@ -2708,6 +2708,10 @@ El flujo es **entraron / avanzaron / se cayeron**. Es lo que el usuario eligió 
 
 ### Hasta tres líneas por gráfico; de la cuarta en adelante, el promedio
 
+> **Esta parte la reemplazó `D-099`:** el gráfico pasó a barras y el tope bajó a
+> dos meses. Lo de abajo es el razonamiento original, que se conserva porque
+> explica de dónde salió el problema que `D-099` arregla.
+
 El filtro compara de 1 a 12 meses. Doce líneas en un gráfico de cinco puntos no se leen, y la regla del proyecto es **tres series categóricas por gráfico**: con más, la identidad por color deja de funcionar. Así que hasta tres meses va una línea por mes, y de cuatro en adelante queda el mes elegido contra el **promedio de los anteriores**. No se pierde nada: la tabla de abajo --«Los mismos números»-- lista **todos** los meses, con sus semanas, su total y la variación contra el mes elegido. El usuario pidió las dos cosas, *«visualmente y en números»*, así que la tabla va **debajo** del gráfico y no en su lugar.
 
 **El color de las líneas previas se eligió con el validador, no a ojo.** El `#9b9cd4` que había puesto **falló**: ΔE 14,5 contra el teal de tendencia, bajo el piso de visión normal de 15. Quedó el índigo principal diferenciado por **trazo partido** más su entrada en la leyenda, que es identidad sin depender del color. La leyenda se dibuja a mano y no con el `<Legend>` de Recharts, igual que en `EvolucionMensual`: la librería la ordena por `dataKey` y el orden que explica el gráfico es el mes elegido primero.
@@ -2748,4 +2752,52 @@ La UF fue el otro cuello: valorizar canje por canje eran cientos de consultas. `
 Se fueron las cuatro casillas, sus listas de un renglón por caso, y el selector de 1/2/4 semanas: las reemplazan las métricas nuevas, que es lo que el usuario contestó cuando pregunté. Con eso **`D-076` queda sin objeto** --el «Qué pasó» con su tooltip ya no existe-- y el párrafo *«Lo que no se cambió»* de `D-097`, que lo daba como ejemplo de recorte deliberado, describe una pantalla que se fue.
 
 **El reporte mensual no se tocó.** Un intento anterior consolidó las dos pantallas en el mensual y fue un error de lectura mío --*«desde el principio te hablé de modificar el reporte semanal, no el reporte mensual»*--; se revirtió completo con `git revert`. Si el mensual se retira o no, se decide **después** de mirar el semanal andando, y no lo borra nadie hasta que el usuario lo diga.
+
+---
+
+## D-099 · El flujo semanal va en barras, y los meses anteriores dejan de perderse
+
+El usuario miró el gráfico andando y preguntó: *«las gráficas de líneas tienden a enredar la lectura, y los periodos anteriores se pierden, crees que es el mejor tipo de gráfico?, tal vez de barras quedaría mejor?»*.
+
+Tenía razón, y había dos cosas distintas: un defecto y una elección de forma.
+
+### El defecto: dos meses pintados igual
+
+En `FlujoSemanal` todas las líneas de meses previos usaban **un solo color** --`paleta.previo`--. Con tres meses comparados, `jul 26` y `jun 26` salían con el mismo color y el mismo trazo partido: no se perdían por estar apretadas, eran literalmente indistinguibles. Y el tope de tres series contaba solo las líneas individuales, así que con el promedio encima el gráfico llegaba a cuatro.
+
+### La forma: barras, porque la semana es un cajón
+
+Una línea entre S1 y S2 dibuja un camino que el dato no tiene. Nada existe a mitad de camino entre la primera semana y la segunda: son cajones, no un continuo, y la pendiente es una forma que el dato no tiene. Barras dicen «este cajón tuvo 8 y el otro 3», que es exactamente lo que se está contando. Además una semana en cero, con barras, se lee como un cajón vacío --que es lo que pasó-- y no como una línea subiendo desde el suelo.
+
+**Agrupadas, nunca apiladas.** Apilar suma, y la S1 de agosto más la S1 de julio no es la cantidad de nada: el alto del apilado sería un número inventado, y el segmento de arriba no arrancaría en cero, así que ni se podría comparar contra el de abajo. Apilar sirve donde las partes componen un todo real, como el reparto de la comisión en el reporte mensual (`D-075`), donde Real VP + Corredores + Equipo sí suman la plata repartida.
+
+### Dos barras por semana, no tres: lo decidió el validador
+
+Le dije que hasta tres meses irían como barra propia. **Con el validador corrido, quedaron dos.**
+
+Con las barras a la vista dentro de un mismo grupo, el par que puede confundirse es *cualquiera* de ellos, no solo los vecinos en la lista: la comprobación correcta es `--pairs all`. Ahí el trío categórico del proyecto --índigo, teal, coral-- **falla en modo oscuro**: el índigo claro contra el teal queda en **ΔE 4,3 deutan y 11,8 en visión normal**, bajo el piso de 15. O sea que ni con visión de color completa se distinguen. La regla para ese caso es cortar series, no shippear una paleta que no pasa.
+
+**La rampa de un solo tono también se probó y también la rechazó.** Tres pasos de índigo (`#3D3EA8,#7B7CD0,#B9BAE6`, y dos variantes más) dejan el tercero bajo el piso de croma --se lee gris-- y bajo 3:1 contra la superficie: una barra que casi no se ve.
+
+Con dos colores el peor par es ΔE 17,6 protan y 25,2 normal en oscuro, y 23,4 / 37,1 en claro. Pasa las cinco comprobaciones en los dos modos con margen.
+
+### Del tercer mes en adelante: la franja de los anteriores
+
+| Meses comparados | Qué se dibuja |
+|---|---|
+| 1 | las barras del mes |
+| 2 | una barra por mes dentro de cada semana |
+| 3 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
+
+La franja va del **mínimo al máximo** de los meses comparados, con el promedio como raya dentro. **Es mejor que el promedio solo**, que es lo que tenía: un promedio de 3,2 no dice si eso es lo normal o la casualidad de dos meses raros. Con la franja, la barra del mes elegido se lee contra ella --adentro es «vamos como siempre», asomando arriba es una semana buena de verdad-- y eso responde «cómo vamos respecto de esos períodos» sin ocho series encima.
+
+**La franja se dibuja a mano y no con el `<ErrorBar>` de Recharts.** El bigote de la librería se probó primero y se vio en la captura que dibujaba un rango que no era el del dato: en una semana con mínimo 2 y máximo 8 pintaba una barrita de 3,6 a 5,5. Toma el valor como distancia y termina mostrando otra cosa, o sea que quedaba mintiendo. La versión propia le pasa el máximo como valor a la barra y saca las tres posiciones del alto en píxeles: la escala es lineal desde cero, así que un píxel vale `alto / máximo` unidades. Se verificó contra los números: S1 con `jul 3, jun 8, may 7, abr 6, mar 2` dibuja la franja de 2 a 8 con la raya en 5,2.
+
+### La semana parcial va rayada
+
+La última semana tiene tres días en un mes de 31, así que su barra siempre va a ser más baja. Ya se avisaba arriba y en el globo; ahora **se ve en la marca**: la barra de la semana parcial va con rayado a 45°. Es textura y no color, así que no gasta un tono ni se confunde con otro mes --y es la codificación secundaria que la regla pide para el caso de daltonismo, impresión y colores forzados--.
+
+### Lo que no cambió
+
+La tabla de «Los mismos números» sigue abajo y sigue listando **todos** los meses comparados, con sus semanas, su total y la variación. Es lo que hace que cortar a dos barras no pierda información: el gráfico compara, la tabla enumera.
 

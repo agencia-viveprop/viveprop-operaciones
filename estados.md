@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el reporte semanal rehecho: el flujo del mes con los meses anteriores encima)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el flujo semanal pasó a barras, con la franja de los meses anteriores)
 
 ---
 
@@ -125,6 +125,24 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - El flujo semanal pasa a barras
+
+Miraste el reporte andando y preguntaste si las líneas eran el mejor gráfico: *«tienden a enredar la lectura, y los periodos anteriores se pierden»*. Eran dos cosas.
+
+**Un defecto mío:** todas las líneas de meses previos usaban **el mismo color**, así que `jul 26` y `jun 26` no se perdían por estar apretadas --eran indistinguibles--. Y con el promedio encima el gráfico llegaba a cuatro series cuando el tope es tres.
+
+**Y la forma:** ahora son barras. Una línea entre S1 y S2 dibuja un camino que el dato no tiene --las semanas son cajones, no un continuo-- y una semana en cero se lee como cajón vacío, que es lo que pasó, en vez de una línea subiendo desde el suelo. Agrupadas y nunca apiladas: apilar la S1 de agosto con la S1 de julio daría un total inventado.
+
+**Quedaron dos barras por semana y no tres, y lo decidió el validador de paleta.** Con las tres barras a la vista dentro de un grupo se comparan todas contra todas, y ahí el trío del proyecto falla en modo oscuro: el índigo claro contra el teal queda en ΔE 11,8 en visión normal, bajo el piso de 15, o sea que ni con visión de color completa se distinguen. La rampa de un solo tono también se probó y también la rechazó --el tercer paso se lee gris y no llega a 3:1 contra el fondo--. Con dos colores pasa las cinco comprobaciones en claro y en oscuro con margen.
+
+**Del tercer mes en adelante va la franja de los anteriores:** del mínimo al máximo, con el promedio como raya dentro. Es mejor que el promedio solo que tenías: un promedio de 3,2 no dice si eso es lo normal o la casualidad de dos meses raros. Con la franja, la barra del mes se lee contra ella --adentro «vamos como siempre», asomando arriba una semana buena de verdad--.
+
+**La franja la dibujo yo y no el `ErrorBar` de Recharts:** el bigote de la librería pintaba un rango que no era el del dato --en una semana con mínimo 2 y máximo 8 dibujaba de 3,6 a 5,5--, se vio en la captura y se reemplazó. Verificado contra los números: S1 con `jul 3, jun 8, may 7, abr 6, mar 2` dibuja de 2 a 8 con la raya en 5,2.
+
+**La semana parcial ahora va rayada a 45°**, así que además de decirlo arriba se ve en la marca.
+
+**Verificado en pantalla** con 1, 2, 3 y 6 meses, en claro y en oscuro, y en las dos pestañas. `npm run build` en cero errores y oxlint limpio. La tabla de «Los mismos números» no cambió: sigue listando todos los meses (`D-099`).
 
 ### 2026-09-02 - El reporte semanal: el flujo del mes, con los meses anteriores encima
 
