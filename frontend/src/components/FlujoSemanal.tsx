@@ -37,46 +37,60 @@ import type { FlujoDelMes, Semana } from '../api/reportes'
  * | Meses | Qué se dibuja |
  * |---|---|
  * | 1 | las barras del mes |
- * | 2 | una barra por mes dentro de cada semana |
- * | 3 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
+ * | 2 o 3 | una barra por mes dentro de cada semana, cada mes con su color |
+ * | 4 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
  *
  * La tabla de abajo lista **todos** los meses en cualquier modo, así que ningún
  * número se pierde por el modo del gráfico.
  */
 
 /**
- * Dos colores para los meses --el índigo principal para el elegido y el coral
- * para el anterior--, asignados por recencia.
+ * Tres colores para los meses, asignados por recencia: **el mes elegido en azul
+ * navy**, el anterior en el coral de la marca, y el tercero en teal. Es lo que
+ * pidió el usuario --«en Azul Navy la del mes actual y las otras en colores
+ * distintos»--.
  *
- * **Son dos y no tres porque el validador rechazó el tercero.** Con las tres
- * barras a la vista dentro de un grupo, el par que importa es *cualquiera* de
- * ellos, así que la comprobación es `--pairs all`. Ahí el trío del proyecto
- * **falla en modo oscuro**: el índigo claro contra el teal queda en ΔE 4,3 deutan
- * y 11,8 en visión normal, bajo el piso de 15, o sea que ni con visión de color
- * completa se distinguen. La regla para ese caso es cortar series, no shippear
- * una paleta que no pasa. Con dos, el peor par es ΔE 17,6 protan y 25,2 normal en
- * oscuro, y 23,4 / 37,1 en claro.
+ * **Los tres salieron de recorrer el espacio de color con el validador, no de
+ * elegirlos a ojo.** El trío que tenía la app (`#3D3EA8, #0891B2, #F4545A`)
+ * **falla con `--pairs all` en modo oscuro**: el índigo claro contra el teal queda
+ * en ΔE 4,3 deutan y 11,8 en visión normal, bajo el piso de 15. Y `--pairs all`
+ * es la comprobación que corresponde: las tres barras se ven juntas dentro del
+ * grupo, así que el par que puede confundirse es *cualquiera* de ellos y no solo
+ * los vecinos en la lista.
  *
- * **La rampa de un solo tono también se probó y también la rechazó.** Tres pasos
- * de índigo (`#3D3EA8,#7B7CD0,#B9BAE6` y dos variantes) dejan el tercero bajo el
- * piso de croma --se lee gris-- y bajo 3:1 contra la superficie: una barra que
- * casi no se ve.
+ * La búsqueda recorrió tonos y luminosidades en OKLCH pidiendo el azul más oscuro
+ * que pase las cinco comprobaciones en los dos modos. Resultado:
  *
- * Del tercer mes en adelante el gráfico cambia de modo --la franja de los
- * anteriores-- así que nunca hacen falta más de dos colores de mes.
+ * | | claro | oscuro |
+ * |---|---|---|
+ * | mes elegido | `#024d9d` | `#066eda` |
+ * | mes anterior | `#F4545A` | `#F4545A` |
+ * | el de antes | `#1794a0` | `#1794a0` |
+ *
+ * Peor par en claro: ΔE 10,8 protan y 21,2 en visión normal. En oscuro: 10,8
+ * protan y 15,6 normal. Contraste contra la superficie ≥ 3:1 en los dos modos, sin
+ * excepciones ni relief.
+ *
+ * **Por qué el navy cambia de paso en oscuro.** `#024d9d` contra el fondo oscuro
+ * no llega a 3:1 --queda en 2,3-- así que en oscuro sube a `#066eda`, que da 3,5:1.
+ * Es el mismo criterio que usa `EvolucionMensual` con su índigo. Con el mismo hex
+ * en los dos modos el azul no puede bajar de L 0,48, y ahí ya no se lee como navy.
+ *
+ * Del cuarto mes en adelante el gráfico cambia de modo --la franja de los
+ * anteriores-- así que nunca hacen falta más de tres colores de mes.
  */
 const PALETA = {
   light: {
-    meses: ['#3D3EA8', '#F4545A'],
+    meses: ['#024d9d', '#F4545A', '#1794a0'],
     // La franja de los meses anteriores es una **referencia**, no un mes: gris de
-    // cero croma, para que no se lea como una tercera categoría.
+    // cero croma, para que no se lea como una cuarta categoría.
     franja: '#dee2e6',
     borde: '#adb5bd',
     promedio: '#495057',
     superficie: '#fcfcfb',
   },
   dark: {
-    meses: ['#7c7dcf', '#F4545A'],
+    meses: ['#066eda', '#F4545A', '#1794a0'],
     franja: '#373A40',
     borde: '#5c5f66',
     promedio: '#c1c2c5',
@@ -84,10 +98,10 @@ const PALETA = {
   },
 } as const
 
-/** Cuántos meses se dibujan como barra propia antes de pasar a la franja. Son dos
- *  por la paleta --ver `PALETA`-- y porque dos barras por semana es la comparación
- *  más directa que hay: un grupo de barras finitas deja de compararse. */
-const MAXIMO_DE_BARRAS = 2
+/** Cuántos meses se dibujan como barra propia antes de pasar a la franja. Tres es
+ *  el tope de series categóricas del proyecto, y también donde deja de leerse: un
+ *  grupo de cuatro barras finitas por semana ya no se compara. */
+const MAXIMO_DE_BARRAS = 3
 
 export type Señal = 'entraron' | 'avanzaron' | 'se_cayeron'
 

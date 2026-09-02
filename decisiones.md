@@ -2771,23 +2771,35 @@ Una línea entre S1 y S2 dibuja un camino que el dato no tiene. Nada existe a mi
 
 **Agrupadas, nunca apiladas.** Apilar suma, y la S1 de agosto más la S1 de julio no es la cantidad de nada: el alto del apilado sería un número inventado, y el segmento de arriba no arrancaría en cero, así que ni se podría comparar contra el de abajo. Apilar sirve donde las partes componen un todo real, como el reparto de la comisión en el reporte mensual (`D-075`), donde Real VP + Corredores + Equipo sí suman la plata repartida.
 
-### Dos barras por semana, no tres: lo decidió el validador
+### Tres barras por semana, y el trío se buscó recorriendo el espacio de color
 
-Le dije que hasta tres meses irían como barra propia. **Con el validador corrido, quedaron dos.**
+Esto se decidió en dos pasos, y vale registrar los dos porque el primero estaba mal encarado.
 
-Con las barras a la vista dentro de un mismo grupo, el par que puede confundirse es *cualquiera* de ellos, no solo los vecinos en la lista: la comprobación correcta es `--pairs all`. Ahí el trío categórico del proyecto --índigo, teal, coral-- **falla en modo oscuro**: el índigo claro contra el teal queda en **ΔE 4,3 deutan y 11,8 en visión normal**, bajo el piso de 15. O sea que ni con visión de color completa se distinguen. La regla para ese caso es cortar series, no shippear una paleta que no pasa.
+**Primer intento: cortar a dos barras.** Con las barras a la vista dentro de un mismo grupo, el par que puede confundirse es *cualquiera* de ellos y no solo los vecinos en la lista: la comprobación correcta es `--pairs all`. Ahí el trío categórico que tenía la app --índigo `#3D3EA8`, teal `#0891B2`, coral `#F4545A`-- **falla en modo oscuro**: el índigo claro contra el teal queda en **ΔE 4,3 deutan y 11,8 en visión normal**, bajo el piso de 15. Ni con visión de color completa se distinguen. La regla para ese caso es cortar series, así que dejé dos barras.
 
-**La rampa de un solo tono también se probó y también la rechazó.** Tres pasos de índigo (`#3D3EA8,#7B7CD0,#B9BAE6`, y dos variantes más) dejan el tercero bajo el piso de croma --se lee gris-- y bajo 3:1 contra la superficie: una barra que casi no se ve.
+**El usuario lo miró y pidió otra cosa:** *«preferiría barras separadas como me habías planteado originalmente, en Azul Navy la del mes actual y las otras en colores distintos»*. Con razón: cortar la serie era la salida fácil: el trío de la app fallaba, no el número tres.
 
-Con dos colores el peor par es ΔE 17,6 protan y 25,2 normal en oscuro, y 23,4 / 37,1 en claro. Pasa las cinco comprobaciones en los dos modos con margen.
+**Segundo intento: buscar el trío, no elegirlo.** Un script recorrió tonos, cromas y luminosidades en OKLCH llamando al validador, pidiendo *el azul más oscuro que pase las cinco comprobaciones con `--pairs all` en los dos modos*. Salieron 24.613 tríos posibles; el que quedó es:
 
-### Del tercer mes en adelante: la franja de los anteriores
+| | claro | oscuro |
+|---|---|---|
+| mes elegido | `#024d9d` | `#066eda` |
+| mes anterior | `#F4545A` | `#F4545A` |
+| el de antes | `#1794a0` | `#1794a0` |
+
+Peor par en claro ΔE 10,8 protan y 21,2 en visión normal; en oscuro 10,8 y 15,6. Contraste ≥ 3:1 en los dos modos, **sin relief y sin quedar en la banda de piso**. El coral es el de la marca, que ya era color de serie en la app.
+
+**Por qué el navy cambia de paso en oscuro.** `#024d9d` contra el fondo oscuro da 2,3:1 y no llega al piso de 3:1, así que en oscuro sube a `#066eda`, que da 3,5:1. Es el mismo criterio que ya usa `EvolucionMensual` con su índigo. **Con el mismo hex en los dos modos el azul no puede bajar de L 0,48** --la banda de luminosidad del modo oscuro-- y ahí deja de leerse como navy: por eso hay un paso por modo y no un solo color.
+
+**La rampa de un solo tono también se probó y la rechazó el validador.** Tres pasos de índigo (`#3D3EA8,#7B7CD0,#B9BAE6`, y dos variantes más) dejan el tercero bajo el piso de croma --se lee gris-- y bajo 3:1 contra la superficie: una barra que casi no se ve.
+
+### Del cuarto mes en adelante: la franja de los anteriores
 
 | Meses comparados | Qué se dibuja |
 |---|---|
 | 1 | las barras del mes |
-| 2 | una barra por mes dentro de cada semana |
-| 3 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
+| 2 o 3 | una barra por mes dentro de cada semana, cada mes con su color |
+| 4 a 12 | el mes elegido, y al lado la franja de los anteriores con su promedio |
 
 La franja va del **mínimo al máximo** de los meses comparados, con el promedio como raya dentro. **Es mejor que el promedio solo**, que es lo que tenía: un promedio de 3,2 no dice si eso es lo normal o la casualidad de dos meses raros. Con la franja, la barra del mes elegido se lee contra ella --adentro es «vamos como siempre», asomando arriba es una semana buena de verdad-- y eso responde «cómo vamos respecto de esos períodos» sin ocho series encima.
 
