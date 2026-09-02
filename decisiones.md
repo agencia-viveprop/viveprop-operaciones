@@ -2934,3 +2934,21 @@ El usuario pidió el mismo criterio en Cobranza, que mostraba las mismas tres po
 
 El helper que arma los pies --«5 abiertos», «Ningún canje cerrado»-- ponía el sustantivo **solo en el caso de cero**. Llamarlo con «canje cerrado», que es lo que pedía la frase completa del renglón nuevo, imprimía **«ningún canje canje cerrado»**. Se vio en la captura. Ahora el sustantivo lo pone el helper en los dos casos y quien llama pasa solo el adjetivo.
 
+---
+
+## D-103 · En canjes, «Mes a mes» no lleva plata
+
+El usuario marcó las tres columnas de plata del bloque «Mes a mes» del reporte semanal --Comisión Dataprop, Ventas, Arriendos-- en la pestaña de **canjes**: *«lo que está en recuadro, para canjes, debe desaparecer, solo enreda la interpretación»*.
+
+**Enredaba de verdad, y es la misma confusión que arregló `D-102` un rato antes.** La fila de febrero decía «11 entraron · $4.269.703 · $2.366.834.959». Esos montos son de los canjes que **entraron** ese mes, y en canjes la comisión es de Dataprop y solo la de los **activos** es plata en juego: de esos 11 de febrero, hoy no queda casi ninguno activo. Un monto puesto en la fila del mes se lee como lo que se hizo ese mes, cuando lo que dice es cuánto habrían valido unos canjes que en su mayoría se cancelaron. Y los $2.366 millones de «Ventas» son el valor de las propiedades, que nunca fue plata de nadie en esta app.
+
+**En negocios se quedan**, y no es una inconsistencia: ahí el hito es la liquidación, la comisión es de ViveProp y el mes de inicio es el mes al que esa plata pertenece.
+
+**Dónde sí queda la plata de canjes:** en «Dónde está lo abierto hoy», que muestra la comisión parada en cada etapa. Es la única que es plata en juego, y ahí está rotulada como la foto de hoy y no como el resultado de un mes.
+
+Con las columnas fuera, el bloque también cambia lo que dice de sí mismo: el subtítulo de canjes ya no habla de la plata, la nota de «Ventas y arriendos no se suman» no aparece --no hay qué no sumar-- y el ancho mínimo de la tabla baja de 620 a 380 px, así que en un teléfono deja de desplazarse.
+
+### El backend sigue calculando esos montos
+
+`TotalDelMes` conserva `comision`, `valor_venta` y `valor_arriendo` para los dos dominios, y `_tendencias` sigue ajustando una curva sobre cada uno aunque la pantalla solo dibuje la de «entraron». Es cálculo que ya no se muestra en canjes --incluido el `comision_entraron` semanal, que quedó sin uso desde `D-098`-- y sacarlo aceleraría el reporte, porque es parte de lo que obliga a prefetchear la serie de UF. **No se toca todavía:** el contrato es de los dos dominios y la plata de negocios sí se usa, así que la limpieza es una decisión aparte y está ofrecida.
+

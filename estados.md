@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; la comisión de Dataprop es la de los canjes activos)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; en canjes la plata sale del «Mes a mes» del reporte semanal)
 
 ---
 
@@ -125,6 +125,22 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - En canjes, «Mes a mes» ya no lleva plata
+
+Marcaste las tres columnas de plata del bloque en la pestaña de canjes: *«solo enreda la interpretación»*. Salieron.
+
+**Enredaba de verdad, y es la misma confusión de la comisión de Dataprop.** La fila de febrero decía «11 entraron · $4.269.703 · $2.366.834.959»: esos montos son de los canjes que *entraron* ese mes, y en canjes solo la comisión de los **activos** es plata en juego. De esos 11 de febrero hoy no queda casi ninguno activo, así que el monto se leía como lo hecho en el mes cuando decía cuánto habrían valido canjes que en su mayoría se cancelaron. Y los $2.366 millones de «Ventas» son el valor de las propiedades, que nunca fue plata de nadie en la app.
+
+**En negocios se quedan**, porque ahí el hito es la liquidación, la comisión es de ViveProp y el mes de inicio es el mes al que esa plata pertenece.
+
+**La plata de canjes sigue estando donde corresponde:** en «Dónde está lo abierto hoy», con la comisión parada en cada etapa y rotulada como la foto de hoy.
+
+De paso el bloque dejó de hablar de plata en canjes: el subtítulo cambió, la nota de «ventas y arriendos no se suman» no aparece --no hay qué no sumar-- y el ancho mínimo de la tabla bajó de 620 a 380 px, así que en teléfono deja de desplazarse.
+
+**Verificado en pantalla** en las dos pestañas. `npm run build` en cero errores y oxlint limpio. Sin cambios en el backend.
+
+**Pendiente y tuyo:** el backend sigue calculando esos montos y sus curvas para canjes --y también el `comision_entraron` semanal, sin uso desde el rediseño--. Sacarlo aceleraría el reporte, porque es parte de lo que obliga a traer la serie de UF completa. No lo toco sin que me lo digas (`D-103`).
 
 ### 2026-09-02 - La comisión de Dataprop es la de los canjes activos
 

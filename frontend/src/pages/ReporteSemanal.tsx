@@ -47,7 +47,7 @@ import { rotuloEtapa } from '../components/canjesEtiquetas'
  * | Flujo | cómo se movió el mes, semana a semana |
  * | Embudo | por dónde avanzaron |
  * | Abiertos | dónde está lo abierto hoy y cuánta plata hay ahí |
- * | Mes a mes | los totales y la plata, con tendencia |
+ * | Mes a mes | los totales del período, con tendencia; y la plata solo en negocios |
  */
 
 type Dominio = 'canjes' | 'negocios'
@@ -286,7 +286,13 @@ function Abiertos({
   )
 }
 
-/** Mes a mes: los totales y la plata, con la tendencia sobre los meses.
+/** Mes a mes: los totales del período, con la tendencia sobre los meses.
+ *
+ * **La plata va solo en negocios** (`D-103`). En canjes las tres columnas de plata
+ * se retiraron: el usuario las señaló --«solo enreda la interpretación»--. Ahí la
+ * comisión es de Dataprop y solo la de los canjes **activos** es plata en juego
+ * (`D-102`), así que un monto por mes de entrada se lee como ganado cuando no lo
+ * es. Lo que sí es plata en juego se muestra en «Dónde está lo abierto hoy».
  *
  * **Esta tendencia va sobre meses y es otra que la del gráfico semanal** (`D-100`).
  * Esa dice cómo se mueve el mes por dentro --semana a semana-- y esta hacia dónde
@@ -296,10 +302,13 @@ function MesAMes({
   totales,
   tendencias,
   rotuloPlata,
+  conPlata,
 }: {
   totales: TotalDelMes[]
   tendencias: ReporteDeDominio['tendencias']
   rotuloPlata: string
+  /** Si van las tres columnas de plata. **En canjes no van** (`D-103`). */
+  conPlata: boolean
 }) {
   const te = tendencias.entraron
 
@@ -317,20 +326,25 @@ function MesAMes({
         )}
       </Group>
       <Text size="xs" c="dimmed" mb="sm">
-        Los totales del período y la plata. La plata va acá y no en el gráfico semanal: se gana
-        al cerrar, así que semana a semana serían ceros con un pico.
+        {conPlata
+          ? 'Los totales del período y la plata. La plata va acá y no en el gráfico semanal: se gana al cerrar, así que semana a semana serían ceros con un pico.'
+          : 'Cuántos entraron, cuántos avanzaron y cuántos se cayeron en cada mes del período.'}
       </Text>
       <div className="tabla-scroll-x">
-        <Table withRowBorders={false} verticalSpacing={4} miw={620}>
+        <Table withRowBorders={false} verticalSpacing={4} miw={conPlata ? 620 : 380}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Mes</Table.Th>
               <Table.Th ta="right">Entraron</Table.Th>
               <Table.Th ta="right">Avanzaron</Table.Th>
               <Table.Th ta="right">Se cayeron</Table.Th>
-              <Table.Th ta="right">{rotuloPlata}</Table.Th>
-              <Table.Th ta="right">Ventas</Table.Th>
-              <Table.Th ta="right">Arriendos</Table.Th>
+              {conPlata && (
+                <>
+                  <Table.Th ta="right">{rotuloPlata}</Table.Th>
+                  <Table.Th ta="right">Ventas</Table.Th>
+                  <Table.Th ta="right">Arriendos</Table.Th>
+                </>
+              )}
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -348,24 +362,30 @@ function MesAMes({
                 <Table.Td ta="right" ff="monospace">
                   {t.se_cayeron}
                 </Table.Td>
-                <Table.Td ta="right" ff="monospace">
-                  {clp(t.comision)}
-                </Table.Td>
-                <Table.Td ta="right" ff="monospace" c="dimmed">
-                  {clp(t.valor_venta)}
-                </Table.Td>
-                <Table.Td ta="right" ff="monospace" c="dimmed">
-                  {clp(t.valor_arriendo)}
-                </Table.Td>
+                {conPlata && (
+                  <>
+                    <Table.Td ta="right" ff="monospace">
+                      {clp(t.comision)}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" c="dimmed">
+                      {clp(t.valor_venta)}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" c="dimmed">
+                      {clp(t.valor_arriendo)}
+                    </Table.Td>
+                  </>
+                )}
               </Table.Tr>
             ))}
           </Table.Tbody>
         </Table>
       </div>
-      <Text size="xs" c="dimmed" mt="xs">
-        Ventas y arriendos van en columnas separadas y <strong>no se suman</strong>: un precio de
-        venta y un mes de renta no son la misma unidad.
-      </Text>
+      {conPlata && (
+        <Text size="xs" c="dimmed" mt="xs">
+          Ventas y arriendos van en columnas separadas y <strong>no se suman</strong>: un precio
+          de venta y un mes de renta no son la misma unidad.
+        </Text>
+      )}
     </Paper>
   )
 }
@@ -531,6 +551,7 @@ export default function ReporteSemanal() {
             totales={reporte.totales}
             tendencias={reporte.tendencias}
             rotuloPlata={rotuloPlata}
+            conPlata={dominio === 'negocios'}
           />
         </Stack>
       )}
