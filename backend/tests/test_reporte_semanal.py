@@ -1,65 +1,58 @@
-"""Tests del reporte semanal (sprint 16).
+"""Tests del reporte semanal: el mes semana a semana, contra los anteriores.
 
-Las dos propiedades que protegen:
+**El contrato cambió entero** (`D-098`). Antes esta pantalla medía una ventana
+móvil de semanas corridas y devolvía cuatro cifras con listas por entidad. Ahora
+el eje es la semana del mes y los meses anteriores van superpuestos, que es lo que
+el usuario pidió para poder comparar.
 
-1. **"Avanzó" es toda actividad, no solo un cambio de etapa.** La primera
-   version filtraba por `etapa_resultante is not None` y daba cero sobre 44
-   movimientos reales de una semana, porque los movimientos migrados del Excel
-   llevan la etapa nula a proposito (D-030). Un reporte que no ve la gestion
-   registrada no sirve.
-2. **Estancado es una ausencia, no un estado guardado.** Se mide contra el
-   ultimo movimiento, y si nunca hubo ninguno contra la fecha de origen. Un
-   canje sin gestion desde 2022 tiene que salir, no quedar invisible por no
-   tener filas en `movimientos`.
+Las propiedades que se protegen acá:
 
-Y las tres que se agregaron con la ventana unica (`D-076`):
-
-3. **Un renglon por entidad, no por movimiento**, y los totales de la seccion
-   cuentan entidades: una lista de doce renglones bajo una cifra que dice 23 es
-   el desajuste que ya se habia arreglado en la bandeja.
-4. **La ventana manda en las cuatro cifras**, y el umbral de estancado es su
-   largo. Antes el selector movia solo una de las cuatro.
-5. **Estancado se mide al cierre de la ventana**, no contra hoy: una ventana
-   pasada tiene que decir lo que decia al terminar, o no se puede comparar con
-   la siguiente.
+1. **Las semanas se cuentan desde el día 1 y la última es parcial.** Un mes de 31
+   días da cinco tramos, febrero cuatro. Sin eso el «mes» del reporte no coincide
+   con el mes.
+2. **«Avanzaron» cuenta entidades, no movimientos.** Dos avances del mismo canje
+   en la semana son un canje que avanzó.
+3. **«Se cayeron» suma las dos fuentes sin duplicar** (`D-086`) y **descuenta las
+   fechas que estampó una carga masiva** (`D-085`). Las dos reglas se heredan de
+   la versión anterior y siguen valiendo.
+4. **El embudo trae todas las etapas, incluso en cero.** Se lee por su forma: una
+   etapa que desaparece parece no existir.
+5. **Lo que no se puede medir se declara.** En negocios «avanzaron» y «se cayeron»
+   no tienen de dónde salir, y decirlo es distinto de dibujar ceros.
 """
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal as D
 
 import pytest
 
-from app.models.canje import Canje, CanjeEstado, CanjeEtapa, OperacionTipo
-from app.models.catalogo import Catalogo, EstadoNegocio, Etapa, ModeloNegocio
+from app.models.canje import Canje, CanjeEstado, CanjeEtapa
+from app.models.catalogo import EstadoNegocio, Etapa, ModeloNegocio
 from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio, NegocioHito, Propiedad
-from app.services.reporte_semanal import (
-    TOPE_LISTA,
-    obtener_reporte_semanal,
-    semana_de,
-)
+from app.services.metricas_periodo import semanas_del_mes
+from app.services.reporte_semanal import MESES_DEFECTO, obtener_reporte_semanal
 
-# Un viernes. La semana que lo contiene es del lunes 17 al domingo 23.
-AHORA = datetime(2026, 8, 21, 12, 0, tzinfo=timezone.utc)
-LUNES, DOMINGO = date(2026, 8, 17), date(2026, 8, 23)
-
-
-def _hace(dias=0, horas=0) -> datetime:
-    return AHORA - timedelta(days=dias, hours=horas)
+# Un miércoles de septiembre: el mes que se mira por defecto en los tests es
+# agosto, ya cerrado, para que las semanas no dependan de la hora.
+AHORA = datetime(2026, 9, 2, 12, 0, tzinfo=timezone.utc)
+HOY = AHORA.date()
 
 
 @pytest.fixture(autouse=True)
 def etapas(db):
-    """`negocios.etapa` apunta a `etapas.codigo` y la clave foranea esta activa."""
-    db.add(Etapa(codigo="E2", nombre="Visita", responsable="COMERCIAL", orden=2))
+    """`negocios.etapa` apunta a `etapas.codigo` y la clave foránea está activa."""
+    db.add_all([
+        Etapa(codigo="E2", nombre="Visita", responsable="COMERCIAL", orden=2),
+        Etapa(codigo="E4", nombre="Documentación", responsable="OPERACIONES", orden=4),
+    ])
     db.commit()
 
 
 @pytest.fixture
 def tipos(db):
-    """Los tipos que el reporte necesita distinguir: gestion, avance y caida."""
     db.add_all([
         TipoMovimiento(codigo="WA_SOLICITANTE", entity_type=EntityType.canje,
-                       nombre="WA confirmación solicitante", etapa_resultante=None,
+                       nombre="WA confirmación", etapa_resultante=None,
                        orden=1, sla_es_habil=False, activo=True),
         TipoMovimiento(codigo="PASA_A_OFERTA", entity_type=EntityType.canje,
                        nombre="Pasa a oferta", etapa_resultante="EN_OFERTA",
@@ -70,611 +63,372 @@ def tipos(db):
         TipoMovimiento(codigo="NEG_LLAMADA", entity_type=EntityType.negocio,
                        nombre="Llamada", etapa_resultante=None,
                        orden=1, sla_es_habil=False, activo=True),
-        TipoMovimiento(codigo="NEG_PERDIDA", entity_type=EntityType.negocio,
-                       nombre="Pérdida", etapa_resultante=None,
+        TipoMovimiento(codigo="NEG_E4", entity_type=EntityType.negocio,
+                       nombre="Pasa a E4", etapa_resultante="E4",
                        orden=2, sla_es_habil=False, activo=True),
     ])
     db.commit()
     return db
 
 
-def _canje(db, id_, etapa=CanjeEtapa.EN_REVISION, estado=CanjeEstado.ACTIVO,
-           dias_solicitud=60, cierre=None):
+def _dia(dia: int, mes: int = 8, anio: int = 2026) -> datetime:
+    return datetime(anio, mes, dia, 10, 0, tzinfo=timezone.utc)
+
+
+def _canje(db, id_, dia=1, mes=8, etapa=CanjeEtapa.EN_REVISION,
+           estado=CanjeEstado.ACTIVO, cierre=None):
     db.add(Canje(
         id=id_,
-        fecha_solicitud=_hace(dias_solicitud),
+        fecha_solicitud=_dia(dia, mes),
         fecha_cierre=cierre,
         estado=estado,
         etapa=etapa,
         comuna="Providencia",
-        corredor_solicitante_nombre="Ana Solicitante",
     ))
 
 
-def _mov(db, entity_type, entity_id, tipo, cuando, etapa=None, comentario="x",
-         creado_en=None):
-    """Un movimiento. `creado_en` se pasa para simular una carga masiva.
-
-    Dos movimientos con el **mismo** `creado_en` al microsegundo entraron en la
-    misma transaccion, que es como el reporte reconoce una carga.
-    """
+def _mov(db, entity_type, entity_id, tipo, cuando, etapa=None, creado_en=None):
+    """Un movimiento. `creado_en` se pasa para simular una carga masiva: dos
+    movimientos con el mismo timestamp al microsegundo entraron en la misma
+    transacción, que es como el reporte reconoce una carga (`D-085`)."""
     db.add(Movimiento(
         entity_type=entity_type,
         entity_id=entity_id,
         tipo_movimiento=tipo,
         fecha=cuando,
         etapa_resultante=etapa,
-        comentario=comentario,
+        comentario="x",
         **({"creado_en": creado_en} if creado_en is not None else {}),
     ))
 
 
-def _negocio(db, codigo, estado=EstadoNegocio.ACTIVO, cierre=None, real=D("0"),
-             etapa="E2"):
+def _negocio(db, codigo, inicio, estado=EstadoNegocio.ACTIVO, cierre=None,
+             real=D("0"), etapa="E2"):
     prop = Propiedad(direccion=f"Calle {codigo}", comuna="Nunoa")
     db.add(prop)
     n = Negocio(codigo=codigo, modelo=ModeloNegocio.MERCADO_PRIMARIO,
                 propiedad=prop, etapa=etapa)
     n.hitos = [NegocioHito(
-        fecha_inicio=(AHORA - timedelta(days=90)).date(),
-        fecha_cierre=cierre,
-        estado=estado,
-        comision_real_vp=real,
+        fecha_inicio=inicio, fecha_cierre=cierre, estado=estado, comision_real_vp=real,
     )]
     db.add(n)
     db.flush()
     return n
 
 
-def _reporte(db, desde=LUNES, hasta=DOMINGO, dias=14):
-    return obtener_reporte_semanal(db, desde, hasta, dias, ahora=AHORA)
+def _reporte(db, meses=MESES_DEFECTO, anio=2026, mes=8):
+    return obtener_reporte_semanal(db, anio, mes, meses, hoy=HOY)
 
 
-# ------------------------------------------------------------------ semana
+# ------------------------------------------------------------------ semanas
 
 
-@pytest.mark.parametrize("dia", [17, 19, 21, 23])
-def test_cualquier_dia_de_la_semana_da_el_mismo_lunes_y_domingo(dia):
-    assert semana_de(date(2026, 8, dia)) == (LUNES, DOMINGO)
+def test_las_semanas_se_cuentan_desde_el_dia_uno():
+    """Del 1 al 7, del 8 al 14, y la última cortada donde termina el mes.
 
-
-def test_sin_periodo_toma_la_semana_en_curso(db):
-    r = obtener_reporte_semanal(db, ahora=AHORA)
-    assert (r.desde, r.hasta) == (LUNES, DOMINGO)
-
-
-# ------------------------------------------------- avanzo = toda actividad
-
-
-def test_la_gestion_sin_cambio_de_etapa_cuenta_como_avance(db, tipos):
-    """La regresion que motivo el cambio: 44 movimientos y cero avanzados."""
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(2), etapa=None)
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_avanzados == 1
-    assert seccion.avanzados[0].referencia == "#1"
-    # Las dos piezas de "que paso" van separadas: la categoria y el comentario de
-    # ese registro. La primera version mandaba una sola cadena y en canjes traia
-    # la categoria y tiraba el comentario, asi que el dato mas especifico de cada
-    # fila no llegaba a la pantalla.
-    assert seccion.avanzados[0].tipo == "WA confirmación solicitante"
-    assert seccion.avanzados[0].comentario == "x"
-    # No movio la etapa, pero la columna igual dice donde quedo: la etapa actual
-    # del canje. Antes venia nula y la celda quedaba muda sobre toda la historia
-    # migrada del Excel, que lleva `etapa_resultante` nulo a proposito.
-    assert seccion.avanzados[0].movio_etapa is False
-    assert seccion.avanzados[0].etapa_nombre == "En revisión"
-
-
-def test_cuando_el_movimiento_si_mueve_la_etapa_la_muestra(db, tipos):
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "PASA_A_OFERTA", _hace(2), etapa="EN_OFERTA")
-    db.commit()
-
-    item = _reporte(db).canjes.avanzados[0]
-    assert (item.etapa, item.etapa_nombre, item.movio_etapa) == ("EN_OFERTA", "En oferta", True)
-
-
-def test_una_caida_no_se_cuenta_tambien_como_avance(db, tipos):
-    """El mismo hecho en dos columnas inflaria las dos."""
-    _canje(db, 1)
-    _canje(db, 2)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(2))
-    _mov(db, EntityType.canje, 2, "CANCELACION", _hace(3), comentario="se arrepintio")
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert (seccion.total_avanzados, seccion.total_caidos) == (1, 1)
-    assert seccion.avanzados[0].referencia == "#1"
-    assert seccion.caidos[0].referencia == "#2"
-    # Por que se cayo lo dice el comentario, y la categoria lo acompaña.
-    assert (seccion.caidos[0].tipo, seccion.caidos[0].comentario) == ("Cancelación", "se arrepintio")
-
-
-def test_la_perdida_de_un_negocio_no_cuenta_como_avance(db, tipos):
-    n = _negocio(db, "VVP-1")
-    _mov(db, EntityType.negocio, n.id, "NEG_PERDIDA", _hace(1), comentario="precio")
-    db.commit()
-
-    seccion = _reporte(db).negocios
-    assert (seccion.total_caidos, seccion.total_avanzados) == (1, 0)
-
-
-def test_lo_de_fuera_del_periodo_no_entra(db, tipos):
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(20))
-    db.commit()
-
-    assert _reporte(db).canjes.total_avanzados == 0
-
-
-def test_el_ultimo_dia_del_periodo_entra_completo(db, tipos):
-    """Un movimiento a las 23:00 del domingo es de esa semana."""
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE",
-         datetime(2026, 8, 23, 23, 0, tzinfo=timezone.utc))
-    db.commit()
-
-    assert _reporte(db).canjes.total_avanzados == 1
-
-
-# ---------------------------------------------------------------- cerrados
-
-
-def test_lo_cerrado_sale_de_la_fecha_de_cierre_y_suma_la_comision(db):
-    _negocio(db, "G-1", EstadoNegocio.CERRADO, cierre=date(2026, 8, 19), real=D("1500000"))
-    _negocio(db, "G-2", EstadoNegocio.CERRADO, cierre=date(2026, 8, 21), real=D("400000"))
-    _negocio(db, "G-3", EstadoNegocio.CERRADO, cierre=date(2026, 7, 1), real=D("999999"))
-    db.commit()
-
-    seccion = _reporte(db).negocios
-    assert seccion.total_cerrados == 2
-    assert seccion.monto_cerrado == D("1900000")
-    assert [c.referencia for c in seccion.cerrados] == ["G-1", "G-2"]
-
-
-def test_los_canjes_cerrados_no_traen_monto(db):
-    """Un canje no lleva comision propia: sumar cero seria inventar plata."""
-    _canje(db, 1, estado=CanjeEstado.CERRADO, etapa=CanjeEtapa.CERRADO, cierre=_hace(2))
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_cerrados == 1
-    assert seccion.monto_cerrado == D("0")
-    assert seccion.cerrados[0].detalle == "Ana Solicitante"
-
-
-def test_un_cancelado_con_la_etapa_en_cierre_no_es_un_cierre(db):
-    """**Los 31 del desalineamiento de Dataprop.**
-
-    Llegaron a la etapa de firma y se cayeron igual: la etapa dice hasta donde
-    llego el proceso y el estado en que termino (`D-071`). El reporte preguntaba
-    por la etapa, asi que uno de esos con fecha de cierre en la ventana habria
-    aparecido como un canje cerrado.
+    No son semanas calendario: lunes a domingo haría que la primera y la última se
+    metieran en el mes vecino, y la base del reporte es el mes.
     """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO, etapa=CanjeEtapa.CERRADO, cierre=_hace(2))
+    semanas = semanas_del_mes(2026, 8)
+
+    assert [s.etiqueta for s in semanas] == [
+        "S1 1-7", "S2 8-14", "S3 15-21", "S4 22-28", "S5 29-31"
+    ]
+    assert semanas[0].desde == date(2026, 8, 1)
+    assert semanas[-1].hasta == date(2026, 8, 31)
+
+
+def test_la_ultima_semana_es_parcial_y_lo_dice():
+    """Tres días en un mes de 31, así que siempre se va a ver más baja. `dias` es
+    lo que permite a la pantalla decir que la caída es del calendario."""
+    assert [s.dias for s in semanas_del_mes(2026, 8)] == [7, 7, 7, 7, 3]
+
+
+def test_febrero_tiene_cuatro_semanas():
+    """«Variable de acuerdo a la cantidad de semanas reales de cada mes.»"""
+    assert len(semanas_del_mes(2026, 2)) == 4
+    assert [s.dias for s in semanas_del_mes(2026, 2)] == [7, 7, 7, 7]
+
+
+# ------------------------------------------------------------------- el flujo
+
+
+def test_el_flujo_reparte_las_entradas_en_su_semana(db, tipos):
+    _canje(db, 1, dia=3)    # S1
+    _canje(db, 2, dia=5)    # S1
+    _canje(db, 3, dia=10)   # S2
+    _canje(db, 4, dia=30)   # S5
     db.commit()
 
-    seccion = _reporte(db).canjes
-    assert seccion.total_cerrados == 0, "se cayo, no se cerro"
-    # Y aparece donde corresponde: en las caidas, por su fecha de cancelacion.
-    assert seccion.total_caidos == 1
+    r = _reporte(db, meses=1)
+
+    del_mes = r.canjes.flujo[0]
+    assert del_mes.mes == "2026-08"
+    assert del_mes.entraron == [2, 1, 0, 0, 1]
 
 
-# -------------------------------------------------------------- estancados
-
-
-@pytest.mark.parametrize("dias_sin_mover, umbral, sale", [
-    (20, 14, True),
-    (14, 14, False),   # justo en el umbral todavia no esta estancado
-    (15, 14, True),
-    (20, 30, False),
-])
-def test_el_umbral_de_estancado_es_estricto(db, tipos, dias_sin_mover, umbral, sale):
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(dias_sin_mover))
+def test_avanzaron_cuenta_canjes_y_no_movimientos(db, tipos):
+    """Dos avances del mismo canje en la semana son **un** canje que avanzó."""
+    _canje(db, 1, dia=1)
+    db.commit()
+    _mov(db, EntityType.canje, 1, "PASA_A_OFERTA", _dia(3), etapa="EN_OFERTA")
+    _mov(db, EntityType.canje, 1, "PASA_A_OFERTA", _dia(5), etapa="EN_NEGOCIO")
     db.commit()
 
-    assert bool(_reporte(db, dias=umbral).canjes.total_estancados) is sale
+    r = _reporte(db, meses=1)
+
+    assert r.canjes.flujo[0].avanzaron == [1, 0, 0, 0, 0]
 
 
-def test_sin_movimientos_se_mide_desde_la_solicitud(db):
-    _canje(db, 1, dias_solicitud=400)
+def test_se_cayeron_suma_las_dos_fuentes_sin_duplicar(db, tipos):
+    """**Las dos fuentes son parciales** (`D-086`).
+
+    Dataprop manda la fecha de cancelación de los canjes recientes y cancelar en
+    la app no escribe ese campo, así que hay que sumar las dos. Y un canje que
+    tenga las dos no puede contarse dos veces.
+    """
+    # Uno solo con movimiento.
+    _canje(db, 1, dia=1, estado=CanjeEstado.CANCELADO)
+    # Uno solo con fecha de cierre.
+    _canje(db, 2, dia=1, estado=CanjeEstado.CANCELADO, cierre=_dia(4))
+    # Uno con las dos: cuenta una vez.
+    _canje(db, 3, dia=1, estado=CanjeEstado.CANCELADO, cierre=_dia(5))
+    db.commit()
+    _mov(db, EntityType.canje, 1, "CANCELACION", _dia(2))
+    _mov(db, EntityType.canje, 3, "CANCELACION", _dia(5))
     db.commit()
 
-    item = _reporte(db).canjes.estancados[0]
-    assert item.dias_sin_movimiento == 400
-    assert item.sin_gestion is True
+    r = _reporte(db, meses=1)
+
+    assert r.canjes.flujo[0].se_cayeron == [3, 0, 0, 0, 0]
 
 
-def test_manda_el_ultimo_movimiento_no_el_primero(db, tipos):
-    _canje(db, 1, dias_solicitud=400)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(300))
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(20))
+def test_la_fecha_que_estampo_una_carga_masiva_no_es_una_caida(db, tipos):
+    """**Las dos condiciones** (`D-085`).
+
+    La limpieza que canceló 215 canjes les puso la fecha del día en que corrió, y
+    contarlas daba 215 caídas en una semana. Lo que distingue a esa fila no es
+    cómo entró sino que su fecha es un subproducto: el script estampó «hoy». Se
+    reconoce porque su `creado_en` lo comparte otra fila **y** coincide con su
+    propia fecha.
+    """
+    momento = _dia(10)
+    _canje(db, 1, dia=1, estado=CanjeEstado.CANCELADO)
+    _canje(db, 2, dia=1, estado=CanjeEstado.CANCELADO)
+    db.commit()
+    # Dos movimientos con el mismo `creado_en` y la fecha de ese mismo día.
+    _mov(db, EntityType.canje, 1, "CANCELACION", momento, creado_en=momento)
+    _mov(db, EntityType.canje, 2, "CANCELACION", momento, creado_en=momento)
     db.commit()
 
-    assert _reporte(db).canjes.estancados[0].dias_sin_movimiento == 20
+    r = _reporte(db, meses=1)
+
+    assert r.canjes.flujo[0].se_cayeron == [0, 0, 0, 0, 0]
 
 
-def test_lo_cerrado_no_puede_estar_estancado(db):
-    _canje(db, 1, etapa=CanjeEtapa.CERRADO, dias_solicitud=400)
-    _canje(db, 2, estado=CanjeEstado.CANCELADO, dias_solicitud=400)
-    _negocio(db, "G-1", EstadoNegocio.CERRADO, cierre=date(2026, 1, 5))
-    _negocio(db, "P-1", EstadoNegocio.PERDIDO)
+def test_una_cancelacion_registrada_a_mano_si_cuenta(db, tipos):
+    """Aunque su fecha sea la de hoy: lo que la distingue de la carga es que su
+    `creado_en` no lo comparte nadie."""
+    _canje(db, 1, dia=1, estado=CanjeEstado.CANCELADO)
+    db.commit()
+    _mov(db, EntityType.canje, 1, "CANCELACION", _dia(10), creado_en=_dia(10))
     db.commit()
 
-    r = _reporte(db)
-    assert (r.canjes.total_estancados, r.negocios.total_estancados) == (0, 0)
+    r = _reporte(db, meses=1)
+
+    assert r.canjes.flujo[0].se_cayeron == [0, 1, 0, 0, 0]
 
 
-def test_el_canje_activo_con_etapa_cerrada_queda_fuera(db):
-    """Los 31 que arrastran el desalineamiento de Dataprop, igual que la bandeja."""
-    _canje(db, 1, estado=CanjeEstado.ACTIVO, etapa=CanjeEtapa.CERRADO, dias_solicitud=400)
+# ------------------------------------------------------ los meses comparados
+
+
+def test_el_mes_elegido_va_primero_y_despues_los_anteriores(db, tipos):
+    """La pantalla dibuja el primero destacado y el resto como referencia."""
+    _canje(db, 1, dia=3, mes=8)
+    _canje(db, 2, dia=3, mes=7)
+    _canje(db, 3, dia=3, mes=6)
     db.commit()
 
-    assert _reporte(db).canjes.total_estancados == 0
+    r = _reporte(db, meses=3)
+
+    assert [f.mes for f in r.canjes.flujo] == ["2026-08", "2026-07", "2026-06"]
+    assert all(f.entraron[0] == 1 for f in r.canjes.flujo)
 
 
-def test_los_estancados_van_del_mas_viejo_al_mas_nuevo(db):
-    for id_, dias in ((1, 30), (2, 400), (3, 100)):
-        _canje(db, id_, dias_solicitud=dias)
+def test_los_totales_van_del_mas_viejo_al_mas_nuevo(db, tipos):
+    """Es el eje del bloque de tendencia, y una serie de tiempo se lee hacia
+    adelante."""
+    r = _reporte(db, meses=3)
+
+    assert [t.etiqueta for t in r.canjes.totales] == ["2026-06", "2026-07", "2026-08"]
+
+
+def test_con_un_mes_no_hay_con_que_comparar(db, tipos):
+    r = _reporte(db, meses=1)
+
+    assert len(r.canjes.flujo) == 1
+    assert len(r.canjes.totales) == 1
+
+
+def test_los_meses_a_comparar_tienen_tope(db, tipos):
+    with pytest.raises(ValueError, match="meses"):
+        obtener_reporte_semanal(db, 2026, 8, 13, hoy=HOY)
+
+
+# ------------------------------------------------------------------ el embudo
+
+
+def test_el_embudo_trae_todas_las_etapas_aunque_esten_en_cero(db, tipos):
+    """**Se lee por su forma**: dónde se angosta. Una etapa que desaparece porque
+    nadie pasó por ella parece no existir."""
+    _canje(db, 1, dia=3)
+    db.commit()
+    _mov(db, EntityType.canje, 1, "PASA_A_OFERTA", _dia(4), etapa="EN_OFERTA")
     db.commit()
 
-    dias = [e.dias_sin_movimiento for e in _reporte(db).canjes.estancados]
-    assert dias == sorted(dias, reverse=True)
+    r = _reporte(db, meses=1)
+
+    etapas = {e.etapa: e.entraron for e in r.canjes.embudo}
+    assert etapas["EN_OFERTA"] == 1
+    assert etapas["EN_REVISION"] == 0
+    assert len(r.canjes.embudo) == len(CanjeEtapa)
 
 
-def test_un_negocio_con_dos_hitos_activos_sale_una_sola_vez(db):
-    n = _negocio(db, "VVP-1")
-    n.hitos.append(NegocioHito(
-        fecha_inicio=(AHORA - timedelta(days=90)).date(),
-        estado=EstadoNegocio.ACTIVO,
-        comision_real_vp=D("0"),
-    ))
+def test_el_embudo_promedia_los_meses_anteriores(db, tipos):
+    """El promedio va como número al lado y no como una segunda barra: es la
+    referencia, y duplicar las barras es lo que recarga la pantalla."""
+    _canje(db, 1, dia=3, mes=8)
+    _canje(db, 2, dia=3, mes=7)
+    _canje(db, 3, dia=4, mes=7)
+    _canje(db, 4, dia=3, mes=6)
+    db.commit()
+    for id_, mes in ((1, 8), (2, 7), (3, 7), (4, 6)):
+        _mov(db, EntityType.canje, id_, "PASA_A_OFERTA", _dia(5, mes), etapa="EN_OFERTA")
     db.commit()
 
-    assert _reporte(db).negocios.total_estancados == 1
+    r = _reporte(db, meses=3)
+
+    oferta = next(e for e in r.canjes.embudo if e.etapa == "EN_OFERTA")
+    assert oferta.entraron == 1                      # agosto
+    assert float(oferta.promedio_anteriores) == 1.5  # (2 de julio + 1 de junio) / 2
 
 
-# ------------------------------------------------------- totales vs listas
+# --------------------------------------------------------------- los abiertos
 
 
-def test_el_total_cuenta_todo_aunque_la_lista_venga_topeada(db):
-    for id_ in range(1, TOPE_LISTA + 6):
-        _canje(db, id_, dias_solicitud=100 + id_)
+def test_los_abiertos_traen_casos_plata_y_dias(db, tipos):
+    """Y el `n` a la vista: con pocos canjes, el promedio de una etapa puede ser un
+    solo caso y sin el `n` se lee como una tendencia."""
+    _canje(db, 1, dia=1, etapa=CanjeEtapa.EN_OFERTA)
+    _canje(db, 2, dia=1, etapa=CanjeEtapa.EN_OFERTA)
     db.commit()
 
-    seccion = _reporte(db).canjes
-    assert seccion.total_estancados == TOPE_LISTA + 5
-    assert len(seccion.estancados) == TOPE_LISTA
+    r = _reporte(db, meses=1)
+
+    oferta = next(e for e in r.canjes.abiertos if e.etapa == "EN_OFERTA")
+    assert oferta.casos == 2
+    # Sin movimiento que registre la entrada, el reloj se cuenta desde la
+    # solicitud y se dice cuántos son.
+    assert oferta.sin_historia == 2
 
 
-# ---------------------------------------------------------------- endpoint
+def test_un_canje_cerrado_no_esta_abierto(db, tipos):
+    """Abierto es activo y con etapa distinta de cerrada, igual que en la bandeja:
+    los que arrastran el desalineamiento del dato de Dataprop no son pendientes."""
+    _canje(db, 1, dia=1, etapa=CanjeEtapa.CERRADO)
+    _canje(db, 2, dia=1, estado=CanjeEstado.CANCELADO)
+    db.commit()
+
+    assert _reporte(db, meses=1).canjes.abiertos == []
 
 
-def test_el_endpoint_sin_parametros_devuelve_la_semana_en_curso(cliente):
-    r = cliente.get("/api/reportes/semanal")
+# ------------------------------------------------------------------ negocios
+
+
+def test_negocios_declara_lo_que_no_puede_medir(db, tipos):
+    """**Decirlo es distinto de dibujar ceros.** Sin movimientos de pipeline no se
+    sabe qué avanzó, y sin fecha en las perdidas no se sabe cuándo se cayeron. Una
+    serie de ceros diría «no pasó nada»."""
+    _negocio(db, "N-1", date(2026, 8, 3))
+    _negocio(db, "N-2", date(2026, 8, 10), estado=EstadoNegocio.PERDIDO)
+    db.commit()
+
+    r = _reporte(db, meses=1)
+
+    assert r.negocios.sin_datos == ["avanzaron", "se_cayeron"]
+    assert r.negocios.flujo[0].entraron == [1, 1, 0, 0, 0]
+
+
+def test_cuando_hay_movimientos_de_pipeline_deja_de_avisar(db, tipos):
+    """El aviso se calcula y no se escribe fijo: se resuelve solo en cuanto
+    alguien registre un avance."""
+    n = _negocio(db, "N-1", date(2026, 8, 3))
+    db.commit()
+    _mov(db, EntityType.negocio, n.id, "NEG_E4", _dia(4), etapa="E4")
+    db.commit()
+
+    r = _reporte(db, meses=1)
+
+    assert "avanzaron" not in r.negocios.sin_datos
+    assert r.negocios.flujo[0].avanzaron == [1, 0, 0, 0, 0]
+
+
+def test_la_plata_de_negocios_va_por_fecha_de_cierre(db, tipos):
+    """La comisión se gana al cerrar, no al entrar."""
+    _negocio(db, "N-1", date(2026, 6, 1), estado=EstadoNegocio.CERRADO,
+             cierre=date(2026, 8, 20), real=D("500000"))
+    db.commit()
+
+    r = _reporte(db, meses=3)
+
+    por_mes = {t.etiqueta: float(t.comision) for t in r.negocios.totales}
+    assert por_mes["2026-08"] == 500000
+    assert por_mes["2026-06"] == 0, "el mes en que empezó no cobra nada"
+
+
+def test_los_abiertos_de_negocios_traen_su_comision_en_juego(db, tipos):
+    _negocio(db, "N-1", date(2026, 5, 1), real=D("774691"), etapa="E4")
+    db.commit()
+
+    r = _reporte(db, meses=1)
+
+    e4 = next(e for e in r.negocios.abiertos if e.etapa == "E4")
+    assert e4.casos == 1
+    assert float(e4.comision) == 774691
+
+
+# ------------------------------------------------------------------ tendencia
+
+
+def test_la_tendencia_va_sobre_los_meses(db, tipos):
+    """No sobre las semanas: cinco puntos con el último de tres días no sostienen
+    una curva, y el ajuste bajaría siempre al final por el calendario."""
+    r = _reporte(db, meses=3)
+
+    assert set(r.canjes.tendencias) >= {"entraron", "se_cayeron", "comision"}
+    assert r.canjes.tendencias["entraron"].puntos == 3
+
+
+# ------------------------------------------------------------------ endpoint
+
+
+def test_el_endpoint_devuelve_los_dos_dominios(cliente, db, tipos):
+    _canje(db, 1, dia=3)
+    db.commit()
+
+    r = cliente.get("/api/reportes/semanal", params={"anio": 2026, "mes": 8, "meses": 3})
+
     assert r.status_code == 200
     cuerpo = r.json()
-    # Siete, no catorce: el umbral sale del largo de la ventana y la ventana por
-    # defecto es la semana en curso.
-    assert cuerpo["dias_estancado"] == 7
-    assert set(cuerpo) == {"desde", "hasta", "dias_estancado", "negocios", "canjes"}
+    assert set(cuerpo) == {"anio", "mes", "meses", "canjes", "negocios"}
+    assert set(cuerpo["canjes"]) == {
+        "semanas", "flujo", "embudo", "abiertos", "totales", "tendencias", "sin_datos",
+    }
 
 
-def test_el_endpoint_deja_forzar_el_umbral(cliente):
-    r = cliente.get("/api/reportes/semanal", params={"dias_estancado": 30})
-    assert r.json()["dias_estancado"] == 30
+def test_el_endpoint_rechaza_un_tope_de_meses_invalido(cliente):
+    assert cliente.get("/api/reportes/semanal", params={"meses": 13}).status_code == 422
 
 
-@pytest.mark.parametrize("params, trozo", [
-    ({"desde": "2026-08-17"}, "juntos"),
-    ({"hasta": "2026-08-23"}, "juntos"),
-    ({"desde": "2026-08-23", "hasta": "2026-08-17"}, "anterior"),
-    ({"desde": "2024-01-01", "hasta": "2026-08-17"}, "366"),
-])
-def test_el_endpoint_rechaza_periodos_imposibles(cliente, params, trozo):
-    r = cliente.get("/api/reportes/semanal", params=params)
-    assert r.status_code == 400
-    assert trozo in r.json()["detail"]
-
-
-# ------------------------------- un renglon por entidad, no por movimiento
-
-
-def test_el_canje_con_tres_registros_sale_una_vez_con_el_ultimo(db, tipos):
-    """Lo que el usuario vio: VVP-15 tres veces y #364 dos veces en la tabla."""
-    _canje(db, 1)
-    for dias in (4, 3, 1):
-        _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(dias))
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    # La cifra cuenta canjes y la lista tiene un renglon: los dos numeros cuadran.
-    assert (seccion.total_avanzados, len(seccion.avanzados)) == (1, 1)
-    # Y los movimientos no se pierden, van aparte.
-    assert seccion.movimientos_avanzados == 3
-    assert seccion.avanzados[0].registros == 3
-    assert seccion.avanzados[0].fecha == _hace(1).date()
-
-
-def test_el_negocio_muestra_el_comentario_del_ultimo_registro(db, tipos):
-    n = _negocio(db, "VVP-1")
-    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(3), comentario="primero")
-    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(1), comentario="ultimo")
-    db.commit()
-
-    seccion = _reporte(db).negocios
-    assert (seccion.total_avanzados, seccion.movimientos_avanzados) == (1, 2)
-    assert seccion.avanzados[0].comentario == "ultimo"
-    # Negocios tambien trae la categoria, para que las dos secciones respondan
-    # "que paso" de la misma forma.
-    assert seccion.avanzados[0].tipo == "Llamada"
-    assert seccion.avanzados[0].registros == 2
-
-
-def test_los_avanzados_van_del_mas_nuevo_al_mas_viejo(db, tipos):
-    """Al reves que los estancados: con la lista topeada, lo que sobra es lo viejo."""
-    for id_, dias in ((1, 1), (2, 4), (3, 2)):
-        _canje(db, id_)
-        _mov(db, EntityType.canje, id_, "WA_SOLICITANTE", _hace(dias))
-    db.commit()
-
-    assert [i.referencia for i in _reporte(db).canjes.avanzados] == ["#1", "#3", "#2"]
-
-
-# ------------------------------ la ventana manda en las cuatro cifras
-
-
-def _cuatro_semanas(db):
-    return obtener_reporte_semanal(db, DOMINGO - timedelta(days=27), DOMINGO, ahora=AHORA)
-
-
-def test_el_umbral_de_estancado_sale_del_largo_de_la_ventana(db):
-    """Sin parametro explicito: una semana da 7 y cuatro semanas dan 28."""
-    assert obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA).dias_estancado == 7
-    assert _cuatro_semanas(db).dias_estancado == 28
-
-
-def test_la_ventana_larga_alcanza_lo_que_la_corta_deja_afuera(db, tipos):
-    """La misma actividad en dos ventanas: es lo que el selector tiene que mover.
-
-    Antes el selector solo cambiaba el umbral de estancado, asi que tres de las
-    cuatro casillas no se movian y el control se leia como si moviera las cuatro.
-    """
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(20))
-    db.commit()
-
-    una = obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA)
-    assert (una.canjes.total_avanzados, _cuatro_semanas(db).canjes.total_avanzados) == (0, 1)
-
-
-def test_estancado_se_mide_al_cierre_de_la_ventana_y_no_contra_hoy(db, tipos):
-    """Una ventana pasada tiene que decir lo que decia al terminar."""
-    _canje(db, 1, dias_solicitud=400)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE",
-         datetime(2026, 7, 10, 12, tzinfo=timezone.utc))
-    db.commit()
-
-    # Al domingo 12 de julio llevaba dos dias quieto: no estaba estancado.
-    pasada = obtener_reporte_semanal(db, date(2026, 7, 6), date(2026, 7, 12), ahora=AHORA)
-    assert pasada.canjes.total_estancados == 0
-
-    # En la ventana en curso el corte es ahora, y ahi si lleva 42 dias.
-    en_curso = obtener_reporte_semanal(db, LUNES, DOMINGO, ahora=AHORA)
-    assert en_curso.canjes.estancados[0].dias_sin_movimiento == 42
-
-
-# -------------------------------------- de que propiedad se esta hablando
-
-
-@pytest.fixture
-def alianza(db):
-    c = Catalogo(tipo="alianza", codigo="ASSETPLAN", nombre="Assetplan")
-    db.add(c)
-    db.flush()
-    return c
-
-
-def test_el_negocio_trae_direccion_comuna_alianza_y_el_texto_de_la_etapa(db, tipos, alianza):
-    n = _negocio(db, "VVP-1")
-    n.alianza_id = alianza.id
-    n.propiedad.unidad = "1802"
-    _mov(db, EntityType.negocio, n.id, "NEG_LLAMADA", _hace(1))
-    db.commit()
-
-    item = _reporte(db).negocios.avanzados[0]
-    assert item.direccion == "Calle VVP-1 1802"
-    assert (item.comuna, item.alianza) == ("Nunoa", "Assetplan")
-    # El texto de la etapa, no solo el codigo: "E2" no le dice nada a quien lee.
-    assert (item.etapa, item.etapa_nombre) == ("E2", "Visita")
-
-
-def test_el_canje_trae_operacion_direccion_y_comuna(db, tipos):
-    _canje(db, 1)
-    db.flush()
-    canje = db.get(Canje, 1)
-    canje.tipo_operacion = OperacionTipo.ARRIENDO
-    canje.direccion = "Av. Siempre Viva 742"
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(1))
-    db.commit()
-
-    item = _reporte(db).canjes.avanzados[0]
-    # El rotulo, no el valor guardado: "ARRIENDO" es el enum, "Arriendo" se lee.
-    assert item.operacion == "Arriendo"
-    assert (item.direccion, item.comuna) == ("Av. Siempre Viva 742", "Providencia")
-
-
-def test_los_estancados_y_los_cerrados_tambien_dicen_de_que_hablan(db):
-    """Las cuatro listas de la seccion llevan las mismas columnas."""
-    _canje(db, 1, dias_solicitud=400)
-    _negocio(db, "G-1", EstadoNegocio.CERRADO, cierre=date(2026, 8, 19), real=D("10"))
-    db.commit()
-
-    r = _reporte(db)
-    estancado = r.canjes.estancados[0]
-    assert (estancado.comuna, estancado.etapa_nombre) == ("Providencia", "En revisión")
-    cerrado = r.negocios.cerrados[0]
-    assert (cerrado.direccion, cerrado.comuna) == ("Calle G-1", "Nunoa")
-
-
-def test_el_umbral_de_estancado_se_puede_cambiar_desde_la_query(cliente, db, tipos):
-    _canje(db, 1)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", _hace(20))
-    db.commit()
-
-    assert cliente.get("/api/reportes/semanal",
-                       params={"dias_estancado": 14}).json()["canjes"]["total_estancados"] == 1
-    assert cliente.get("/api/reportes/semanal",
-                       params={"dias_estancado": 30}).json()["canjes"]["total_estancados"] == 0
-
-
-# ------------------------- los movimientos con fecha de carga no son actividad
-
-
-# El instante exacto en que "corrio el script": dos o mas movimientos que lo
-# comparten entraron juntos.
-CARGA = AHORA - timedelta(hours=3)
-
-
-def test_una_limpieza_masiva_no_llena_se_cayo(db, tipos):
-    """**El caso que el usuario vio.**
-
-    Una limpieza marco como cancelados los canjes que Dataprop dejo de exportar y
-    les creo el movimiento con la fecha del dia en que corrio. En una ventana que
-    incluye ese dia, «Se cayo» mostraba 215 sobre 303 canjes: cierto sobre los
-    movimientos y falso sobre el negocio, porque esos canjes se cayeron en algun
-    momento desconocido de los ultimos anos.
-    """
-    for id_ in (1, 2, 3):
-        _canje(db, id_, estado=CanjeEstado.CANCELADO)
-        _mov(db, EntityType.canje, id_, "CANCELACION", CARGA,
-             comentario="Cancelado en la limpieza", creado_en=CARGA)
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_caidos == 0, "la fecha la puso el script, no la gestion"
-    # Pero no en silencio: la pantalla tiene que poder decir que existen.
-    assert seccion.movimientos_con_fecha_de_carga == 3
-
-
-def test_una_carga_con_fechas_reales_si_cuenta(db, tipos):
-    """**No alcanza con "vino de una carga".**
-
-    Las 11 cancelaciones migradas del Excel entraron todas juntas, pero con las
-    fechas que traia el archivo. Esas pertenecen a la ventana donde caen.
-    """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO)
-    _canje(db, 2, estado=CanjeEstado.CANCELADO)
-    # Las dos comparten el instante de creacion --misma transaccion-- pero sus
-    # fechas son de dias distintos y anteriores.
-    _mov(db, EntityType.canje, 1, "CANCELACION", _hace(2), creado_en=CARGA)
-    _mov(db, EntityType.canje, 2, "CANCELACION", _hace(3), creado_en=CARGA)
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_caidos == 2
-    assert seccion.movimientos_con_fecha_de_carga == 0
-
-
-def test_una_cancelacion_registrada_hoy_en_la_app_cuenta(db, tipos):
-    """Tambien tiene fecha de hoy, y esa **si** es una gestion.
-
-    Lo que la distingue de la limpieza es que su `creado_en` no lo comparte nadie:
-    entro sola.
-    """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO)
-    _mov(db, EntityType.canje, 1, "CANCELACION", AHORA, creado_en=AHORA)
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_caidos == 1
-    assert seccion.movimientos_con_fecha_de_carga == 0
-
-
-def test_la_regla_no_es_solo_para_las_cancelaciones(db, tipos):
-    """Vale para cualquier tipo: lo que se descarta es una fecha inventada."""
-    _canje(db, 1)
-    _canje(db, 2)
-    _mov(db, EntityType.canje, 1, "WA_SOLICITANTE", CARGA, creado_en=CARGA)
-    _mov(db, EntityType.canje, 2, "WA_SOLICITANTE", CARGA, creado_en=CARGA)
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert (seccion.total_avanzados, seccion.movimientos_avanzados) == (0, 0)
-    assert seccion.movimientos_con_fecha_de_carga == 2
-
-
-def test_los_negocios_usan_la_misma_regla(db, tipos):
-    """El historial de negocios se cargo con fechas reales, asi que no cambia.
-
-    Pero la regla esta puesta igual: una carga futura que estampe "hoy" no puede
-    aparecer como actividad de la ventana.
-    """
-    n1 = _negocio(db, "VVP-1")
-    n2 = _negocio(db, "VVP-2")
-    _mov(db, EntityType.negocio, n1.id, "NEG_LLAMADA", CARGA, creado_en=CARGA)
-    _mov(db, EntityType.negocio, n2.id, "NEG_LLAMADA", CARGA, creado_en=CARGA)
-    # Y uno con fecha real cargado en la misma transaccion.
-    _mov(db, EntityType.negocio, n1.id, "NEG_LLAMADA", _hace(2), creado_en=CARGA)
-    db.commit()
-
-    seccion = _reporte(db).negocios
-    assert seccion.total_avanzados == 1, "solo el de fecha real"
-    assert seccion.movimientos_con_fecha_de_carga == 2
-
-
-# ------------------ las cancelaciones que solo existen como fecha de cierre
-
-
-def test_una_cancelacion_sin_movimiento_se_cuenta_por_su_fecha_de_cierre(db):
-    """**El defecto que el usuario encontro.**
-
-    Dataprop manda la fecha de cancelacion de los canjes recientes --47 de 293, y
-    nueve en agosto-- y esos canjes no tienen movimiento de cancelacion: no se
-    cancelaron en la app. Mirando solo los movimientos, «Se cayo» daba cero en
-    todas las ventanas y el usuario sabia que en agosto si hubo cancelaciones.
-    """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=_hace(2))
-    _canje(db, 2, estado=CanjeEstado.CANCELADO, cierre=_hace(30))
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_caidos == 1, "solo el de la ventana"
-    item = seccion.caidos[0]
-    assert (item.referencia, item.fecha) == ("#1", _hace(2).date())
-    # La fila no tiene autor ni comentario, asi que dice de donde viene la fecha.
-    assert item.tipo == "Cancelado"
-    assert "export de Dataprop" in item.comentario
-    assert item.registros == 0
-
-
-def test_el_movimiento_le_gana_a_la_fecha_de_cierre(db, tipos):
-    """Si la app registro la cancelacion, esa es la version con autor y comentario.
-
-    Sin esta preferencia el canje saldria dos veces: una por el movimiento y otra
-    por la fecha del export.
-    """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=_hace(2))
-    _mov(db, EntityType.canje, 1, "CANCELACION", _hace(3), comentario="se arrepintio")
-    db.commit()
-
-    seccion = _reporte(db).canjes
-    assert seccion.total_caidos == 1, "un canje, una caida"
-    assert seccion.caidos[0].comentario == "se arrepintio"
-    assert seccion.caidos[0].registros == 1
-
-
-def test_un_cancelado_sin_fecha_de_cierre_no_cae_en_ninguna_ventana(db):
-    """Los 246 viejos: la fecha no existe, y no se puede inventar.
-
-    Aparecen en el dashboard como cancelados --eso es estado, no fecha-- pero
-    ninguna ventana puede reclamarlos.
-    """
-    _canje(db, 1, estado=CanjeEstado.CANCELADO, cierre=None)
-    db.commit()
-
-    assert _reporte(db).canjes.total_caidos == 0
+def test_el_endpoint_exige_anio_y_mes_juntos(cliente):
+    assert cliente.get("/api/reportes/semanal", params={"anio": 2026}).status_code == 400

@@ -2689,3 +2689,63 @@ Con la fecha y el autor en columnas de 110 y 130 px, la prosa arranca a unos 150
 ### Lo que **no** se cambió
 
 El «Qué pasó» del reporte semanal sigue recortado con tooltip: ahí el recorte es deliberado (`D-076`), porque son cuatro casillas en paralelo y una prosa de tres renglones en cada fila rompe la comparación. La diferencia es que ese texto tiene su versión completa a un mouse de distancia, y el del historial no tenía ninguna.
+
+---
+
+## D-098 · El reporte semanal pasa a ser el flujo del mes, con los meses anteriores encima
+
+El usuario dijo qué le faltaba: *«la idea es poder mostrar en este reporte cómo van moviéndose los canjes y los negocios semana a semana dentro del mes, y a la vez tener la opción de compararlo con meses anteriores y así poder saber visualmente y en números cómo vamos respecto de esos períodos anteriores»*. Y puso la restricción que decidió casi todo lo demás: *«siempre la idea es que quien lo vea pueda entender lo que está viendo»*.
+
+**El contrato cambió entero, no se le agregó un filtro.** La pantalla vieja medía una ventana de 1, 2 o 4 semanas corridas y devolvía cuatro casillas --cerrados, avanzaron, se cayeron, estancados-- con su lista de renglones. Esa forma no admite la comparación que se pidió: una ventana corrida no tiene con qué mes compararse, porque «las últimas dos semanas» de agosto y de julio no son el mismo tramo de nada. El eje tenía que ser **la semana del mes**, y el mes anterior, la línea de atrás.
+
+### Las semanas se cuentan desde el día 1, y la última es corta
+
+`semanas_del_mes` corta `S1 1-7`, `S2 8-14`, `S3 15-21`, `S4 22-28`, `S5 29-31`. No son semanas de lunes a domingo, y es a propósito: con lunes, la primera semana de un mes se reparte con el anterior y «S1» dejaría de significar «el arranque del mes», que es justo la comparación que se quiere. El costo es que **la última semana es parcial** --tres días en un mes de 31, uno en febrero de 28-- y en un gráfico eso se lee como una caída de actividad cuando es el calendario. Por eso `Semana.dias` viaja en la respuesta, la pantalla lo dice arriba en un aviso, y el globo del gráfico lo repite en el punto (`· 3 días`). Febrero tiene **cuatro** tramos, no cinco, y las líneas de los meses de cinco se **cortan** ahí (`connectNulls={false}`) en vez de inventar un cero.
+
+### Tres señales, y ninguna es «cerrados»
+
+El flujo es **entraron / avanzaron / se cayeron**. Es lo que el usuario eligió cuando le pregunté qué era «moverse», y es lo que una pantalla de período puede medir sin repetir la cartera: el dashboard mira el estado de hoy, este mira los movimientos del tramo. «Avanzaron» **cuenta entidades y no movimientos** --dos avances del mismo canje en la semana son uno que avanzó--, porque la pregunta es cuántos se movieron, no cuántas veces se tocó la ficha. «Se cayeron» en canjes suma las **dos** fuentes --la cancelación registrada en la app y la fecha que manda Dataprop-- sin contar dos veces al mismo canje (`D-086`), y sigue descartando lo que puso la carga masiva (`D-085`).
+
+### Hasta tres líneas por gráfico; de la cuarta en adelante, el promedio
+
+El filtro compara de 1 a 12 meses. Doce líneas en un gráfico de cinco puntos no se leen, y la regla del proyecto es **tres series categóricas por gráfico**: con más, la identidad por color deja de funcionar. Así que hasta tres meses va una línea por mes, y de cuatro en adelante queda el mes elegido contra el **promedio de los anteriores**. No se pierde nada: la tabla de abajo --«Los mismos números»-- lista **todos** los meses, con sus semanas, su total y la variación contra el mes elegido. El usuario pidió las dos cosas, *«visualmente y en números»*, así que la tabla va **debajo** del gráfico y no en su lugar.
+
+**El color de las líneas previas se eligió con el validador, no a ojo.** El `#9b9cd4` que había puesto **falló**: ΔE 14,5 contra el teal de tendencia, bajo el piso de visión normal de 15. Quedó el índigo principal diferenciado por **trazo partido** más su entrada en la leyenda, que es identidad sin depender del color. La leyenda se dibuja a mano y no con el `<Legend>` de Recharts, igual que en `EvolucionMensual`: la librería la ordena por `dataKey` y el orden que explica el gráfico es el mes elegido primero.
+
+**Sin curva de tendencia en el gráfico semanal.** Son cuatro o cinco puntos y el último es una semana de tres días: cualquier ajuste bajaría siempre al final por un artefacto del calendario. La tendencia vive en el bloque mensual, donde el eje son meses completos.
+
+### La plata va por etapa y por mes, no por semana
+
+El usuario pidió que *«la plata debe ser similar a las cantidades, según etapa»*. Va en dos lugares y en **ninguno** de ellos es una serie semanal: en «Dónde está lo abierto hoy», que dice cuánta comisión hay parada en cada etapa, y en «Mes a mes», con ventas y arriendos en **columnas separadas** --un precio de venta y un mes de renta no son la misma unidad (`D-064`)--. La razón de no ponerla en el gráfico semanal es que la comisión **se gana al cerrar**: semana a semana serían ceros con un pico, que no informa nada sobre cómo se movió el mes.
+
+### Cuatro bloques, y cada título es la pregunta que responde
+
+| Bloque | La pregunta |
+|---|---|
+| Flujo | cómo se movió el mes, semana a semana |
+| Por dónde avanzaron | a qué etapas entraron, contra el promedio de los meses comparados |
+| Dónde está lo abierto hoy | en qué etapa está parado lo abierto, cuánta plata hay y cuánto lleva |
+| Mes a mes | los totales del período, la plata y la tendencia |
+
+**El embudo muestra todas las etapas, incluso en cero.** Un embudo se lee por su forma --dónde se angosta-- y una etapa que desaparece parece no existir. El promedio de los meses anteriores va como **número al lado**, no como una segunda barra: eso es lo que recargaría la pantalla, que es lo que el usuario pidió evitar.
+
+**«Dónde está lo abierto hoy» dice en el subtítulo que no depende del mes.** Es la foto de hoy y es la misma en cualquier período, y sin decirlo alguien la leería como «lo abierto en agosto». El reloj de cada caso se cuenta desde el **último movimiento que lo dejó en su etapa actual**, y los casos sin ese registro se cuentan aparte --«N sin movimiento que registre la entrada a la etapa»-- en vez de promediarse con un inicio que no es lo mismo que haberlo medido.
+
+### Lo que no se puede medir se **explica**, no se esconde
+
+En negocios, «avanzaron» y «se cayeron» no tienen de dónde salir: el pipeline no tiene **ningún** movimiento registrado, y las liquidaciones perdidas no tienen fecha de cierre. Le pregunté si esconder esos paneles o construirlos diciendo por qué están vacíos, y eligió lo segundo. El backend declara **cuál** señal falta --`sin_datos`, calculado consultando la base y no escrito a mano, así que el panel aparece solo en cuanto empiece a haber datos-- y la pantalla pone el **por qué** en prosa. Una línea en cero diría «no pasó nada»; lo que pasa es «no se sabe», que es una diferencia que cambia la decisión de quien mira.
+
+Por lo mismo **no** hay área apilada de composición por etapa: los 605 movimientos de canjes migrados traen `etapa_resultante` en cero, así que la composición histórica no es reconstruible. Dibujarla sería inventarla.
+
+### Una consulta por señal, no una por semana
+
+La primera versión pedía los datos por tramo y tardaba **24,6 s**. Ahora `flujo_de_canjes_por_tramo` y `flujo_de_negocios_por_tramo` hacen **una consulta por señal sobre la ventana completa** y reparten en Python con `_tramo_de`: 7,2 s con 3 meses y 8,9 s con 12. La clave del tramo lleva el mes adelante --`"2026-08 / S1 1-7"`-- para que la S1 de dos meses distintos no colisione.
+
+La UF fue el otro cuello: valorizar canje por canje eran cientos de consultas. `uf.serie_completa` trae **las 252 filas en una** y `plata_canjes.uf_del_canje` resuelve contra ese diccionario. Cuando se le pasa el caché, resuelve **solo** desde ahí: la ausencia de un día es «no hay UF para ese día», no una excusa para volver a la base. Un caché por fecha no alcanzaba porque los cancelados tienen cada uno su propia fecha de solicitud.
+
+### Lo que se retiró, y lo que quedó viejo en los .md
+
+Se fueron las cuatro casillas, sus listas de un renglón por caso, y el selector de 1/2/4 semanas: las reemplazan las métricas nuevas, que es lo que el usuario contestó cuando pregunté. Con eso **`D-076` queda sin objeto** --el «Qué pasó» con su tooltip ya no existe-- y el párrafo *«Lo que no se cambió»* de `D-097`, que lo daba como ejemplo de recorte deliberado, describe una pantalla que se fue.
+
+**El reporte mensual no se tocó.** Un intento anterior consolidó las dos pantallas en el mensual y fue un error de lectura mío --*«desde el principio te hablé de modificar el reporte semanal, no el reporte mensual»*--; se revirtió completo con `git revert`. Si el mensual se retira o no, se decide **después** de mirar el semanal andando, y no lo borra nadie hasta que el usuario lo diga.
+

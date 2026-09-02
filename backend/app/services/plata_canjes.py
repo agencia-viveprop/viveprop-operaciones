@@ -118,8 +118,16 @@ def _dias(desde: datetime | date, hasta: date) -> int:
     return (hasta - desde).days
 
 
-def uf_del_canje(db: Session, canje: Canje, hoy: date) -> Decimal | None:
+def uf_del_canje(
+    db: Session, canje: Canje, hoy: date, cache: dict[date, Decimal] | None = None
+) -> Decimal | None:
     """Con qué UF se valoriza este canje. Ver el docstring del módulo.
+
+    **`cache`, cuando se pasa, es la serie completa** --lo que devuelve
+    `uf.serie_completa`-- y se resuelve solo contra él, sin consultar. Una fecha
+    ausente significa "no hay UF para ese día", que es lo mismo que responde
+    `valor_uf` fallando. La política de **qué** fecha usar no cambia; lo que se
+    evita es preguntar de a una (`D-098`).
 
     Es público porque la política es una sola y la usa también la facturación de
     canjes: cada caso con la UF que le corresponde, y no la de hoy para todos.
@@ -133,6 +141,8 @@ def uf_del_canje(db: Session, canje: Canje, hoy: date) -> Decimal | None:
         cuando = _fecha(canje.fecha_cierre) or hoy
     else:
         cuando = _fecha(canje.fecha_solicitud) or hoy
+    if cache is not None:
+        return cache.get(cuando)
     try:
         return valor_uf(db, cuando)
     except UFNoDisponible:

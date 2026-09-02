@@ -2,619 +2,525 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   ActionIcon,
-  Badge,
+  Alert,
   Group,
   Paper,
+  Progress,
   SegmentedControl,
+  Select,
   SimpleGrid,
   Stack,
   Table,
   Text,
   Title,
-  Tooltip,
 } from '@mantine/core'
+import { IconChevronLeft, IconChevronRight, IconInfoCircle } from '@tabler/icons-react'
 import {
-  IconArrowsExchange,
-  IconBriefcase,
-  IconChevronLeft,
-  IconChevronRight,
-} from '@tabler/icons-react'
-import {
-  aISO,
-  lunesDe,
+  MESES_A_COMPARAR,
   obtenerReporteSemanal,
-  type ItemMovido,
-  type Seccion,
-  type Ubicacion,
+  type EtapaAbierta,
+  type EtapaDelEmbudo,
+  type ReporteDeDominio,
+  type TotalDelMes,
 } from '../api/reportes'
+import { obtenerCatalogos } from '../api/catalogos'
 import PageHeader from '../components/PageHeader'
-import { clp, fecha } from '../components/negociosFormato'
 import EstadoConsulta from '../components/EstadoConsulta'
-
-/** Cuál de los dos dominios. Cambia una columna y el sustantivo de las ayudas. */
-type Dominio = 'negocios' | 'canjes'
-
-const plural = (n: number, uno: string, muchos: string) => (n === 1 ? uno : muchos)
-
-/** "a", "a y b", "a, b y c". */
-function enumerar(partes: string[]): string {
-  if (partes.length <= 1) return partes.join('')
-  return `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`
-}
-
-/** Cómo se llama cada casilla, para poder nombrarla en el vacío. */
-const ROTULOS: Record<string, string> = {
-  cerrados: 'Se cerró',
-  avanzados: 'Avanzó',
-  caidos: 'Se cayó',
-  estancados: 'Estancado',
-}
-
-/** "17 al 23 de agosto de 2026", o con los dos meses si la ventana los cruza. */
-function rotulo(desde: string, hasta: string): string {
-  const d = new Date(`${desde}T12:00:00`)
-  const h = new Date(`${hasta}T12:00:00`)
-  const mes = (f: Date) => f.toLocaleDateString('es-CL', { month: 'long' })
-  const cola = `de ${mes(h)} de ${h.getFullYear()}`
-  return d.getMonth() === h.getMonth()
-    ? `${d.getDate()} al ${h.getDate()} ${cola}`
-    : `${d.getDate()} de ${mes(d)} al ${h.getDate()} ${cola}`
-}
+import FlujoSemanal, { type Señal } from '../components/FlujoSemanal'
+import { clp } from '../components/negociosFormato'
+import { rotuloEtapa } from '../components/canjesEtiquetas'
 
 /**
- * Texto largo en una celda: una línea, con el completo en el tooltip.
+ * Reporte semanal: cómo se movió el mes, semana a semana, contra los anteriores.
  *
- * Las tablas son de una línea por fila a propósito --se leen de un barrido-- así
- * que un comentario de doscientos caracteres no puede decidir el ancho de todas
- * las columnas. Al agregar dirección, comuna y alianza el problema se volvió
- * visible: la tabla de negocios ya salía con desplazamiento horizontal y lo que
- * se lo comía era el comentario.
+ * **Cuatro bloques y cada título es la pregunta que responde.** Es la restricción
+ * que puso el usuario --«que quien lo vea pueda entender lo que está viendo»-- y
+ * la que decidió qué **no** va: ni área apilada de composición por etapa (el dato
+ * no existe hacia atrás), ni curva de tendencia sobre cinco semanas, ni la plata
+ * en el gráfico semanal (`D-098`).
  *
- * Se recorta con CSS y no cortando el string, para que el texto siga completo
- * para copiar y el tooltip tenga qué mostrar.
+ * | Bloque | La pregunta |
+ * |---|---|
+ * | Flujo | cómo se movió el mes, semana a semana |
+ * | Embudo | por dónde avanzaron |
+ * | Abiertos | dónde está lo abierto hoy y cuánta plata hay ahí |
+ * | Mes a mes | los totales y la plata, con tendencia |
  */
-function Recortado({
-  texto,
-  detalle,
-  ancho,
-}: {
-  texto: string | null
-  /** Lo que va después, atenuado: la categoría primero y el detalle detrás. */
-  detalle?: string | null
-  ancho: number
-}) {
-  const completo = [texto, detalle].filter(Boolean).join(' · ')
-  if (!completo) return <>—</>
-  return (
-    <Tooltip label={completo} multiline w={420} withArrow openDelay={400}>
-      <Text size="xs" truncate="end" style={{ maxWidth: ancho }}>
-        {texto}
-        {detalle && (
-          <Text component="span" c="dimmed">
-            {texto ? ' · ' : ''}
-            {detalle}
-          </Text>
-        )}
-      </Text>
-    </Tooltip>
-  )
+
+type Dominio = 'canjes' | 'negocios'
+
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/** Las tres señales del flujo, en orden de lectura: qué entró, qué se movió, qué
+ *  se perdió. El sustantivo cambia por dominio. */
+const SEÑALES: { campo: Señal; titulo: (d: Dominio) => string; ayuda: string }[] = [
+  {
+    campo: 'entraron',
+    titulo: (d) => (d === 'canjes' ? 'Entraron' : 'Liquidaciones iniciadas'),
+    ayuda: 'Por fecha de solicitud en canjes, y de inicio de la liquidación en negocios.',
+  },
+  {
+    campo: 'avanzaron',
+    titulo: () => 'Avanzaron de etapa',
+    ayuda: 'Cuenta entidades y no movimientos: dos avances del mismo canje en la semana son uno que avanzó.',
+  },
+  {
+    campo: 'se_cayeron',
+    titulo: (d) => (d === 'canjes' ? 'Se cayeron' : 'Se perdieron'),
+    ayuda: 'En canjes suma las dos fuentes: la cancelación registrada y la fecha que manda Dataprop.',
+  },
+]
+
+/** Por qué una señal no tiene datos. El backend dice **cuál** falta; el texto de
+ *  por qué vive acá, porque es lo que se le explica a quien mira. */
+const POR_QUE_FALTA: Record<string, string> = {
+  avanzaron:
+    'Todavía no se puede medir: el pipeline de negocios no tiene ningún movimiento registrado, así que no hay historia de cuándo avanzó cada negocio de etapa. Aparece en cuanto se empiece a registrar el avance en la ficha.',
+  se_cayeron:
+    'Todavía no se puede medir: las liquidaciones perdidas no tienen fecha de cierre, así que no se sabe en qué semana se cayeron. Aparece en cuanto se registre esa fecha al cerrarlas.',
 }
 
-/** Las columnas que dicen de qué propiedad se habla.
+function rotuloMesCorto(clave: string): string {
+  const nombres = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+  const [anio, mes] = clave.split('-')
+  return `${nombres[Number(mes) - 1] ?? mes} ${anio.slice(2)}`
+}
+
+function variacion(actual: number, referencia: number): string {
+  if (referencia === 0) return actual === 0 ? '—' : 'nuevo'
+  const pct = Math.round(((actual - referencia) / referencia) * 100)
+  return `${pct > 0 ? '+' : ''}${pct}%`
+}
+
+/** La tabla del flujo: los mismos números del gráfico, mes por mes.
  *
- * Van en las cuatro listas de la sección. La referencia sola --«VVP-15», «#344»--
- * no le dice nada a quien lee el reporte sin abrir otra pantalla, y el reporte se
- * lee justamente para decidir a quién llamar hoy. */
-function CabecerasUbicacion({ dominio }: { dominio: Dominio }) {
-  return (
-    <>
-      {dominio === 'canjes' && <Table.Th>Operación</Table.Th>}
-      <Table.Th>Dirección</Table.Th>
-      <Table.Th>Comuna</Table.Th>
-      {dominio === 'negocios' && <Table.Th>Alianza</Table.Th>}
-    </>
-  )
-}
-
-function CeldasUbicacion({ item, dominio }: { item: Ubicacion; dominio: Dominio }) {
-  return (
-    <>
-      {dominio === 'canjes' && <Table.Td>{item.operacion ?? '—'}</Table.Td>}
-      <Table.Td>
-        <Recortado texto={item.direccion} ancho={260} />
-      </Table.Td>
-      <Table.Td>{item.comuna ?? '—'}</Table.Td>
-      {dominio === 'negocios' && <Table.Td>{item.alianza ?? '—'}</Table.Td>}
-    </>
-  )
-}
-
-/** El texto de la etapa, no su código.
- *
- * En negocios el código se conserva como prefijo --`E4 · Coordinación`-- porque
- * es el vocabulario con el que se habla del pipeline. En canjes no: `EN_NEGOCIO`
- * es un valor de base de datos y no le sirve a nadie.
- *
- * Lo usan las dos tablas que muestran etapa: escribirla distinto en cada una
- * obligaría a traducir entre dos casillas de la misma sección. */
-function textoEtapa(
-  item: { etapa: string | null; etapa_nombre: string | null },
-  dominio: Dominio,
-): string | null {
-  if (!item.etapa_nombre) return null
-  return dominio === 'negocios' ? `${item.etapa} · ${item.etapa_nombre}` : item.etapa_nombre
-}
-
-/** «Quedó en».
- *
- * Cuando el último movimiento no movió la etapa se dice «sigue en», que es una
- * respuesta a "en qué quedó" y no una celda muda. */
-function Etapa({ item, dominio }: { item: ItemMovido; dominio: Dominio }) {
-  const texto = textoEtapa(item, dominio)
-  if (!texto) return <>—</>
-  return item.movio_etapa ? (
-    <Text size="xs">{texto}</Text>
-  ) : (
-    <Text size="xs" c="dimmed">
-      sigue en {texto}
-    </Text>
-  )
-}
-
-function TablaCerrados({
-  seccion,
-  conMonto,
+ * Va **debajo del gráfico y no en lugar de él**: el usuario pidió las dos cosas,
+ * «visualmente y en números». La columna de variación compara cada mes anterior
+ * contra el elegido, que es la pregunta «cómo vamos respecto de esos períodos». */
+function TablaDelFlujo({
   dominio,
+  reporte,
+  señal,
 }: {
-  seccion: Seccion
-  conMonto: boolean
-  dominio: Dominio
+  dominio: ReporteDeDominio
+  reporte: ReporteDeDominio
+  señal: Señal
 }) {
+  void dominio
+  const [actual] = reporte.flujo
+  const totalDe = (valores: number[]) => valores.reduce((a, b) => a + b, 0)
+  const totalActual = totalDe(actual[señal])
+
   return (
-    <Table striped withTableBorder fz="xs" className="tabla-una-linea">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Referencia</Table.Th>
-          <CabecerasUbicacion dominio={dominio} />
-          <Table.Th>{dominio === 'negocios' ? 'Hito' : 'Corredor'}</Table.Th>
-          <Table.Th>Fecha de cierre</Table.Th>
-          {conMonto && <Table.Th ta="right">Comisión real VP</Table.Th>}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {seccion.cerrados.map((c, i) => (
-          <Table.Tr key={`${c.referencia}-${i}`}>
-            <Table.Td fw={600}>{c.referencia}</Table.Td>
-            <CeldasUbicacion item={c} dominio={dominio} />
-            <Table.Td>{c.detalle ?? '—'}</Table.Td>
-            <Table.Td>{fecha(c.fecha)}</Table.Td>
-            {conMonto && (
-              <Table.Td ta="right" ff="monospace">
-                {clp(c.monto)}
+    <div className="tabla-scroll-x">
+      <Table withRowBorders={false} verticalSpacing={4} fz="xs" miw={520}>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Mes</Table.Th>
+            {reporte.semanas.map((s) => (
+              <Table.Th key={s.etiqueta} ta="right">
+                {s.etiqueta.split(' ')[0]}
+              </Table.Th>
+            ))}
+            <Table.Th ta="right">Total</Table.Th>
+            <Table.Th ta="right">vs {rotuloMesCorto(actual.mes)}</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {reporte.flujo.map((f, indice) => (
+            <Table.Tr key={f.mes}>
+              <Table.Td fw={indice === 0 ? 700 : 400}>{rotuloMesCorto(f.mes)}</Table.Td>
+              {reporte.semanas.map((s, i) => (
+                <Table.Td key={s.etiqueta} ta="right" ff="monospace">
+                  {f[señal][i] ?? '—'}
+                </Table.Td>
+              ))}
+              <Table.Td ta="right" ff="monospace" fw={700}>
+                {totalDe(f[señal])}
               </Table.Td>
-            )}
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
-  )
-}
-
-/**
- * La última actualización de cada negocio o canje, un renglón por cada uno.
- *
- * Antes era un renglón por movimiento, y con eso VVP-15 aparecía tres veces y
- * había que leer las tres para saber en qué quedó. La columna «Registros» es la
- * que evita que el resumen mienta: dice cuántos movimientos hay detrás del
- * renglón que se está mostrando.
- */
-function TablaMovidos({
-  items,
-  columnaEtapa,
-  dominio,
-  /** Qué es la fecha de la fila. En «Avanzó» es la última actualización; en «Se
-   *  cayó» es cuándo se cayó, y muchas de esas filas no tienen movimiento --su
-   *  fecha viene del export-- así que llamarla "actualización" seria falso. */
-  rotuloFecha = 'Última actualización',
-}: {
-  items: Seccion['avanzados']
-  columnaEtapa: boolean
-  dominio: Dominio
-  rotuloFecha?: string
-}) {
-  return (
-    <Table striped withTableBorder fz="xs" className="tabla-una-linea">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Referencia</Table.Th>
-          <CabecerasUbicacion dominio={dominio} />
-          <Table.Th>{rotuloFecha}</Table.Th>
-          <Table.Th ta="right">Registros</Table.Th>
-          <Table.Th>Qué pasó</Table.Th>
-          {columnaEtapa && <Table.Th>Quedó en</Table.Th>}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {items.map((m, i) => (
-          <Table.Tr key={`${m.referencia}-${i}`}>
-            <Table.Td fw={600}>{m.referencia}</Table.Td>
-            <CeldasUbicacion item={m} dominio={dominio} />
-            <Table.Td>{fecha(m.fecha)}</Table.Td>
-            <Table.Td ta="right" ff="monospace">
-              {m.registros}
-            </Table.Td>
-            {/* Las dos piezas de "qué pasó": la categoría del movimiento y, en
-                gris, el comentario de ese registro. Antes en canjes se mostraba
-                solo la categoría --«Respuesta Corredor» en ocho filas seguidas--
-                y el texto que distingue un caso del otro no llegaba a la
-                pantalla. */}
-            <Table.Td>
-              <Recortado texto={m.tipo} detalle={m.comentario} ancho={420} />
-            </Table.Td>
-            {columnaEtapa && (
-              <Table.Td>
-                <Etapa item={m} dominio={dominio} />
+              <Table.Td ta="right" ff="monospace" c="dimmed">
+                {indice === 0 ? '—' : variacion(totalActual, totalDe(f[señal]))}
               </Table.Td>
-            )}
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>
+    </div>
   )
 }
 
-function TablaEstancados({ seccion, dominio }: { seccion: Seccion; dominio: Dominio }) {
-  return (
-    <Table striped withTableBorder fz="xs" className="tabla-una-linea">
-      <Table.Thead>
-        <Table.Tr>
-          <Table.Th>Referencia</Table.Th>
-          <CabecerasUbicacion dominio={dominio} />
-          <Table.Th ta="right">Sin moverse</Table.Th>
-          <Table.Th>Etapa</Table.Th>
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {seccion.estancados.map((e, i) => (
-          <Table.Tr key={`${e.referencia}-${i}`}>
-            <Table.Td fw={600}>{e.referencia}</Table.Td>
-            <CeldasUbicacion item={e} dominio={dominio} />
-            <Table.Td ta="right">
-              <Text size="xs" ff="monospace" component="span">
-                {e.dias_sin_movimiento ?? '—'} días
-              </Text>
-              {/* Que nunca se le haya registrado nada no es lo mismo que llevar
-                  ese tiempo sin gestión: en el primer caso la cuenta corre desde
-                  la fecha de origen y el dato es más débil. */}
-              {e.sin_gestion && (
-                <Text size="xs" c="dimmed">
-                  sin gestión registrada
-                </Text>
-              )}
-            </Table.Td>
-            <Table.Td>{textoEtapa(e, dominio) ?? "—"}</Table.Td>
-          </Table.Tr>
-        ))}
-      </Table.Tbody>
-    </Table>
-  )
-}
-
-function Tile({
-  rotulo: texto,
-  valor,
-  ayuda,
-  color,
-  activo,
-  onClick,
+/** El embudo: por dónde avanzaron en el mes.
+ *
+ * **Todas las etapas van, incluso en cero**: el embudo se lee por su forma --dónde
+ * se angosta-- y una etapa que desaparece parece no existir. El promedio de los
+ * meses anteriores va como número al lado y no como una segunda barra, que es lo
+ * que recargaría la pantalla. */
+function Embudo({
+  embudo,
+  rotular,
+  vacio,
 }: {
-  rotulo: string
-  valor: string
-  ayuda: string
-  color: string
-  activo: boolean
-  onClick: () => void
+  embudo: EtapaDelEmbudo[]
+  rotular: (codigo: string) => string
+  vacio?: string
 }) {
-  return (
-    <Paper
-      withBorder
-      radius="md"
-      p="md"
-      onClick={onClick}
-      className="caja-cifra"
-      style={{
-        cursor: 'pointer',
-        borderColor: activo ? `var(--mantine-color-${color}-6)` : undefined,
-        ["--cifra-max" as string]: '1.625rem',
-      }}
-    >
-      <Badge color={color} variant="light" mb={6}>
-        {texto}
-      </Badge>
-      <Text className="cifra" fw={800} lh={1.1}>
-        {valor}
-      </Text>
-      <Text size="xs" c="dimmed" mt={4}>
-        {ayuda}
-      </Text>
-    </Paper>
-  )
-}
-
-function SeccionDominio({
-  nombre,
-  icono,
-  seccion,
-  conMonto,
-  dominio,
-  diasEstancado,
-}: {
-  nombre: string
-  icono: React.ReactNode
-  seccion: Seccion
-  conMonto: boolean
-  dominio: Dominio
-  diasEstancado: number
-}) {
-  const [bucket, setBucket] = useState('avanzados')
-  const uno = dominio === 'negocios' ? 'negocio' : 'canje'
-  const varios = dominio === 'negocios' ? 'negocios' : 'canjes'
-
-  const listas: Record<string, { largo: number; total: number; nodo: React.ReactNode }> = {
-    cerrados: {
-      largo: seccion.cerrados.length,
-      total: seccion.total_cerrados,
-      nodo: <TablaCerrados seccion={seccion} conMonto={conMonto} dominio={dominio} />,
-    },
-    avanzados: {
-      largo: seccion.avanzados.length,
-      total: seccion.total_avanzados,
-      nodo: <TablaMovidos items={seccion.avanzados} columnaEtapa dominio={dominio} />,
-    },
-    caidos: {
-      largo: seccion.caidos.length,
-      total: seccion.total_caidos,
-      nodo: (
-        <TablaMovidos
-          items={seccion.caidos}
-          columnaEtapa={false}
-          dominio={dominio}
-          rotuloFecha="Cuándo se cayó"
-        />
-      ),
-    },
-    estancados: {
-      largo: seccion.estancados.length,
-      total: seccion.total_estancados,
-      nodo: <TablaEstancados seccion={seccion} dominio={dominio} />,
-    },
-  }
-  const elegido = listas[bucket]
-  // Las otras casillas que sí tienen algo, para que el vacío no se lea como que
-  // no hay nada en la sección.
-  const conFilas = Object.entries(listas)
-    .filter(([clave, lista]) => clave !== bucket && lista.total > 0)
-    .map(([clave, lista]) => `${ROTULOS[clave]} (${lista.total})`)
+  const tope = Math.max(...embudo.map((e) => e.entraron), 1)
+  const total = embudo.reduce((a, e) => a + e.entraron, 0)
 
   return (
     <Paper withBorder radius="md" p="md">
-      <Stack gap="md">
-        <Group gap="xs">
-          {icono}
-          <Title order={4}>{nombre}</Title>
-        </Group>
-
-        <SimpleGrid cols={{ base: 2, md: 4 }}>
-          <Tile
-            rotulo="Se cerró"
-            valor={conMonto ? clp(seccion.monto_cerrado) : String(seccion.total_cerrados)}
-            ayuda={
-              conMonto
-                ? `${seccion.total_cerrados} ${plural(seccion.total_cerrados, 'hito', 'hitos')} en comisión real VP`
-                : `${varios} cerrados en la ventana`
-            }
-            color="good"
-            activo={bucket === 'cerrados'}
-            onClick={() => setBucket('cerrados')}
-          />
-          {/* La cifra cuenta entidades y la ayuda dice los movimientos que hay
-              detrás. Contaba movimientos, y como la lista ahora trae un renglón
-              por entidad, la cifra y la lista no cuadraban. */}
-          <Tile
-            rotulo="Avanzó"
-            valor={String(seccion.total_avanzados)}
-            ayuda={
-              seccion.total_avanzados === 0
-                ? 'sin registros en la ventana'
-                : `${varios} con actividad · ${seccion.movimientos_avanzados} ${plural(
-                    seccion.movimientos_avanzados,
-                    'registro',
-                    'registros',
-                  )}`
-            }
-            color="info"
-            activo={bucket === 'avanzados'}
-            onClick={() => setBucket('avanzados')}
-          />
-          <Tile
-            rotulo="Se cayó"
-            valor={String(seccion.total_caidos)}
-            ayuda={conMonto ? 'pérdidas y desistimientos' : 'cancelaciones'}
-            color="critical"
-            activo={bucket === 'caidos'}
-            onClick={() => setBucket('caidos')}
-          />
-          {/* El umbral lo manda la API y sale del largo de la ventana: escribirlo
-              a mano en la pantalla es como se despega del que aplica de verdad. */}
-          <Tile
-            rotulo="Estancado"
-            valor={String(seccion.total_estancados)}
-            ayuda={`abierto y sin moverse en los ${diasEstancado} días de la ventana`}
-            color="warning"
-            activo={bucket === 'estancados'}
-            onClick={() => setBucket('estancados')}
-          />
-        </SimpleGrid>
-
-        {/* **Lo descartado se dice.** Una limpieza marco como cancelados 215
-            canjes que Dataprop dejo de exportar, y les creo el movimiento con la
-            fecha del dia en que corrio: en una ventana que incluye ese dia, «Se
-            cayo» mostraba 215 sobre 303 canjes. Ahora no cuentan, porque su fecha
-            es del script y no de la gestion -- pero callarlo dejaria una cifra en
-            cero al lado de registros que el usuario sabe que existen. */}
-        {seccion.movimientos_con_fecha_de_carga > 0 && (
-          <Text size="xs" c="dimmed">
-            {seccion.movimientos_con_fecha_de_carga}{' '}
-            {plural(seccion.movimientos_con_fecha_de_carga, 'registro', 'registros')} de esta
-            ventana {plural(seccion.movimientos_con_fecha_de_carga, 'tiene', 'tienen')} la fecha de
-            una carga masiva, no de la gestión, así que no {plural(
-              seccion.movimientos_con_fecha_de_carga,
-              'cuenta',
-              'cuentan',
-            )}{' '}
-            en las cifras de arriba: cuándo pasó de verdad no se sabe.
-          </Text>
-        )}
-
-        {elegido.largo === 0 ? (
-          // **El vacío nombra la casilla y dice dónde sí hay algo.** Decía "nada
-          // que mostrar acá" debajo de una fila de recuadros donde uno podía
-          // marcar 2: la frase era cierta --de la casilla elegida-- y la pantalla
-          // se leía como que la sección estaba vacía. Es el mismo malentendido
-          // que se arregló en la bandeja (`D-073`, `D-074`).
-          <Text size="sm" c="dimmed" ta="center" py="lg">
-            Nada en «{ROTULOS[bucket]}» en esta ventana.
-            {conFilas.length > 0 && ` Sí hay en ${enumerar(conFilas)}.`}
-          </Text>
-        ) : (
-          <Stack gap={4}>
-            <div className="tabla-scroll-x">{elegido.nodo}</div>
-            {elegido.total > elegido.largo && (
-              // Sin esto la lista topeada se leería como el total.
-              <Text size="xs" c="dimmed">
-                Se muestran {elegido.largo} de {elegido.total} {plural(elegido.total, uno, varios)}.
+      <Title order={5}>Por dónde avanzaron</Title>
+      <Text size="xs" c="dimmed" mb="sm">
+        Cuántos entraron a cada etapa en el mes, y el promedio de los meses que estás
+        comparando.
+      </Text>
+      {vacio ? (
+        <Text size="sm" c="dimmed">
+          {vacio}
+        </Text>
+      ) : total === 0 ? (
+        <Text size="sm" c="dimmed">
+          Nadie cambió de etapa en este mes.
+        </Text>
+      ) : (
+        <Stack gap={6}>
+          {embudo.map((e) => (
+            <Group key={e.etapa} gap="sm" wrap="nowrap">
+              <Text size="sm" w={210} style={{ flexShrink: 0 }}>
+                {rotular(e.etapa)}
               </Text>
-            )}
-          </Stack>
-        )}
-      </Stack>
+              <Progress
+                value={(e.entraron / tope) * 100}
+                size="lg"
+                radius="sm"
+                style={{ flex: 1, minWidth: 60 }}
+              />
+              <Text size="sm" ff="monospace" w={100} ta="right" style={{ flexShrink: 0 }}>
+                {e.entraron}
+                <Text span size="xs" c="dimmed">
+                  {' '}
+                  prom {Number(e.promedio_anteriores).toLocaleString('es-CL')}
+                </Text>
+              </Text>
+            </Group>
+          ))}
+        </Stack>
+      )}
     </Paper>
   )
 }
 
-/** Las ventanas que se pueden elegir, en semanas calendario.
- *
- * Semanas y no "7/14/30 días" porque un número tiene que significar lo mismo el
- * martes y el viernes: con ventana móvil, "se cayeron 3" cambia todos los días
- * para el mismo hecho y las flechas dejan de comparar períodos con nombre.
- * También deja un vocabulario común con el reporte mensual, que ya trabaja con
- * ventana móvil de meses calendario. */
-const LARGOS = [
-  { value: '1', label: '1 semana' },
-  { value: '2', label: '2 semanas' },
-  { value: '4', label: '4 semanas' },
-]
+/** Dónde está lo abierto hoy, con la plata en juego y cuánto lleva ahí. */
+function Abiertos({
+  abiertos,
+  rotular,
+  rotuloPlata,
+}: {
+  abiertos: EtapaAbierta[]
+  rotular: (codigo: string) => string
+  rotuloPlata: string
+}) {
+  const sinHistoria = abiertos.reduce((a, e) => a + e.sin_historia, 0)
 
-/**
- * El reporte del período: qué se cerró, qué avanzó, qué se cayó y qué está
- * estancado, en los dos dominios.
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Title order={5}>Dónde está lo abierto hoy</Title>
+      <Text size="xs" c="dimmed" mb="sm">
+        <strong>No depende del mes que estés mirando</strong>: lo abierto es lo de hoy, así que
+        esta foto es la misma en cualquier período.
+      </Text>
+      {abiertos.length === 0 ? (
+        <Text size="sm" c="dimmed">
+          No hay nada abierto.
+        </Text>
+      ) : (
+        <>
+          <div className="tabla-scroll-x">
+            <Table withRowBorders={false} verticalSpacing={4} miw={480}>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Etapa</Table.Th>
+                  <Table.Th ta="right">Casos</Table.Th>
+                  <Table.Th ta="right">{rotuloPlata}</Table.Th>
+                  <Table.Th ta="right">Promedio</Table.Th>
+                  <Table.Th ta="right">Rango</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {abiertos.map((e) => (
+                  <Table.Tr key={e.etapa}>
+                    <Table.Td>{rotular(e.etapa)}</Table.Td>
+                    <Table.Td ta="right" ff="monospace">
+                      {e.casos}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace">
+                      {clp(e.comision)}
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace">
+                      {e.dias_promedio} d
+                    </Table.Td>
+                    <Table.Td ta="right" ff="monospace" c="dimmed">
+                      {e.dias_min === e.dias_max ? '—' : `${e.dias_min}–${e.dias_max} d`}
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </div>
+          {sinHistoria > 0 && (
+            <Text size="xs" c="dimmed" mt="xs">
+              {sinHistoria === 1 ? 'Uno' : sinHistoria} sin movimiento que registre la entrada a
+              la etapa: ahí el reloj se cuenta desde el inicio, que no es lo mismo que haberlo
+              medido.
+            </Text>
+          )}
+        </>
+      )}
+    </Paper>
+  )
+}
+
+/** Mes a mes: los totales y la plata, con la tendencia sobre los meses.
  *
- * Es lo contrario del dashboard. El dashboard responde "cómo vamos" y mira el
- * estado actual; esto responde "qué pasó" y mira los movimientos del período.
- * Por eso no repite las cifras de cartera: sumar lo mismo dos veces con dos
- * cortes distintos es la forma más rápida de que nadie confíe en ninguna.
- *
- * **Un solo control de ventana para las cuatro cifras.** Antes había dos --el
- * navegador fijaba la semana y el 7/14/30 tocaba solo «Estancado»--, así que un
- * control visible movía una de cuatro casillas y se leía como si moviera las
- * cuatro. Ahora la ventana manda en todo y el umbral de estancado es su largo,
- * con lo que «Avanzó» y «Estancado» reparten la cartera abierta en vez de contar
- * dos cosas incomparables.
- */
+ * **Acá vive la tendencia y no en el gráfico semanal**: cinco puntos con el último
+ * de tres días no sostienen una curva. */
+function MesAMes({
+  totales,
+  tendencias,
+  rotuloPlata,
+}: {
+  totales: TotalDelMes[]
+  tendencias: ReporteDeDominio['tendencias']
+  rotuloPlata: string
+}) {
+  const te = tendencias.entraron
+
+  return (
+    <Paper withBorder radius="md" p="md">
+      <Group justify="space-between" align="baseline">
+        <Title order={5}>Mes a mes</Title>
+        {te?.mostrar && (
+          <Text size="xs" c="dimmed">
+            la tendencia de {te.puntos} meses viene{' '}
+            <Text span fw={700}>
+              {te.direccion === 'sube' ? 'al alza' : te.direccion === 'baja' ? 'a la baja' : 'plana'}
+            </Text>
+          </Text>
+        )}
+      </Group>
+      <Text size="xs" c="dimmed" mb="sm">
+        Los totales del período y la plata. La plata va acá y no en el gráfico semanal: se gana
+        al cerrar, así que semana a semana serían ceros con un pico.
+      </Text>
+      <div className="tabla-scroll-x">
+        <Table withRowBorders={false} verticalSpacing={4} miw={620}>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Mes</Table.Th>
+              <Table.Th ta="right">Entraron</Table.Th>
+              <Table.Th ta="right">Avanzaron</Table.Th>
+              <Table.Th ta="right">Se cayeron</Table.Th>
+              <Table.Th ta="right">{rotuloPlata}</Table.Th>
+              <Table.Th ta="right">Ventas</Table.Th>
+              <Table.Th ta="right">Arriendos</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {totales.map((t, i) => (
+              <Table.Tr key={t.etiqueta}>
+                <Table.Td fw={i === totales.length - 1 ? 700 : 400}>
+                  {rotuloMesCorto(t.etiqueta)}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace">
+                  {t.entraron}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace">
+                  {t.avanzaron}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace">
+                  {t.se_cayeron}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace">
+                  {clp(t.comision)}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace" c="dimmed">
+                  {clp(t.valor_venta)}
+                </Table.Td>
+                <Table.Td ta="right" ff="monospace" c="dimmed">
+                  {clp(t.valor_arriendo)}
+                </Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      </div>
+      <Text size="xs" c="dimmed" mt="xs">
+        Ventas y arriendos van en columnas separadas y <strong>no se suman</strong>: un precio de
+        venta y un mes de renta no son la misma unidad.
+      </Text>
+    </Paper>
+  )
+}
+
 export default function ReporteSemanal() {
-  const [ventanas, setVentanas] = useState(0)
-  const [largo, setLargo] = useState('1')
-  const semanas = Number(largo)
+  // El mes que se está mirando. Arranca en el actual y las flechas lo mueven.
+  const [cursor, setCursor] = useState(() => {
+    const hoy = new Date()
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+  })
+  const [meses, setMeses] = useState('3')
+  const [dominio, setDominio] = useState<Dominio>('canjes')
 
-  // El domingo de la ventana es el de esta semana corrido `ventanas` ventanas
-  // completas, así que dos ventanas consecutivas no se pisan ni dejan hueco.
-  const domingo = lunesDe(new Date(), ventanas * semanas)
-  domingo.setDate(domingo.getDate() + 6)
-  const lunes = new Date(domingo)
-  lunes.setDate(lunes.getDate() - (semanas * 7 - 1))
-  const desde = aISO(lunes)
-  const hasta = aISO(domingo)
+  const anio = cursor.getFullYear()
+  const mes = cursor.getMonth() + 1
 
   const consulta = useQuery({
-    queryKey: ['reporte-semanal', desde, hasta],
-    // Sin `dias_estancado`: lo deriva el backend del largo de la ventana, y así
-    // no hay dos lugares que puedan discrepar sobre cuál es el umbral.
-    queryFn: () => obtenerReporteSemanal({ desde, hasta }),
+    queryKey: ['reporte-semanal', anio, mes, meses],
+    queryFn: () => obtenerReporteSemanal(anio, mes, Number(meses)),
   })
   const { data } = consulta
 
+  const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
+  const rotularNegocio = (codigo: string) => {
+    const etapa = catalogos?.etapas.find((e) => e.codigo === codigo)
+    return etapa ? `${codigo} · ${etapa.nombre}` : codigo
+  }
+  const rotularCanje = (codigo: string) => rotuloEtapa(codigo)
+
+  const correr = (delta: number) =>
+    setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1))
+
+  const reporte = data ? data[dominio] : null
+  const rotular = dominio === 'canjes' ? rotularCanje : rotularNegocio
+  const rotuloPlata = dominio === 'canjes' ? 'Comisión Dataprop' : 'Comisión real VP'
+
   return (
-    <Stack gap="md">
+    <>
       <PageHeader
         title="Reporte semanal"
-        subtitle="Qué pasó en la ventana, en negocios y en canjes. El dashboard dice cómo vamos; esto dice qué cambió."
+        subtitle="Cómo se movió el mes, semana a semana, contra los meses anteriores."
         action={
-          <Group gap="xs">
-            <Tooltip label="Ventana anterior">
-              <ActionIcon variant="default" onClick={() => setVentanas((v) => v - 1)} aria-label="Ventana anterior">
-                <IconChevronLeft size={16} />
-              </ActionIcon>
-            </Tooltip>
-            <Text size="sm" fw={600} w={260} ta="center">
-              {rotulo(desde, hasta)}
+          <Group gap="xs" wrap="nowrap">
+            <ActionIcon variant="default" radius="xl" onClick={() => correr(-1)} aria-label="Mes anterior">
+              <IconChevronLeft size={16} />
+            </ActionIcon>
+            <Text fw={700} ta="center" style={{ minWidth: 150 }}>
+              {MESES[mes - 1]} {anio}
             </Text>
-            <Tooltip label={ventanas >= 0 ? 'Todavía no empieza' : 'Ventana siguiente'}>
-              <ActionIcon
-                variant="default"
-                disabled={ventanas >= 0}
-                onClick={() => setVentanas((v) => v + 1)}
-                aria-label="Ventana siguiente"
-              >
-                <IconChevronRight size={16} />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon variant="default" radius="xl" onClick={() => correr(1)} aria-label="Mes siguiente">
+              <IconChevronRight size={16} />
+            </ActionIcon>
           </Group>
         }
       />
 
-      <Group gap="xs">
-        <Text size="xs" c="dimmed">
-          Ventana móvil de
-        </Text>
-        <SegmentedControl size="xs" value={largo} onChange={setLargo} data={LARGOS} />
-        <Text size="xs" c="dimmed">
-          Las cuatro cifras y las listas hablan de esta ventana, y estancado es lo que no se movió en
-          ella.
-        </Text>
-      </Group>
-
-      {!data ? (
+      {!reporte || !data ? (
         <EstadoConsulta de={consulta} alto={240} />
       ) : (
-        <Stack gap="lg">
-          <SeccionDominio
-            nombre="Negocios"
-            icono={<IconBriefcase size={20} />}
-            seccion={data.negocios}
-            conMonto
-            dominio="negocios"
-            diasEstancado={data.dias_estancado}
+        <Stack gap="md">
+          <Group gap="lg" wrap="wrap">
+            <SegmentedControl
+              color="accent"
+              value={dominio}
+              onChange={(v) => setDominio(v as Dominio)}
+              data={[
+                { value: 'canjes', label: 'Canjes' },
+                { value: 'negocios', label: 'Negocios' },
+              ]}
+            />
+            <Group gap="xs">
+              <Text size="xs" c="dimmed">
+                Comparar con los últimos
+              </Text>
+              <Select
+                size="xs"
+                w={110}
+                value={meses}
+                onChange={(v) => setMeses(v ?? '3')}
+                data={MESES_A_COMPARAR.map((m) => ({
+                  value: String(m),
+                  label: m === 1 ? '1 mes' : `${m} meses`,
+                }))}
+                allowDeselect={false}
+              />
+              <Text size="xs" c="dimmed">
+                · {MESES[mes - 1]} tiene {reporte.semanas.length} semanas
+              </Text>
+            </Group>
+          </Group>
+
+          <Alert variant="light" color="brand" icon={<IconInfoCircle size={18} />}>
+            <Text size="sm">
+              Las semanas se cuentan <strong>desde el día 1</strong> del mes: del 1 al 7, del 8
+              al 14, y así.{' '}
+              {reporte.semanas[reporte.semanas.length - 1].dias < 7 && (
+                <>
+                  La última tiene{' '}
+                  <strong>{reporte.semanas[reporte.semanas.length - 1].dias} días</strong>, así
+                  que siempre va a verse más baja: es el calendario, no una caída de actividad.
+                </>
+              )}
+            </Text>
+          </Alert>
+
+          {/* ── 1. El flujo, semana a semana ─────────────────────────── */}
+          <SimpleGrid cols={{ base: 1, lg: 3 }} spacing="md">
+            {SEÑALES.map((s) => (
+              <FlujoSemanal
+                key={s.campo}
+                titulo={s.titulo(dominio)}
+                subtitulo={s.ayuda}
+                semanas={reporte.semanas}
+                flujo={reporte.flujo}
+                señal={s.campo}
+                sinDatos={
+                  reporte.sin_datos.includes(s.campo) ? POR_QUE_FALTA[s.campo] : undefined
+                }
+              />
+            ))}
+          </SimpleGrid>
+
+          <Paper withBorder radius="md" p="md">
+            <Title order={5}>Los mismos números</Title>
+            <Text size="xs" c="dimmed" mb="sm">
+              Cada mes en su fila, con sus semanas y su total. La última columna compara ese mes
+              contra {MESES[mes - 1]}.
+            </Text>
+            <Stack gap="lg">
+              {SEÑALES.filter((s) => !reporte.sin_datos.includes(s.campo)).map((s) => (
+                <div key={s.campo}>
+                  <Text size="sm" fw={600} mb={4}>
+                    {s.titulo(dominio)}
+                  </Text>
+                  <TablaDelFlujo dominio={reporte} reporte={reporte} señal={s.campo} />
+                </div>
+              ))}
+            </Stack>
+          </Paper>
+
+          {/* ── 2. Por dónde avanzaron ───────────────────────────────── */}
+          <Embudo
+            embudo={reporte.embudo}
+            rotular={rotular}
+            vacio={
+              reporte.sin_datos.includes('avanzaron') ? POR_QUE_FALTA.avanzaron : undefined
+            }
           />
-          <SeccionDominio
-            nombre="Canjes"
-            icono={<IconArrowsExchange size={20} />}
-            seccion={data.canjes}
-            conMonto={false}
-            dominio="canjes"
-            diasEstancado={data.dias_estancado}
+
+          {/* ── 3. Dónde está lo abierto ─────────────────────────────── */}
+          <Abiertos abiertos={reporte.abiertos} rotular={rotular} rotuloPlata={rotuloPlata} />
+
+          {/* ── 4. Mes a mes, con la tendencia ───────────────────────── */}
+          <MesAMes
+            totales={reporte.totales}
+            tendencias={reporte.tendencias}
+            rotuloPlata={rotuloPlata}
           />
         </Stack>
       )}
-    </Stack>
+    </>
   )
 }

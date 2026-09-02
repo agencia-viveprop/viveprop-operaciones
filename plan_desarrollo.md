@@ -268,6 +268,8 @@ Es lo contrario del dashboard. El dashboard responde "cómo vamos" y mira el est
 
 - **Listo cuando:** una semana con gestión registrada pero sin cambios de etapa aparece con actividad, no vacía (`D-031`), y el umbral de estancado es un control visible, no una constante escondida (`D-032`). ✅ 30 tests; verificado contra `dev`.
 
+**Rehecho el 2026-09-02** (`D-098`). Lo pedido cambió: *«mostrar cómo van moviéndose los canjes y los negocios semana a semana dentro del mes, y a la vez compararlo con meses anteriores»*. La ventana móvil de 1/2/4 semanas y sus cuatro casillas se retiraron --una ventana corrida no tiene con qué mes compararse-- y quedó el **flujo del mes** --entraron / avanzaron / se cayeron-- con el eje en las semanas del mes y los meses anteriores superpuestos, más el embudo de entradas por etapa, la foto de lo abierto con su plata, y el bloque mes a mes con la tendencia. 24 tests.
+
 ### 17 · F4 — Reporte mensual comparativo ✅ Listo
 
 Mes actual contra mes anterior y contra el mismo mes del año anterior, con variación. Las dos comparaciones van juntas porque responden cosas distintas: la primera dice si sube o baja, la segunda si es tendencia o estacionalidad.

@@ -21,6 +21,8 @@ from app.services.reporte_mensual import (
 from app.services.obligaciones import Cobranza, obtener_cobranza
 from app.services.vista_directorio import VistaDirectorio, obtener_vista_directorio
 from app.services.reporte_semanal import (
+    MESES_DEFECTO,
+    MESES_VALIDOS,
     ReporteSemanal,
     obtener_reporte_semanal,
 )
@@ -32,44 +34,35 @@ MAX_DIAS = 366
 
 @router.get("/semanal", response_model=ReporteSemanal)
 def semanal(
-    desde: date | None = Query(None, description="Inicio del período. Por defecto, el lunes de esta semana."),
-    hasta: date | None = Query(None, description="Fin del período, incluido."),
-    dias_estancado: int | None = Query(
-        None,
-        ge=1,
-        le=365,
+    anio: int | None = Query(None, ge=2022, le=2100, description="Año. Por defecto, el actual."),
+    mes: int | None = Query(None, ge=1, le=12, description="Mes. Por defecto, el actual."),
+    meses: int = Query(
+        MESES_DEFECTO,
         description=(
-            "Días sin movimiento para considerar algo estancado. "
-            "Por defecto, el largo del período: así las cuatro cifras del reporte "
-            "hablan de la misma ventana."
+            "Cuántos meses comparar, contando el elegido. Uno es «solo este mes, sin "
+            f"comparación»; el tope es {max(MESES_VALIDOS)}."
         ),
     ),
     db: Session = Depends(get_db),
     usuario: Usuario = Depends(get_current_user),
 ):
-    """Qué se cerró, qué avanzó, qué se cayó y qué está estancado.
+    """Cómo se movió el mes, semana a semana, contra los meses anteriores.
 
-    El período es libre y no solo semanal: el nombre viene del uso previsto, pero
-    sirve igual para una quincena o un mes.
+    **El eje es la semana del mes.** Los parámetros cambiaron: antes eran
+    `desde`/`hasta`/`dias_estancado` y medían una ventana de semanas corridas, que
+    no permitía comparar nada con los meses previos (`D-098`).
     """
-    if (desde is None) != (hasta is None):
+    if (anio is None) != (mes is None):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            "Hay que indicar 'desde' y 'hasta' juntos, o ninguno de los dos.",
+            "Hay que indicar 'anio' y 'mes' juntos, o ninguno de los dos.",
         )
-    if desde is not None and hasta is not None:
-        if hasta < desde:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"'hasta' ({hasta}) es anterior a 'desde' ({desde}).",
-            )
-        if (hasta - desde).days > MAX_DIAS:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                f"El período no puede pasar de {MAX_DIAS} días.",
-            )
-
-    return obtener_reporte_semanal(db, desde, hasta, dias_estancado)
+    if meses not in MESES_VALIDOS:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Los meses a comparar tienen que ser uno de {list(MESES_VALIDOS)}.",
+        )
+    return obtener_reporte_semanal(db, anio, mes, meses)
 
 
 @router.get("/mensual", response_model=ReporteMensual)

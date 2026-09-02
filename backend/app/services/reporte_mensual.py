@@ -780,6 +780,7 @@ def _tendencia(
     campo: str,
     nombre: str,
     inicio: tuple[int, int] | None = None,
+    dominio: str | None = None,
 ) -> Tendencia:
     """La curva de mínimos cuadrados sobre los meses de la ventana.
 
@@ -797,7 +798,7 @@ def _tendencia(
     if n < 2:
         return Tendencia(
             metrica=nombre,
-            dominio=DOMINIOS[campo],
+            dominio=dominio or DOMINIOS[campo],
             puntos=n,
             grado=0,
             pendiente=CERO,
@@ -839,7 +840,7 @@ def _tendencia(
 
     return Tendencia(
         metrica=nombre,
-        dominio=DOMINIOS[campo],
+        dominio=dominio or DOMINIOS[campo],
         puntos=n,
         grado=grado,
         pendiente=pendiente.quantize(CENTAVO),

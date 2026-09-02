@@ -1,610 +1,342 @@
-"""Reporte semanal: qué se cerró, qué avanzó, qué se cayó, qué está estancado.
+"""Reporte semanal: cómo se movió el mes, semana a semana, contra los anteriores.
 
-Cubre los **dos dominios**. Un reporte de la semana que ignore los 194 canjes
-abiertos sería medio reporte, y quien lo lee opera los dos.
+**El eje es la semana del mes, y los meses anteriores van superpuestos.** Es lo
+que el usuario pidió: *«poder mostrar cómo van moviéndose los canjes y los
+negocios semana a semana dentro del mes, y a la vez tener la opción de compararlo
+con meses anteriores»*. La versión anterior de esta pantalla medía una ventana
+móvil de semanas corridas y no permitía comparar nada.
 
-**Es un reporte de movimiento, no de estado.** El dashboard responde "cómo
-vamos"; esto responde "qué pasó esta semana". Por eso casi todo se calcula desde
-`movimientos` y no desde el estado actual de las filas: el estado dice dónde
-estamos, el movimiento dice qué cambió.
+**Cuatro bloques, y cada uno responde una pregunta**, que es la restricción que él
+puso --*«que quien lo vea pueda entender lo que está viendo»*--:
 
-**Las excepciones son lo cerrado y lo caído de canjes, que salen de
-`fecha_cierre`.** En lo cerrado es la fecha en que entró la plata y es más
-confiable que buscar el movimiento que la marcó. En lo caído de canjes es la
-**única** fecha que existe: Dataprop manda la fecha de cancelación de los canjes
-recientes --47 de 293, todos de los últimos cuatro meses-- y cancelar en la app no
-escribe ese campo, así que hay que mirar los dos lados. Antes se miraban solo los
-movimientos y las nueve cancelaciones de agosto no aparecían en ninguna ventana
-(`D-086`).
+| Bloque | La pregunta |
+|---|---|
+| `flujo` | cómo se movió el mes, semana a semana |
+| `embudo` | por dónde avanzaron |
+| `abiertos` | dónde está lo abierto hoy y cuánta plata hay ahí |
+| `totales` | mes a mes, con promedio y tendencia |
 
-Y se filtra por **estado** y no por etapa: los 31 canjes con la etapa en «Cierre»
-están todos cancelados --llegaron a la firma y se cayeron-- así que preguntar por
-la etapa contaría una caída como un cierre.
+**La tendencia va sobre los meses y no sobre las semanas.** Cinco puntos
+semanales, con el último de tres días, no sostienen una curva: el ajuste bajaría
+siempre al final por un artefacto del calendario. Sobre los meses comparados sí, y
+aparece desde tres.
 
-**"Avanzó" es toda actividad registrada, no solo un cambio de etapa.** En un
-reporte semanal lo que importa es donde hubo progreso, y registrar una
-confirmacion por WhatsApp es progreso aunque la etapa no se mueva. Ademas los
-movimientos migrados del Excel llevan `etapa_resultante` nulo a proposito
-(D-030), asi que filtrar por cambio de etapa dejaria el reporte vacio sobre toda
-la historia previa. Cuando el movimiento si mueve la etapa, se dice.
-
-**Un renglón por negocio o por canje, no por movimiento.** Las listas muestran
-la **última actualización** de cada uno, con la cuenta de cuántos registros tuvo
-en la ventana. Un renglón por movimiento repetía la misma referencia tres veces y
-obligaba a leer las tres para saber en qué quedó. Por eso los totales de la
-sección cuentan **entidades** y los movimientos van en un campo aparte: una lista
-de doce renglones bajo una cifra que dice 23 es el desajuste que se arregló en la
-bandeja, y no vale repetirlo acá.
-
-**Los movimientos con fecha de carga no cuentan como actividad de la ventana.**
-Una limpieza marcó como cancelados 215 canjes que Dataprop dejó de exportar y les
-creó el movimiento con la fecha del día en que corrió: en una ventana que incluye
-ese día, «Se cayó» mostraba 215 sobre 303 canjes. Se descuentan y se informan
-aparte --nunca en silencio--. El criterio está en `_fecha_puesta_por_la_carga`, y
-lo importante es que **no descarta todo lo cargado**: las 11 cancelaciones
-migradas del Excel traen fechas reales y siguen contando.
-
-**Estancado** no es un estado guardado, es una ausencia: algo abierto sin
-movimiento en más de N días.
-
-**El umbral de estancado es el largo de la ventana.** No es un parámetro
-independiente: si la ventana son cuatro semanas, estancado es lo que no se movió
-en esas cuatro semanas, y así «Avanzó» y «Estancado» reparten la cartera abierta
-en vez de contar dos cosas incomparables. Se puede forzar por parámetro --los
-tests lo hacen-- pero el default sale de la ventana.
-
-**Y se mide al cierre de la ventana, no contra hoy.** Antes se medía siempre
-contra `ahora`, así que al navegar cuatro semanas atrás las tres primeras cifras
-cambiaban y «Estancado» seguía mostrando el estancamiento de hoy. Un período
-pasado tiene que decir lo que decía al terminar, o no se puede comparar con el
-que sigue.
+**Las señales que no se pueden medir se declaran en `sin_datos`.** En negocios,
+«avanzaron» y «se cayeron» son cero por dos razones distintas del estado del
+proyecto: el pipeline no tiene ni un movimiento registrado, y las diez
+liquidaciones perdidas no tienen fecha de cierre. Dibujar una serie de ceros ahí
+diría «no pasó nada», cuando lo que pasa es «no se sabe». La pantalla lo explica.
 """
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.canje import (
-    ETAPA_LABELS,
-    OPERACION_LABELS,
-    Canje,
-    CanjeEstado,
-    CanjeEtapa,
+from app.models.catalogo import EstadoNegocio
+from app.models.canje import CanjeEtapa
+from app.models.catalogo import Etapa
+from app.models.movimiento import EntityType, Movimiento
+from app.models.negocio import NegocioHito
+from app.services.metricas_periodo import (
+    EtapaAbierta,
+    EtapaDelEmbudo,
+    FlujoDelMes,
+    Semana,
+    TotalDelMes,
+    Tramo,
+    abiertos_de_canjes,
+    abiertos_de_negocios,
+    embudo_de_canjes,
+    embudo_de_negocios,
+    flujo_de_canjes_por_tramo,
+    flujo_de_negocios_por_tramo,
+    instantes_de_carga,
+    semanas_del_mes,
 )
-from app.models.catalogo import Catalogo, EstadoNegocio, Etapa
-from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
-from app.models.negocio import Negocio, NegocioHito, Propiedad
+from app.services.reporte_mensual import (
+    Tendencia,
+    correr_meses,
+    limites,
+    _tendencia,
+)
+from app.services.uf import serie_completa
 
 CERO = Decimal("0")
 
-# Tipos que significan "el negocio no prosperó".
-CAIDA_NEGOCIO = ("NEG_PERDIDA", "NEG_DESISTIMIENTO")
-CAIDA_CANJE = ("CANCELACION",)
-TOPE_LISTA = 25
+# Cuántos meses anteriores se pueden comparar. Uno es «solo este mes, sin
+# comparación»; doce es el año hacia atrás.
+MESES_VALIDOS = tuple(range(1, 13))
+MESES_DEFECTO = 3
 
-# Los rótulos de etapa de canje, indexados por el valor guardado:
-# `movimientos.etapa_resultante` es texto y puede traer algo que ya no esté en el
-# enum, así que se busca por clave y no se construye el enum.
-LABELS_CANJE = {etapa.value: texto for etapa, texto in ETAPA_LABELS.items()}
-
-
-class Ubicacion(BaseModel):
-    """De qué propiedad se está hablando.
-
-    Va en las cuatro listas de las dos secciones. La referencia sola --«VVP-15»,
-    «#344»-- no le dice nada a quien lee el reporte sin abrir otra pantalla, y el
-    reporte se lee justamente para decidir a quién llamar hoy.
-
-    `alianza` es de negocios y `operacion` de canjes: cada dominio llena la suya.
-    """
-
-    direccion: str | None = None
-    comuna: str | None = None
-    alianza: str | None = None
-    operacion: str | None = None
-
-
-class ItemCerrado(Ubicacion):
-    referencia: str
-    detalle: str | None = None
-    fecha: date | None = None
-    monto: Decimal | None = None
-
-
-class ItemMovido(Ubicacion):
-    referencia: str
-    fecha: date
-    # Dónde quedó: la etapa que dejó el movimiento, o la actual si no la movió.
-    # Así la columna nunca queda muda, que es lo que pasaba con los movimientos
-    # migrados del Excel --etapa nula a propósito-- donde salía "—" en fila.
-    etapa: str | None = None
-    etapa_nombre: str | None = None
-    # Si el último movimiento cambió la etapa, o fue gestión sin mover el
-    # pipeline. Las dos cosas son avance, pero no son la misma cosa.
-    movio_etapa: bool = False
-    # Qué pasó, en dos piezas: el tipo de movimiento --la categoría, «Respuesta
-    # Corredor»-- y el comentario que se escribió --el detalle del caso--.
-    #
-    # Van **separadas y no pegadas de este lado**: la primera versión mandaba una
-    # sola cadena, y en canjes traía el tipo y tiraba el comentario, así que el
-    # dato más específico de cada registro no llegaba a la pantalla. Pegarlas es
-    # decisión de presentación; el reporte manda los dos hechos.
-    tipo: str | None = None
-    comentario: str | None = None
-    # Cuántos movimientos tuvo en la ventana, contando este.
-    registros: int = 1
-
-
-class ItemEstancado(Ubicacion):
-    referencia: str
-    etapa: str | None = None
-    etapa_nombre: str | None = None
-    dias_sin_movimiento: int | None = None
-    # Nunca se le registró nada: la cuenta corre desde su fecha de origen.
-    sin_gestion: bool = False
-
-
-class Seccion(BaseModel):
-    cerrados: list[ItemCerrado]
-    monto_cerrado: Decimal
-    avanzados: list[ItemMovido]
-    caidos: list[ItemMovido]
-    estancados: list[ItemEstancado]
-    # Los totales van aparte porque las listas están topeadas.
-    total_cerrados: int
-    total_avanzados: int
-    total_caidos: int
-    total_estancados: int
-    # Movimientos, no entidades: `total_avanzados` cuenta negocios o canjes con
-    # actividad y este cuenta los registros que hicieron. Los dos números
-    # importan y no son el mismo.
-    movimientos_avanzados: int
-    # Movimientos de la ventana cuya fecha la puso un proceso masivo y no la
-    # gestión: se descuentan de todas las cifras y se informan acá. Si se
-    # descartaran en silencio, la pantalla diría 0 donde el usuario sabe que hay
-    # 215 registros, y eso se lee como que el reporte no funciona.
-    movimientos_con_fecha_de_carga: int = 0
+class ReporteDeDominio(BaseModel):
+    semanas: list[Semana]
+    # El mes elegido primero y después los anteriores, del más nuevo al más viejo.
+    # La pantalla dibuja el primero destacado y el resto como referencia.
+    flujo: list[FlujoDelMes]
+    embudo: list[EtapaDelEmbudo]
+    abiertos: list[EtapaAbierta]
+    # Del más viejo al más nuevo, incluido el mes elegido: es el eje del bloque de
+    # tendencia.
+    totales: list[TotalDelMes]
+    tendencias: dict[str, Tendencia]
+    # Qué señales no se pueden medir en este dominio, por nombre de campo. La
+    # pantalla las explica en vez de dibujar ceros.
+    sin_datos: list[str]
 
 
 class ReporteSemanal(BaseModel):
-    desde: date
-    hasta: date
-    dias_estancado: int
-    negocios: Seccion
-    canjes: Seccion
+    anio: int
+    mes: int
+    # Cuántos meses hacia atrás se comparan, contando el elegido.
+    meses: int
+    canjes: ReporteDeDominio
+    negocios: ReporteDeDominio
 
 
-def semana_de(referencia: date) -> tuple[date, date]:
-    """El lunes y el domingo de la semana que contiene esa fecha."""
-    lunes = referencia - timedelta(days=referencia.weekday())
-    return lunes, lunes + timedelta(days=6)
+def _clave(anio: int, mes: int) -> str:
+    return f"{anio:04d}-{mes:02d}"
 
 
-def _rango_utc(desde: date, hasta: date) -> tuple[datetime, datetime]:
-    """El intervalo completo, con el último día incluido."""
-    return (
-        datetime.combine(desde, time.min, tzinfo=timezone.utc),
-        datetime.combine(hasta, time.max, tzinfo=timezone.utc),
-    )
+def _meses_de_la_ventana(anio: int, mes: int, meses: int) -> list[tuple[int, int]]:
+    """El mes elegido y los anteriores, del más viejo al más nuevo."""
+    return [correr_meses(anio, mes, -(meses - 1 - i)) for i in range(meses)]
 
 
-def _ultimos_movimientos(db: Session, tipo: EntityType):
-    return (
-        select(
-            Movimiento.entity_id.label("entity_id"),
-            func.max(Movimiento.fecha).label("fecha"),
+def _embudo(
+    entradas_del_mes: dict[str, int],
+    entradas_anteriores: list[dict[str, int]],
+    etapas: list[str],
+) -> list[EtapaDelEmbudo]:
+    """El embudo del mes con el promedio de los meses anteriores al lado.
+
+    **Todas las etapas del pipeline van, incluso en cero.** El embudo se lee por
+    su forma --dónde se angosta-- y una etapa que desaparece porque nadie pasó por
+    ella rompe esa lectura: parece que la etapa no existe.
+
+    El promedio va como número y no como una segunda barra: es la referencia, y
+    duplicar las barras es justo lo que recarga la pantalla.
+    """
+    salida = []
+    for etapa in etapas:
+        previos = [m.get(etapa, 0) for m in entradas_anteriores]
+        promedio = (
+            (Decimal(sum(previos)) / len(previos)).quantize(Decimal("0.1"))
+            if previos
+            else CERO
         )
-        .where(Movimiento.entity_type == tipo)
-        .group_by(Movimiento.entity_id)
-        .subquery()
-    )
-
-
-def _dias(corte: datetime, fecha) -> int | None:
-    if fecha is None:
-        return None
-    if fecha.tzinfo is None:
-        fecha = fecha.replace(tzinfo=timezone.utc)
-    return (corte - fecha).days
-
-
-def _instantes_de_carga(db: Session, tipo: EntityType) -> set[datetime]:
-    """Los `creado_en` que comparte más de un movimiento: una carga masiva.
-
-    Dos movimientos con el mismo timestamp **al microsegundo** entraron en la
-    misma transacción. No hace falta ninguna marca ni ninguna constante: esa
-    coincidencia exacta no pasa por casualidad. Es el mismo criterio con el que el
-    reporte de canjes activos distingue lo cargado de lo registrado a mano.
-    """
-    return {
-        instante
-        for (instante,) in db.execute(
-            select(Movimiento.creado_en)
-            .where(Movimiento.entity_type == tipo)
-            .group_by(Movimiento.creado_en)
-            .having(func.count() > 1)
-        ).all()
-    }
-
-
-def _fecha_puesta_por_la_carga(fecha, creado_en, cargas: set[datetime]) -> bool:
-    """Si la fecha de ese movimiento la inventó el proceso que lo cargó.
-
-    **El caso que esto resuelve.** Una limpieza marcó como cancelados 215 canjes
-    que Dataprop dejó de exportar, y les creó el movimiento de cancelación con la
-    fecha del día en que corrió. En una ventana que incluye ese día, «Se cayó»
-    mostraba 215 --sobre 303 canjes-- cuando en realidad esos canjes se cayeron en
-    algún momento desconocido de los últimos años. La cifra era cierta sobre los
-    movimientos y falsa sobre el negocio.
-
-    **No alcanza con "vino de una carga".** El otro grupo cargado --11
-    cancelaciones migradas del Excel-- trae fechas reales, de 2024 a 2026, porque
-    el archivo las tenía. Esas sí pertenecen a la ventana donde caen y tienen que
-    contar. La diferencia no es cómo entraron, es si la fecha es un dato o un
-    subproducto: **el script estampó "hoy"**.
-
-    Por eso hacen falta las dos condiciones. Y por eso tampoco alcanza con mirar
-    solo la coincidencia de fechas: una cancelación que alguien registra hoy en la
-    app también tiene `fecha` de hoy, y esa es una gestión real. Lo que la
-    distingue es que su `creado_en` no lo comparte nadie.
-    """
-    if creado_en is None or creado_en not in cargas:
-        return False
-    if creado_en.tzinfo is None:
-        creado_en = creado_en.replace(tzinfo=timezone.utc)
-    return fecha.date() == creado_en.date()
-
-
-def _direccion(calle: str | None, unidad: str | None) -> str | None:
-    """La dirección como se dice en voz alta, con la unidad si la hay."""
-    if not calle:
-        return None
-    return f"{calle} {unidad}" if unidad else calle
-
-
-def _nombres_de_etapa(db: Session) -> dict[str, str]:
-    """`{codigo: nombre}` de las etapas de negocio.
-
-    La tabla tiene siete filas: traerla completa una vez sale más barato que
-    unirla en cada consulta, y deja el nombre disponible también cuando la etapa
-    viene del negocio y no del movimiento.
-    """
-    return {codigo: nombre for codigo, nombre in db.execute(select(Etapa.codigo, Etapa.nombre)).all()}
-
-
-def _ultimo_por_referencia(items: list[ItemMovido]) -> list[ItemMovido]:
-    """Un renglón por entidad: el último movimiento, contando los anteriores.
-
-    Recibe la lista en orden ascendente de fecha, así que el que pisa cada clave
-    al final es el más reciente. Devuelve del más nuevo al más viejo: con la lista
-    topeada, lo que hay que dejar afuera es lo viejo.
-    """
-    ultimos: dict[str, ItemMovido] = {}
-    for item in items:
-        previo = ultimos.get(item.referencia)
-        if previo is not None:
-            item.registros = previo.registros + 1
-        ultimos[item.referencia] = item
-    return sorted(ultimos.values(), key=lambda i: i.fecha, reverse=True)
-
-
-# --------------------------------------------------------------- negocios
-
-
-def _seccion_negocios(db: Session, desde: date, hasta: date, dias: int, corte: datetime) -> Seccion:
-    inicio, fin = _rango_utc(desde, hasta)
-    etapas = _nombres_de_etapa(db)
-
-    filas_cerradas = db.execute(
-        select(Negocio.codigo, NegocioHito.nombre, NegocioHito.fecha_cierre,
-               NegocioHito.comision_real_vp, Propiedad.direccion, Propiedad.unidad,
-               Propiedad.comuna, Catalogo.nombre)
-        .join(Negocio, Negocio.id == NegocioHito.negocio_id)
-        .join(Propiedad, Propiedad.id == Negocio.propiedad_id)
-        .outerjoin(Catalogo, Catalogo.id == Negocio.alianza_id)
-        .where(
-            NegocioHito.estado == EstadoNegocio.CERRADO,
-            NegocioHito.fecha_cierre >= desde,
-            NegocioHito.fecha_cierre <= hasta,
+        salida.append(
+            EtapaDelEmbudo(
+                etapa=etapa,
+                entraron=entradas_del_mes.get(etapa, 0),
+                promedio_anteriores=promedio,
+            )
         )
-        .order_by(NegocioHito.fecha_cierre)
-    ).all()
-    cerrados = [
-        ItemCerrado(referencia=cod, detalle=nombre, fecha=f, monto=monto or CERO,
-                    direccion=_direccion(calle, unidad), comuna=comuna, alianza=alianza)
-        for cod, nombre, f, monto, calle, unidad, comuna, alianza in filas_cerradas
-    ]
-    monto_cerrado = sum((c.monto or CERO for c in cerrados), CERO)
+    return salida
 
-    cargas = _instantes_de_carga(db, EntityType.negocio)
-    movidos = db.execute(
-        select(Negocio.codigo, Movimiento.fecha, Movimiento.etapa_resultante,
-               Movimiento.comentario, Movimiento.tipo_movimiento, Negocio.etapa,
-               Propiedad.direccion, Propiedad.unidad, Propiedad.comuna, Catalogo.nombre,
-               TipoMovimiento.nombre, Movimiento.creado_en)
-        .join(Negocio, Negocio.id == Movimiento.entity_id)
-        .join(Propiedad, Propiedad.id == Negocio.propiedad_id)
-        .join(TipoMovimiento, TipoMovimiento.codigo == Movimiento.tipo_movimiento)
-        .outerjoin(Catalogo, Catalogo.id == Negocio.alianza_id)
-        .where(
+
+def _etapas_de_negocio(db: Session) -> list[str]:
+    return list(db.scalars(select(Etapa.codigo).order_by(Etapa.orden)))
+
+
+def _sin_datos_de_negocios(db: Session) -> list[str]:
+    """Qué señales de negocios no tienen de dónde salir, medido y no supuesto.
+
+    Se calcula en vez de escribirse fijo porque las dos condiciones se resuelven
+    solas en cuanto alguien registre un avance o cierre una liquidación perdida
+    con su fecha. Un aviso que envejece mal es peor que ninguno.
+    """
+    faltan = []
+    avances = db.scalar(
+        select(func.count()).where(
             Movimiento.entity_type == EntityType.negocio,
-            Movimiento.fecha >= inicio,
-            Movimiento.fecha <= fin,
+            Movimiento.etapa_resultante.is_not(None),
         )
-        # El id desempata los del mismo instante: sin eso, cuál es "el último"
-        # queda a criterio del plan de la consulta.
-        .order_by(Movimiento.fecha, Movimiento.id)
-    ).all()
+    )
+    if not avances:
+        faltan.append("avanzaron")
 
-    # La fecha de estos movimientos la puso el proceso que los cargó, así que no
-    # dicen nada sobre la ventana. Se cuentan aparte y la pantalla los informa.
-    descartados = [f for f in movidos if _fecha_puesta_por_la_carga(f[1], f[11], cargas)]
-    movidos = [f for f in movidos if not _fecha_puesta_por_la_carga(f[1], f[11], cargas)]
-
-    def _item(fila) -> ItemMovido:
-        (cod, f, etapa_mov, com, _tipo, etapa_actual, calle, unidad, comuna,
-         alianza, nombre_tipo, _creado) = fila
-        etapa = etapa_mov or etapa_actual
-        return ItemMovido(
-            referencia=cod,
-            fecha=f.date(),
-            etapa=etapa,
-            etapa_nombre=etapas.get(etapa) if etapa else None,
-            movio_etapa=etapa_mov is not None,
-            tipo=nombre_tipo,
-            comentario=com,
-            direccion=_direccion(calle, unidad),
-            comuna=comuna,
-            alianza=alianza,
+    caidas_con_fecha = db.scalar(
+        select(func.count()).select_from(NegocioHito).where(
+            NegocioHito.estado.in_((EstadoNegocio.PERDIDO, EstadoNegocio.DESISTIDO)),
+            NegocioHito.fecha_cierre.is_not(None),
         )
+    )
+    if not caidas_con_fecha:
+        faltan.append("se_cayeron")
+    return faltan
 
-    # Actividad que no sea una caida: esas se listan aparte y contarlas en las
-    # dos columnas seria contar el mismo hecho dos veces.
-    planos = [_item(f) for f in movidos if f[4] not in CAIDA_NEGOCIO]
-    avanzados = _ultimo_por_referencia(planos)
-    caidos = _ultimo_por_referencia([
-        # Una caída no es una etapa del pipeline: es su final.
-        _item(f).model_copy(update={"etapa": None, "etapa_nombre": None, "movio_etapa": False})
-        for f in movidos
-        if f[4] in CAIDA_NEGOCIO
-    ])
 
-    ultimos = _ultimos_movimientos(db, EntityType.negocio)
-    filas_abiertas = db.execute(
-        select(Negocio.codigo, Negocio.etapa, ultimos.c.fecha, NegocioHito.fecha_inicio,
-               Propiedad.direccion, Propiedad.unidad, Propiedad.comuna, Catalogo.nombre)
-        .join(NegocioHito, NegocioHito.negocio_id == Negocio.id)
-        .join(Propiedad, Propiedad.id == Negocio.propiedad_id)
-        .outerjoin(Catalogo, Catalogo.id == Negocio.alianza_id)
-        .outerjoin(ultimos, ultimos.c.entity_id == Negocio.id)
-        .where(NegocioHito.estado == EstadoNegocio.ACTIVO)
-    ).all()
+def _tramos_de_semana(ventana: list[tuple[int, int]]) -> list[Tramo]:
+    """Las semanas de todos los meses de la ventana, con el mes en la clave.
 
-    # Un negocio con dos hitos activos trae dos filas. Se queda con la referencia
-    # más vieja, que es la que da el estancamiento mayor: si no se le registró
-    # nada, el hito que empezó antes es el que lleva más tiempo esperando.
-    por_negocio: dict[str, tuple] = {}
-    for cod, etapa, ultima, inicio_hito, calle, unidad, comuna, alianza in filas_abiertas:
-        referencia = ultima or datetime.combine(inicio_hito, time.min, tzinfo=timezone.utc)
-        if referencia.tzinfo is None:
-            referencia = referencia.replace(tzinfo=timezone.utc)
-        previo = por_negocio.get(cod)
-        if previo is None or referencia < previo[0]:
-            por_negocio[cod] = (referencia, etapa, ultima, calle, unidad, comuna, alianza)
+    La clave lleva el mes --`2026-08 / S1 1-7`-- porque las semanas de meses
+    distintos comparten etiqueta y se pisarían en el reparto.
+    """
+    return [
+        Tramo(clave=f"{a:04d}-{m:02d} / {s.etiqueta}", desde=s.desde, hasta=s.hasta)
+        for a, m in ventana
+        for s in semanas_del_mes(a, m)
+    ]
 
-    estancados = []
-    for cod, (referencia, etapa, ultima, calle, unidad, comuna, alianza) in por_negocio.items():
-        transcurridos = _dias(corte, referencia)
-        if transcurridos is not None and transcurridos > dias:
-            estancados.append(
-                ItemEstancado(
-                    referencia=cod,
-                    etapa=etapa,
-                    etapa_nombre=etapas.get(etapa) if etapa else None,
-                    dias_sin_movimiento=transcurridos,
-                    sin_gestion=ultima is None,
-                    direccion=_direccion(calle, unidad),
-                    comuna=comuna,
-                    alianza=alianza,
-                )
+
+def _tramos_de_mes(ventana: list[tuple[int, int]]) -> list[Tramo]:
+    tramos = []
+    for a, m in ventana:
+        desde, hasta = limites(a, m)
+        tramos.append(Tramo(clave=_clave(a, m), desde=desde, hasta=hasta))
+    return tramos
+
+
+def _armar_dominio(
+    anio: int,
+    mes: int,
+    ventana: list[tuple[int, int]],
+    por_semana: dict[str, tuple],
+    por_mes: dict[str, tuple],
+    embudos: list[dict[str, int]],
+    etapas: list[str],
+    abiertos: list[EtapaAbierta],
+    dominio: str,
+    sin_datos: list[str],
+    plata_semanal: bool,
+) -> ReporteDeDominio:
+    """Arma la respuesta de un dominio a partir de los repartos ya calculados.
+
+    Los dos dominios comparten esta función porque la forma de la respuesta es la
+    misma; lo que cambia es de dónde salen los números, y eso ya se resolvió antes
+    de llegar acá.
+    """
+    flujo = []
+    for a, m in ventana:
+        claves = [
+            f"{a:04d}-{m:02d} / {s.etiqueta}" for s in semanas_del_mes(a, m)
+        ]
+        filas = [por_semana.get(c, (0, 0, 0, CERO, CERO, CERO)) for c in claves]
+        flujo.append(
+            FlujoDelMes(
+                mes=_clave(a, m),
+                entraron=[f[0] for f in filas],
+                avanzaron=[f[1] for f in filas],
+                se_cayeron=[f[2] for f in filas],
+                # En negocios la plata se gana al cerrar, no al entrar, así que la
+                # columna semanal de «lo que entró» no tiene de dónde salir y va en
+                # cero: la plata de negocios vive en el bloque mensual.
+                comision_entraron=[f[3] if plata_semanal else CERO for f in filas],
             )
-    estancados.sort(key=lambda e: -(e.dias_sin_movimiento or 0))
+        )
+    # El mes elegido primero: la pantalla lo destaca y el resto es referencia.
+    flujo.reverse()
 
-    return Seccion(
-        cerrados=cerrados[:TOPE_LISTA],
-        monto_cerrado=monto_cerrado,
-        avanzados=avanzados[:TOPE_LISTA],
-        caidos=caidos[:TOPE_LISTA],
-        estancados=estancados[:TOPE_LISTA],
-        total_cerrados=len(cerrados),
-        total_avanzados=len(avanzados),
-        total_caidos=len(caidos),
-        total_estancados=len(estancados),
-        movimientos_avanzados=len(planos),
-        movimientos_con_fecha_de_carga=len(descartados),
+    totales = []
+    for a, m in ventana:
+        f = por_mes.get(_clave(a, m), (0, 0, 0, CERO, CERO, CERO))
+        totales.append(
+            TotalDelMes(
+                etiqueta=_clave(a, m),
+                entraron=f[0],
+                avanzaron=f[1],
+                se_cayeron=f[2],
+                comision=f[3],
+                valor_venta=f[4],
+                valor_arriendo=f[5],
+            )
+        )
+
+    return ReporteDeDominio(
+        semanas=semanas_del_mes(anio, mes),
+        flujo=flujo,
+        embudo=_embudo(embudos[-1], embudos[:-1], etapas),
+        abiertos=abiertos,
+        totales=totales,
+        tendencias=_tendencias(totales, dominio),
+        sin_datos=sin_datos,
     )
 
 
-# ----------------------------------------------------------------- canjes
-
-
-def _operacion(tipo) -> str | None:
-    return OPERACION_LABELS.get(tipo) if tipo else None
-
-
-def _seccion_canjes(db: Session, desde: date, hasta: date, dias: int, corte: datetime) -> Seccion:
-    inicio, fin = _rango_utc(desde, hasta)
-
-    # **Por estado y no por etapa.** La etapa dice hasta dónde llegó el proceso y
-    # el estado en qué terminó: los 31 canjes con la etapa en «Cierre» están todos
-    # cancelados (`D-071`), así que preguntar por la etapa cuenta una caída como un
-    # cierre en cuanto uno de esos traiga fecha de cierre en la ventana.
-    filas_cerradas = db.execute(
-        select(Canje.id, Canje.corredor_solicitante_nombre, Canje.fecha_cierre,
-               Canje.tipo_operacion, Canje.direccion, Canje.comuna)
-        .where(
-            Canje.estado == CanjeEstado.CERRADO,
-            Canje.fecha_cierre >= inicio,
-            Canje.fecha_cierre <= fin,
-        )
-        .order_by(Canje.fecha_cierre)
-    ).all()
-    cerrados = [
-        ItemCerrado(referencia=f"#{cid}", detalle=corredor, fecha=f.date() if f else None,
-                    operacion=_operacion(op), direccion=calle, comuna=comuna)
-        for cid, corredor, f, op, calle, comuna in filas_cerradas
-    ]
-
-    cargas = _instantes_de_carga(db, EntityType.canje)
-    movidos = db.execute(
-        select(Movimiento.entity_id, Movimiento.fecha, Movimiento.etapa_resultante,
-               Movimiento.comentario, Movimiento.tipo_movimiento, TipoMovimiento.nombre,
-               Canje.etapa, Canje.tipo_operacion, Canje.direccion, Canje.comuna,
-               Movimiento.creado_en)
-        .join(Canje, Canje.id == Movimiento.entity_id)
-        .join(TipoMovimiento, TipoMovimiento.codigo == Movimiento.tipo_movimiento)
-        .where(
-            Movimiento.entity_type == EntityType.canje,
-            Movimiento.fecha >= inicio,
-            Movimiento.fecha <= fin,
-        )
-        .order_by(Movimiento.fecha, Movimiento.id)
-    ).all()
-
-    # Los 215 de la limpieza del 21-08 caen acá: su fecha es la del script.
-    descartados = [f for f in movidos if _fecha_puesta_por_la_carga(f[1], f[10], cargas)]
-    movidos = [f for f in movidos if not _fecha_puesta_por_la_carga(f[1], f[10], cargas)]
-
-    def _item(fila) -> ItemMovido:
-        cid, f, etapa_mov, com, _tipo, nombre_tipo, etapa_actual, op, calle, comuna, _creado = fila
-        etapa = etapa_mov or (etapa_actual.value if etapa_actual else None)
-        return ItemMovido(
-            referencia=f"#{cid}",
-            fecha=f.date(),
-            etapa=etapa,
-            etapa_nombre=LABELS_CANJE.get(etapa, etapa) if etapa else None,
-            movio_etapa=etapa_mov is not None,
-            tipo=nombre_tipo,
-            comentario=com,
-            operacion=_operacion(op),
-            direccion=calle,
-            comuna=comuna,
-        )
-
-    planos = [_item(f) for f in movidos if f[4] not in CAIDA_CANJE]
-    avanzados = _ultimo_por_referencia(planos)
-    caidos = _ultimo_por_referencia([
-        _item(f).model_copy(update={"etapa": None, "etapa_nombre": None, "movio_etapa": False})
-        for f in movidos
-        if f[4] in CAIDA_CANJE
-    ])
-
-    # **Y las cancelaciones que solo existen como fecha.** Dataprop manda la fecha
-    # de cancelación de los canjes recientes y cancelar en la app no escribe ese
-    # campo, así que las dos fuentes son parciales y hay que sumarlas: mirando solo
-    # los movimientos, las nueve cancelaciones de agosto no aparecían en ninguna
-    # ventana.
-    #
-    # Se prefiere el movimiento cuando existe: trae el comentario y el autor, y esa
-    # es la versión de la app. El `fecha_cierre` completa lo que la app no vio.
-    con_movimiento = {c.referencia for c in caidos}
-    solo_fecha = db.execute(
-        select(Canje.id, Canje.fecha_cierre, Canje.tipo_operacion,
-               Canje.direccion, Canje.comuna)
-        .where(
-            Canje.estado == CanjeEstado.CANCELADO,
-            Canje.fecha_cierre >= inicio,
-            Canje.fecha_cierre <= fin,
-        )
-    ).all()
-    caidos = caidos + [
-        ItemMovido(
-            referencia=f"#{cid}",
-            fecha=f.date(),
-            tipo="Cancelado",
-            # Se dice de dónde viene la fecha, porque la fila no tiene autor ni
-            # comentario y la columna de registros va a mostrar cero.
-            comentario="sin movimiento registrado; la fecha viene del export de Dataprop",
-            registros=0,
-            operacion=_operacion(op),
-            direccion=calle,
-            comuna=comuna,
-        )
-        for cid, f, op, calle, comuna in solo_fecha
-        if f"#{cid}" not in con_movimiento
-    ]
-    caidos.sort(key=lambda i: i.fecha, reverse=True)
-
-    # Abierto es lo mismo que en la bandeja: activo y con etapa distinta de
-    # cerrada, para no contar como pendientes los 31 que arrastran el
-    # desalineamiento del dato de Dataprop.
-    ultimos = _ultimos_movimientos(db, EntityType.canje)
-    filas_abiertas = db.execute(
-        select(Canje.id, Canje.etapa, ultimos.c.fecha, Canje.fecha_solicitud,
-               Canje.tipo_operacion, Canje.direccion, Canje.comuna)
-        .outerjoin(ultimos, ultimos.c.entity_id == Canje.id)
-        .where(Canje.estado == CanjeEstado.ACTIVO, Canje.etapa != CanjeEtapa.CERRADO)
-    ).all()
-
-    estancados = []
-    for cid, etapa, ultima, solicitud, op, calle, comuna in filas_abiertas:
-        referencia = ultima or solicitud
-        transcurridos = _dias(corte, referencia)
-        if transcurridos is not None and transcurridos > dias:
-            estancados.append(
-                ItemEstancado(
-                    referencia=f"#{cid}",
-                    etapa=etapa.value,
-                    etapa_nombre=LABELS_CANJE.get(etapa.value, etapa.value),
-                    dias_sin_movimiento=transcurridos,
-                    sin_gestion=ultima is None,
-                    operacion=_operacion(op),
-                    direccion=calle,
-                    comuna=comuna,
-                )
-            )
-    estancados.sort(key=lambda e: -(e.dias_sin_movimiento or 0))
-
-    return Seccion(
-        cerrados=cerrados[:TOPE_LISTA],
-        monto_cerrado=CERO,  # los canjes no llevan comisión propia en la app
-        avanzados=avanzados[:TOPE_LISTA],
-        caidos=caidos[:TOPE_LISTA],
-        estancados=estancados[:TOPE_LISTA],
-        total_cerrados=len(cerrados),
-        total_avanzados=len(avanzados),
-        total_caidos=len(caidos),
-        total_estancados=len(estancados),
-        movimientos_avanzados=len(planos),
-        movimientos_con_fecha_de_carga=len(descartados),
+def _dominio_canjes(
+    db: Session, anio: int, mes: int, meses: int, hoy: date, cache_uf: dict
+) -> ReporteDeDominio:
+    ventana = _meses_de_la_ventana(anio, mes, meses)
+    cargas = instantes_de_carga(db, EntityType.canje)
+    por_semana = flujo_de_canjes_por_tramo(
+        db, _tramos_de_semana(ventana), cargas, hoy, cache_uf
     )
+    por_mes = flujo_de_canjes_por_tramo(db, _tramos_de_mes(ventana), cargas, hoy, cache_uf)
+    embudos = [embudo_de_canjes(db, *limites(a, m)) for a, m in ventana]
+
+    return _armar_dominio(
+        anio, mes, ventana, por_semana, por_mes, embudos,
+        [e.value for e in CanjeEtapa],
+        abiertos_de_canjes(db, hoy, cache_uf),
+        "canjes",
+        [],
+        plata_semanal=True,
+    )
+
+
+def _dominio_negocios(
+    db: Session, anio: int, mes: int, meses: int, hoy: date
+) -> ReporteDeDominio:
+    ventana = _meses_de_la_ventana(anio, mes, meses)
+    por_semana = flujo_de_negocios_por_tramo(db, _tramos_de_semana(ventana))
+    por_mes = flujo_de_negocios_por_tramo(db, _tramos_de_mes(ventana))
+    embudos = [embudo_de_negocios(db, *limites(a, m)) for a, m in ventana]
+
+    return _armar_dominio(
+        anio, mes, ventana, por_semana, por_mes, embudos,
+        _etapas_de_negocio(db),
+        abiertos_de_negocios(db, hoy),
+        "negocios",
+        _sin_datos_de_negocios(db),
+        plata_semanal=False,
+    )
+
+
+def _tendencias(totales: list[TotalDelMes], dominio: str) -> dict[str, Tendencia]:
+    """La curva sobre los meses, para las señales y para la plata.
+
+    Reusa el ajuste del reporte mensual --mismos grados por cantidad de puntos,
+    misma regla de cuándo mostrarla-- en vez de escribir un segundo ajuste que
+    habría que mantener en paralelo (`D-089`).
+    """
+    campos = (
+        ("entraron", "Entraron"),
+        ("avanzaron", "Avanzaron"),
+        ("se_cayeron", "Se cayeron"),
+        ("comision", "Comisión"),
+        ("valor_venta", "Monto de las ventas"),
+        ("valor_arriendo", "Monto de los arriendos"),
+    )
+    return {
+        campo: _tendencia(totales, campo, nombre, dominio=dominio)
+        for campo, nombre in campos
+    }
 
 
 def obtener_reporte_semanal(
     db: Session,
-    desde: date | None = None,
-    hasta: date | None = None,
-    dias_estancado: int | None = None,
-    ahora: datetime | None = None,
+    anio: int | None = None,
+    mes: int | None = None,
+    meses: int = MESES_DEFECTO,
+    hoy: date | None = None,
 ) -> ReporteSemanal:
-    ahora = ahora or datetime.now(timezone.utc)
-    if desde is None or hasta is None:
-        desde, hasta = semana_de(ahora.date())
+    hoy = hoy or datetime.now(timezone.utc).date()
+    anio = anio or hoy.year
+    mes = mes or hoy.month
+    if meses not in MESES_VALIDOS:
+        raise ValueError(f"Los meses a comparar tienen que ser uno de {list(MESES_VALIDOS)}.")
 
-    # El umbral es el largo de la ventana, así que las cuatro cifras hablan del
-    # mismo período y no hay dos controles diciendo cosas distintas.
-    if dias_estancado is None:
-        dias_estancado = (hasta - desde).days + 1
-
-    # Al cierre de la ventana, o ahora si la ventana todavía no termina.
-    corte = min(ahora, datetime.combine(hasta, time.max, tzinfo=timezone.utc))
+    # La serie de UF entera, de una vez: la plata de canjes valoriza cada canje con
+    # la UF de su propia fecha, y este reporte los recorre una vez por semana y por
+    # mes comparado. Pidiéndolas de a una eran cientos de consultas (`D-098`).
+    cache_uf = serie_completa(db)
 
     return ReporteSemanal(
-        desde=desde,
-        hasta=hasta,
-        dias_estancado=dias_estancado,
-        negocios=_seccion_negocios(db, desde, hasta, dias_estancado, corte),
-        canjes=_seccion_canjes(db, desde, hasta, dias_estancado, corte),
+        anio=anio,
+        mes=mes,
+        meses=meses,
+        canjes=_dominio_canjes(db, anio, mes, meses, hoy, cache_uf),
+        negocios=_dominio_negocios(db, anio, mes, meses, hoy),
     )

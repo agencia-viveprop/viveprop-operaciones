@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-08-31 (22 listos + G2 en curso; auditoría cerrada: sus cuatro puntos arreglados y en producción)
+**Última actualización:** 2026-09-02 (22 listos + G2 en curso; el reporte semanal rehecho: el flujo del mes con los meses anteriores encima)
 
 ---
 
@@ -86,7 +86,7 @@ el 3 (cargar la tabla de UF). Sirve como avance de hitos, no de horas.
 | 13 | F2 · Dashboard de negocios | **Listo** | 2026-08-21 | — | Paleta validada con script (`D-028`). **Segundo hito visible.** |
 | 14 | E1 · Plantilla de negocios | **Listo** | 2026-08-21 | — | 32 columnas en grupos, hoja de instrucciones y códigos válidos leídos de la base. |
 | 15 | E2 · Importador de negocios | **Listo** | 2026-08-21 | — | Una fila es un hito (`D-039`). Idempotente, y no escribe nada si hay un solo error. 32 tests. |
-| 16 | F3 · Reporte semanal | **Listo** | 2026-08-21 | — | Los dos dominios. 30 tests. "Avanzó" es toda actividad (`D-031`); umbral como control (`D-032`). |
+| 16 | F3 · Reporte semanal | **Listo** | 2026-09-02 | — | **Rehecho:** el flujo del mes --entraron / avanzaron / se cayeron-- semana a semana, con los meses anteriores superpuestos. 24 tests. Reemplazó las cuatro casillas de ventana móvil (`D-098`). |
 | 17 | F4 · Reporte mensual comparativo | **Listo** | 2026-08-21 | — | Contra el mes anterior y el mismo mes del año pasado. La variación contra cero es nula, no infinita (`D-041`). 25 tests. |
 | 18 | F5 · Vista directorio | **Listo** | 2026-08-22 | — | Armada con supuestos explícitos (`D-044`), porque la definición no llegó. Proyección como rango con el `n` a la vista. 16 tests. |
 | 19 | B5 · Registrar movimientos en canjes | **Listo** | 2026-08-21 | `30ea66a` | Ya funcionaba desde B3. Verificado, sin código nuevo. |
@@ -125,6 +125,38 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-02 - El reporte semanal: el flujo del mes, con los meses anteriores encima
+
+**Lo que pediste:** *«poder mostrar en este reporte cómo van moviéndose los canjes y los negocios semana a semana dentro del mes, y a la vez tener la opción de compararlo con meses anteriores»*, con la restricción de que *«quien lo vea pueda entender lo que está viendo»*.
+
+**La pantalla cambió entera, y solo esa pantalla.** El reporte mensual quedó intacto: el intento de consolidar las dos en el mensual se revirtió completo antes de esto. Lo que había --cuatro casillas sobre una ventana de 1, 2 o 4 semanas corridas, con su lista de un renglón por caso-- no admitía la comparación que pediste, porque una ventana corrida no tiene con qué mes compararse.
+
+**Arriba:** dos pestañas `Canjes │ Negocios`, un cursor de mes con flechas, y «Comparar con los últimos [N ▾]» de 1 a 12 meses. Al lado dice cuántas semanas tiene el mes elegido, porque es variable.
+
+**Las semanas se cuentan desde el día 1** --`S1 1-7`, `S2 8-14`, y así-- y no de lunes a domingo: con lunes, la primera semana se reparte con el mes anterior y «S1» dejaría de significar «el arranque del mes». La última es parcial --tres días en un mes de 31-- así que **siempre va a verse más baja**; eso se dice en un aviso arriba y se repite en el globo del gráfico, para que no se lea como una caída de actividad. Febrero tiene cuatro semanas y las líneas de los meses de cinco se cortan ahí en vez de dibujar un cero.
+
+**Cuatro bloques, y cada título es la pregunta que responde:**
+
+| Bloque | Qué muestra |
+|---|---|
+| Flujo | tres gráficos --entraron, avanzaron de etapa, se cayeron-- con el eje en las semanas del mes y los meses comparados superpuestos |
+| Los mismos números | la misma cosa en tabla: un mes por fila, sus semanas, su total y la variación contra el mes elegido |
+| Por dónde avanzaron | cuántos entraron a cada etapa en el mes, con el promedio de los meses comparados al lado |
+| Dónde está lo abierto hoy | en qué etapa está parado lo abierto, cuánta comisión hay ahí y cuánto lleva (promedio y rango) |
+| Mes a mes | los totales del período, la comisión, ventas y arriendos en columnas separadas, y la tendencia |
+
+**Hasta tres meses van como línea propia; de cuatro en adelante, el mes elegido contra el promedio de los anteriores.** Doce líneas en un gráfico de cinco puntos no se leen. La tabla sí lista todos los meses, así que no se pierde ningún número.
+
+**La plata va por etapa y por mes, no por semana.** La comisión se gana al cerrar: semana a semana serían ceros con un pico.
+
+**En negocios hay dos paneles que dicen por qué están vacíos**, que es lo que elegiste en vez de esconderlos: «Avanzaron de etapa» no se puede medir porque el pipeline no tiene ningún movimiento registrado, y «Se perdieron» tampoco porque las liquidaciones perdidas no tienen fecha de cierre. Los dos aparecen solos en cuanto empiece a haber datos --el backend lo consulta, no está escrito a mano--. Una línea en cero diría «no pasó nada»; lo que pasa es «no se sabe».
+
+**Verificado en pantalla en los dos dominios**, y 24 tests nuevos cubren las semanas desde el día 1, la última parcial, los cuatro tramos de febrero, «avanzaron» contando entidades y no movimientos, las dos fuentes de caídos sin duplicar, la exclusión de la carga masiva y el contrato del endpoint. `npm run build` en cero errores y oxlint limpio.
+
+**Pendiente y tuyo:** decidir si el reporte mensual se retira ahora que el semanal cubre el período con comparación. No borro nada hasta que lo digas.
+
+**Un test sigue rojo y es de antes:** `test_sin_ningun_dato_la_historica_no_se_cae`, del reporte mensual, que depende del reloj y volvió a fallar cuando se revirtió el intento anterior. El arreglo --acotar la ventana histórica a un mes como mínimo-- está ofrecido y sin respuesta.
 
 ### 2026-08-31 - El comentario del historial ya no se corta
 

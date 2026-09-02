@@ -41,78 +41,6 @@ export function obtenerResumenCanjes(): Promise<ResumenCanjes> {
 }
 
 
-// --------------------------------------------- reporte semanal de período
-
-/** De qué propiedad se está hablando. Va en las cuatro listas de una sección.
- *
- * `alianza` la llena negocios y `operacion` canjes: los dos dominios comparten
- * el resto de las columnas y se diferencian en esa. */
-export type Ubicacion = {
-  direccion: string | null
-  comuna: string | null
-  alianza: string | null
-  operacion: string | null
-}
-
-export type ItemCerrado = Ubicacion & {
-  referencia: string
-  detalle: string | null
-  fecha: string | null
-  monto: string | null
-}
-
-export type ItemMovido = Ubicacion & {
-  referencia: string
-  fecha: string
-  /** La etapa en que quedó: la que dejó el movimiento, o la actual si no la movió. */
-  etapa: string | null
-  etapa_nombre: string | null
-  movio_etapa: boolean
-  /** Qué pasó, en dos piezas: la categoría del movimiento y el comentario del
-   * caso. Vienen separadas y la pantalla las combina. */
-  tipo: string | null
-  comentario: string | null
-  /** Cuántos movimientos tuvo en la ventana, contando el que se muestra. */
-  registros: number
-}
-
-export type ItemEstancado = Ubicacion & {
-  referencia: string
-  etapa: string | null
-  etapa_nombre: string | null
-  dias_sin_movimiento: number | null
-  /** Nunca se le registró nada: la cuenta corre desde su fecha de origen. */
-  sin_gestion: boolean
-}
-
-export type Seccion = {
-  cerrados: ItemCerrado[]
-  monto_cerrado: string
-  avanzados: ItemMovido[]
-  caidos: ItemMovido[]
-  estancados: ItemEstancado[]
-  total_cerrados: number
-  total_avanzados: number
-  total_caidos: number
-  total_estancados: number
-  /** Movimientos, no entidades: `total_avanzados` cuenta negocios o canjes con
-   * actividad y este cuenta los registros que hicieron. */
-  movimientos_avanzados: number
-  /** Movimientos de la ventana cuya fecha la puso un proceso masivo y no la
-   *  gestion. Se descuentan de las cuatro cifras y **se informan**: si se
-   *  descartaran en silencio, la pantalla diria 0 donde el usuario sabe que hay
-   *  215 registros, y eso se lee como que el reporte no funciona. */
-  movimientos_con_fecha_de_carga: number
-}
-
-export type ReporteSemanal = {
-  desde: string
-  hasta: string
-  dias_estancado: number
-  negocios: Seccion
-  canjes: Seccion
-}
-
 async function parseOrThrow(res: Response) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
@@ -121,43 +49,100 @@ async function parseOrThrow(res: Response) {
   return res.json()
 }
 
-export function obtenerReporteSemanal(params: {
-  desde?: string
-  hasta?: string
-  dias_estancado?: number
-}): Promise<ReporteSemanal> {
-  const qs = new URLSearchParams()
-  if (params.desde && params.hasta) {
-    qs.set('desde', params.desde)
-    qs.set('hasta', params.hasta)
-  }
-  if (params.dias_estancado) qs.set('dias_estancado', String(params.dias_estancado))
-  return fetch(`/api/reportes/semanal${qs.toString() ? `?${qs}` : ''}`, {
+
+// --------------------------------------------------- reporte semanal
+//
+// **El eje es la semana del mes, y los meses anteriores van superpuestos.** El
+// contrato cambió entero: antes eran cuatro cifras de una ventana de semanas
+// corridas, que no permitía comparar nada con los meses previos (`D-098`).
+
+/** Un tramo del mes. `dias` va porque la última semana es parcial --tres días en
+ *  un mes de 31-- y sin decirlo su caída se lee como una caída de actividad. */
+export type Semana = {
+  etiqueta: string
+  desde: string
+  hasta: string
+  dias: number
+}
+
+/** El movimiento de un mes, con un valor por semana en cada lista. */
+export type FlujoDelMes = {
+  mes: string
+  entraron: number[]
+  avanzaron: number[]
+  se_cayeron: number[]
+  comision_entraron: string[]
+}
+
+export type EtapaDelEmbudo = {
+  etapa: string
+  entraron: number
+  promedio_anteriores: string
+}
+
+/** Dónde está lo abierto, cuánta plata hay ahí y cuánto lleva.
+ *
+ *  `casos` se muestra siempre: con pocos abiertos, el promedio de una etapa puede
+ *  ser un solo caso y sin el número se lee como una tendencia. */
+export type EtapaAbierta = {
+  etapa: string
+  casos: number
+  comision: string
+  dias_promedio: number
+  dias_min: number
+  dias_max: number
+  sin_historia: number
+}
+
+/** El mes entero. Es el eje del bloque de tendencia. */
+export type TotalDelMes = {
+  etiqueta: string
+  entraron: number
+  avanzaron: number
+  se_cayeron: number
+  comision: string
+  valor_venta: string
+  valor_arriendo: string
+}
+
+export type ReporteDeDominio = {
+  semanas: Semana[]
+  /** El mes elegido primero y después los anteriores: la pantalla destaca el
+   *  primero y usa el resto como referencia. */
+  flujo: FlujoDelMes[]
+  embudo: EtapaDelEmbudo[]
+  abiertos: EtapaAbierta[]
+  /** Del más viejo al más nuevo. */
+  totales: TotalDelMes[]
+  tendencias: Record<string, Tendencia>
+  /** Qué señales no tienen de dónde salir en este dominio. La pantalla las
+   *  explica en vez de dibujar una serie de ceros, que diría «no pasó nada»
+   *  cuando lo que pasa es «no se sabe». */
+  sin_datos: string[]
+}
+
+export type ReporteSemanal = {
+  anio: number
+  mes: number
+  meses: number
+  canjes: ReporteDeDominio
+  negocios: ReporteDeDominio
+}
+
+/** Cuántos meses se pueden comparar, contando el elegido. */
+export const MESES_A_COMPARAR = Array.from({ length: 12 }, (_, i) => i + 1)
+
+export function obtenerReporteSemanal(
+  anio: number,
+  mes: number,
+  meses: number,
+): Promise<ReporteSemanal> {
+  return fetch(`/api/reportes/semanal?anio=${anio}&mes=${mes}&meses=${meses}`, {
     credentials: 'include',
   }).then(parseOrThrow)
 }
 
-/** El lunes de la semana que contiene esa fecha, corrida `semanas` semanas.
- *
- * Se calcula en el cliente y no se le pide al servidor para que las flechas de
- * navegación no dependan de un viaje de red: se sabe de antemano qué período se
- * va a pedir.
- */
-export function lunesDe(referencia: Date, semanas = 0): Date {
-  const d = new Date(referencia)
-  // getDay() da 0 el domingo; acá la semana arranca el lunes, igual que en el
-  // backend, así que el domingo cuenta como el día 7 de la semana anterior.
-  const desplazamiento = (d.getDay() + 6) % 7
-  d.setDate(d.getDate() - desplazamiento + semanas * 7)
-  return d
-}
 
-/** ISO sin la parte de hora y sin pasar por UTC, que correría el día. */
-export function aISO(d: Date): string {
-  const mes = String(d.getMonth() + 1).padStart(2, '0')
-  const dia = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${mes}-${dia}`
-}
 
 
 // --------------------------------------------- reporte mensual comparativo
