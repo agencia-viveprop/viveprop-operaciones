@@ -118,9 +118,7 @@ def _dias(desde: datetime | date, hasta: date) -> int:
     return (hasta - desde).days
 
 
-def uf_del_canje(
-    db: Session, canje: Canje, hoy: date, cache: dict[date, Decimal | None] | None = None
-) -> Decimal | None:
+def uf_del_canje(db: Session, canje: Canje, hoy: date) -> Decimal | None:
     """Con qué UF se valoriza este canje. Ver el docstring del módulo.
 
     Es público porque la política es una sola y la usa también la facturación de
@@ -128,14 +126,6 @@ def uf_del_canje(
     Duplicarla ahí ya salió mal una vez --un canje cancelado en 2022 valorizado
     con la UF de hoy daba una comisión de miles de millones-- porque su valor
     viene mal etiquetado en el Excel de origen.
-
-    **`cache`, cuando se pasa, es la serie completa** --lo que devuelve
-    `uf.serie_completa`-- y se resuelve solo contra él, sin consultar. Una fecha
-    ausente significa "no hay UF para ese día", que es lo mismo que responde
-    `valor_uf` fallando. La política de **qué** fecha usar no cambia; lo que se
-    evita es preguntar una por una: los cancelados se valorizan con la UF de su
-    fecha de solicitud, así que hay casi una fecha distinta por canje y el reporte
-    por período tardaba 21 segundos contra Neon (`D-098`).
     """
     if canje.estado == CanjeEstado.ACTIVO:
         cuando = hoy
@@ -143,8 +133,6 @@ def uf_del_canje(
         cuando = _fecha(canje.fecha_cierre) or hoy
     else:
         cuando = _fecha(canje.fecha_solicitud) or hoy
-    if cache is not None:
-        return cache.get(cuando)
     try:
         return valor_uf(db, cuando)
     except UFNoDisponible:

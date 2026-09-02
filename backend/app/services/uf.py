@@ -34,26 +34,6 @@ def valor_uf(db: Session, fecha: date) -> Decimal:
     return Decimal(valor)
 
 
-def serie_completa(db: Session) -> dict[date, Decimal]:
-    """Toda la serie de UF en un diccionario, en una sola consulta.
-
-    Existe para los cálculos que valorizan muchas filas con fechas distintas. El
-    caso que la motivó: el reporte por período valoriza cada canje con la UF de
-    **su** fecha --la del cierre para un cerrado, la de la solicitud para un
-    cancelado (`D-046`)-- así que hay casi una fecha distinta por canje. Pidiendo
-    una por una, el reporte tardaba 21 segundos contra Neon; con la serie en
-    memoria, una consulta de 252 filas (`D-098`).
-
-    Quien la use tiene que tratar **la ausencia como "no hay UF para ese día"**,
-    que es exactamente lo que significa: `valor_uf` busca por fecha exacta y falla
-    si no está.
-    """
-    return {
-        fecha: Decimal(valor)
-        for fecha, valor in db.execute(select(UFDiaria.fecha, UFDiaria.valor)).all()
-    }
-
-
 def uf_a_clp(db: Session, monto_uf: Decimal | float | int, fecha: date) -> Decimal:
     return Decimal(str(monto_uf)) * valor_uf(db, fecha)
 

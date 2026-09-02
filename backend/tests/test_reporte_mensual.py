@@ -151,7 +151,7 @@ def test_la_ventana_se_puede_cambiar(db):
 
 def test_una_ventana_invalida_se_rechaza(db):
     with pytest.raises(ValueError, match="ventana"):
-        obtener_reporte_mensual(db, 2026, 8, ventana=13, hoy=HOY)
+        obtener_reporte_mensual(db, 2026, 8, ventana=5, hoy=HOY)
 
 
 # ------------------------------------------------------------ año corrido
@@ -327,13 +327,6 @@ def test_el_endpoint_sin_parametros_toma_el_mes_actual(cliente):
         "mes", "ventana_meses", "movil", "anio_corrido",
         "meses_sin_cierres", "meses_con_negocios",
         "serie", "promedio", "tendencias", "es_historico", "inicio_por_dominio",
-        # El grano del desglose y la comparación superpuesta (`D-098`).
-        "granularidad", "semanas_del_mes", "serie_comparacion", "comparacion",
-        "rotulo_comparacion",
-        # Los bloques nuevos: de lo que entró en la ventana cómo está, y cuánto
-        # llevan los abiertos donde están.
-        "canjes_por_etapa", "negocios_por_etapa", "hitos_por_estado",
-        "duracion_canjes_por_etapa", "duracion_negocios_por_etapa",
     }
     assert cuerpo["ventana_meses"] == 6
     # Sin datos, los seis meses de la ventana estan vacios. Es el numero que la
@@ -371,7 +364,7 @@ def test_el_endpoint_acepta_las_tres_ventanas(cliente, ventana):
     ({"anio": 2026, "mes": 13}, 422),
     ({"anio": 2026, "mes": 0}, 422),
     ({"anio": 1999, "mes": 3}, 422),
-    ({"ventana": 13}, 422),         # la ventana llega hasta 12 meses
+    ({"ventana": 5}, 422),          # no es 3, 6 ni 12
 ])
 def test_el_endpoint_rechaza_periodos_imposibles(cliente, params, codigo):
     assert cliente.get("/api/reportes/mensual", params=params).status_code == codigo
@@ -543,12 +536,6 @@ def test_las_metricas_se_declaran_separadas_por_dominio():
     }
     assert campos_can == {
         "canjes_solicitados", "canjes_activos", "canjes_cerrados", "canjes_cancelados",
-        # **Canjes ya tiene eje de plata** (`D-098`). No lo tenía porque
-        # `valor_prop` traía la moneda equivocada en ~138 de las 297 filas
-        # migradas, así que sumarlo daba cifras sin sentido (`D-054`). Corregidas
-        # las monedas, 228 de los 229 canjes tienen magnitud plausible y la
-        # comisión se calcula con la regla del contrato.
-        "canjes_valor_venta", "canjes_valor_arriendo", "canjes_comision_dataprop",
     }
     # Ningun campo en los dos lados, y juntas son todas.
     assert not (campos_neg & campos_can)
@@ -899,7 +886,7 @@ def test_el_endpoint_acepta_la_ventana_historica(cliente):
 
 
 def test_el_endpoint_sigue_rechazando_una_ventana_invalida(cliente):
-    assert cliente.get("/api/reportes/mensual?ventana=13").status_code == 422
+    assert cliente.get("/api/reportes/mensual?ventana=5").status_code == 422
     assert cliente.get("/api/reportes/mensual?ventana=-1").status_code == 422
 
 
@@ -1041,76 +1028,3 @@ def test_una_curva_con_forma_se_dibuja_aunque_termine_plana(db):
     assert te.mostrar is True, "tiene forma de campana, aunque el final sea plano"
     # La forma esta: el medio por encima de los dos extremos.
     assert te.curva[2] > te.curva[0] and te.curva[3] > te.curva[-1]
-
-
-# --------------------------------------------------- el grano y la comparación
-
-
-def test_la_ventana_de_un_mes_se_desglosa_en_semanas(db):
-    """**El grano se deriva de la ventana, no es un segundo control** (`D-098`).
-
-    Con un solo mes, una barra sola no tiene forma: el desglose son las semanas de
-    ese mes. Con dos meses o más el grano es el mes, porque semanas por doce meses
-    serían 52 barras y «la semana 5» de un mes que tiene 4 no existe.
-    """
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=1, hoy=HOY)
-
-    assert r.granularidad == "semana"
-    # Agosto tiene 31 días: cinco tramos desde el día 1, el último de tres días.
-    assert [m.etiqueta for m in r.serie] == ["S1 1-7", "S2 8-14", "S3 15-21", "S4 22-28", "S5 29-31"]
-    assert r.semanas_del_mes == 5
-
-
-def test_febrero_tiene_cuatro_semanas_y_un_mes_de_31_tiene_cinco(db):
-    """«Variable de acuerdo a la cantidad de semanas reales de cada mes», como se
-    pidió. Contadas desde el día 1, no de lunes a domingo: con semanas calendario
-    la primera y la última se meten en el mes vecino."""
-    assert obtener_reporte_mensual(db, 2026, 2, ventana=1, hoy=HOY).semanas_del_mes == 4
-    assert obtener_reporte_mensual(db, 2026, 8, ventana=1, hoy=HOY).semanas_del_mes == 5
-
-
-def test_con_dos_meses_o_mas_el_grano_es_el_mes(db):
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=3, hoy=HOY)
-
-    assert r.granularidad == "mes"
-    assert [m.etiqueta for m in r.serie] == ["2026-06", "2026-07", "2026-08"]
-
-
-def test_la_comparacion_por_defecto_es_el_tramo_anterior(db):
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=3, hoy=HOY)
-
-    assert r.comparacion == "anterior"
-    assert [m.etiqueta for m in r.serie_comparacion] == ["2026-03", "2026-04", "2026-05"]
-    assert r.rotulo_comparacion == "2026-03 a 2026-05"
-
-
-def test_la_comparacion_interanual_toma_el_mismo_tramo_del_ano_pasado(db):
-    """Responde otra pregunta que la anterior: «vamos mejor que el año pasado por
-    esta época» en vez de «mejor que el trimestre pasado»."""
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=3, hoy=HOY, comparacion="anio_anterior")
-
-    assert [m.etiqueta for m in r.serie_comparacion] == ["2025-06", "2025-07", "2025-08"]
-
-
-def test_la_comparacion_de_un_mes_se_rotula_sin_repetirlo(db):
-    """Decía «2026-07 a 2026-07», que se lee como un error de la pantalla."""
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=1, hoy=HOY)
-
-    assert r.rotulo_comparacion == "2026-07"
-
-
-def test_la_historica_no_tiene_con_que_comparar(db):
-    """Antes del primer registro no hay nada, así que la serie va vacía en vez de
-    salir en cero: cero diría «ese período existió y fue nulo»."""
-    _negocio(db, "H-1", [_hito(date(2026, 3, 1), date(2026, 3, 10), real=D("100"))])
-
-    r = obtener_reporte_mensual(db, 2026, 8, ventana=0, hoy=HOY)
-
-    assert r.es_historico is True
-    assert r.serie_comparacion == []
-    assert r.rotulo_comparacion == ""
-
-
-def test_una_comparacion_invalida_se_rechaza(db):
-    with pytest.raises(ValueError, match="comparación"):
-        obtener_reporte_mensual(db, 2026, 8, ventana=3, comparacion="el mes que viene", hoy=HOY)

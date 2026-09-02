@@ -50,18 +50,6 @@ from sqlalchemy.orm import Session
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.models.catalogo import Catalogo, EstadoNegocio
 from app.models.negocio import Negocio, NegocioHito
-from app.services.uf import serie_completa
-from app.services.metricas_periodo import (
-    ConteoEtapa,
-    DuracionEtapa,
-    canjes_por_etapa,
-    duracion_de_canjes_por_etapa,
-    duracion_de_negocios_por_etapa,
-    hitos_por_estado,
-    negocios_por_etapa,
-    plata_de_canjes,
-    plata_de_canjes_por_clave,
-)
 
 CERO = Decimal("0")
 CENTAVO = Decimal("0.01")
@@ -131,25 +119,6 @@ class MetricasMes(BaseModel):
     # mantuvo porque la particion sigue siendo completa; lo que cambio es que el
     # apilado pasa de dos segmentos a tres.
     canjes_activos: int
-    # **La plata de canjes, que hasta ahora no existía en el reporte.**
-    #
-    # No estaba por una razón que dejó de ser cierta: `valor_prop` tenía la moneda
-    # equivocada en ~138 de las 297 filas migradas --pesos etiquetados UF y al
-    # revés-- así que sumarlo daba cifras sin sentido y el campo se descartó como
-    # fuente de plata (`D-054`). Las monedas se corrigieron y hoy 228 de los 229
-    # canjes tienen una magnitud plausible para su moneda, así que el eje se puede
-    # calcular (`D-098`).
-    #
-    # Venta y arriendo van separados por lo mismo que en negocios: un precio de
-    # venta y un mes de renta no son la misma unidad. La comisión sí se suma,
-    # porque las dos son pesos de comisión.
-    canjes_valor_venta: Decimal = Decimal("0")
-    canjes_valor_arriendo: Decimal = Decimal("0")
-    canjes_comision_dataprop: Decimal = Decimal("0")
-    # De cuántos canjes del período no se pudo calcular la plata. Es casi siempre
-    # falta de UF para su fecha --la serie arranca en 2026-01-01 y hay canjes de
-    # 2025-- y va a la vista para que un monto bajo no se lea como poca plata.
-    canjes_sin_valorizar: int = 0
 
 
 class PromedioMes(BaseModel):
@@ -179,9 +148,6 @@ class PromedioMes(BaseModel):
     canjes_cerrados: Decimal
     canjes_cancelados: Decimal
     canjes_activos: Decimal
-    canjes_valor_venta: Decimal
-    canjes_valor_arriendo: Decimal
-    canjes_comision_dataprop: Decimal
 
 
 class Variacion(BaseModel):
@@ -303,35 +269,6 @@ class ReporteMensual(BaseModel):
     # La tendencia de cada métrica sobre la ventana, indexada por su campo.
     tendencias: dict[str, Tendencia]
 
-    # --- El grano del desglose y la comparación (`D-098`) ---
-
-    # `'mes'` o `'semana'`. Se deriva de la ventana y la pantalla lo usa para
-    # rotular el eje, no para decidir nada.
-    granularidad: str
-    # Cuántas semanas tiene el mes elegido. Va aunque el grano sea el mes, porque
-    # la pantalla lo muestra al lado del selector: «agosto 2026 · 5 semanas».
-    semanas_del_mes: int
-    # La serie del período contra el que se compara, punto por punto, para
-    # dibujarla superpuesta. Vacía cuando no hay con qué comparar --la ventana
-    # histórica no tiene un antes--.
-    serie_comparacion: list[MetricasMes]
-    comparacion: str
-    # «mar-may 2026» o «ago 2025», para rotular la serie gris del gráfico.
-    rotulo_comparacion: str
-
-    # --- Los bloques nuevos, sobre la ventana completa ---
-
-    # De lo que entró en la ventana, cómo está hoy. Ver `metricas_periodo`: es la
-    # foto de hoy y no la del cierre del período, que pediría reconstruir el pasado
-    # movimiento por movimiento.
-    canjes_por_etapa: list[ConteoEtapa]
-    negocios_por_etapa: list[ConteoEtapa]
-    hitos_por_estado: list[ConteoEtapa]
-    # Cuánto llevan los abiertos en la etapa en que están. **Es una foto, no una
-    # serie**: los abiertos son los de hoy, así que esto no depende de la ventana.
-    duracion_canjes_por_etapa: list[DuracionEtapa]
-    duracion_negocios_por_etapa: list[DuracionEtapa]
-
 
 # Qué se compara, y con qué nombre se muestra. El orden es el de lectura: la
 # plata primero, el volumen despues.
@@ -351,18 +288,14 @@ METRICAS_NEGOCIOS: tuple[tuple[str, str, bool], ...] = (
     ("negocios_iniciados", "Negocios iniciados", False),
 )
 
-# Canjes **ya tiene** eje de plata. No lo tenía porque `valor_prop` traía la
-# moneda equivocada en ~138 de las 297 filas migradas --pesos etiquetados UF y al
-# revés-- así que sumarlo daba cifras sin sentido (`D-054`). Corregidas las
-# monedas, 228 de los 229 canjes tienen magnitud plausible y el eje se calcula con
-# la regla del contrato: 6/5/4% del corretaje en venta según el tramo en UF, 8% en
-# arriendo (`D-098`).
-#
-# La plata va primero, igual que en negocios: es el orden de lectura.
+# Canjes no tiene eje de plata, y no es un olvido. Sí genera comisión --la de
+# administración de Dataprop, 6/5/4% en venta según el tramo en UF u 8% en
+# arriendo-- pero se calcula sobre la comisión de los corredores participantes,
+# que está en cero en las 297 filas. Y `valor_prop`, que sería la alternativa, no
+# se puede sumar: la moneda está equivocada en ~138 de las 297 filas --pesos
+# etiquetados UF y UF etiquetados CLP-- y el campo mezcla precio de venta con
+# arriendo mensual. Ver `D-054`.
 METRICAS_CANJES: tuple[tuple[str, str, bool], ...] = (
-    ("canjes_valor_venta", "Monto de las ventas en canje", True),
-    ("canjes_valor_arriendo", "Monto de los arriendos en canje", True),
-    ("canjes_comision_dataprop", "Comisión de Dataprop", True),
     ("canjes_solicitados", "Canjes solicitados", False),
     ("canjes_activos", "Canjes activos", False),
     ("canjes_cerrados", "Canjes cerrados", False),
@@ -412,31 +345,6 @@ def limites(anio: int, mes: int) -> tuple[date, date]:
     return date(anio, mes, 1), date(anio, mes, monthrange(anio, mes)[1])
 
 
-def semanas_del_mes(anio: int, mes: int) -> list[tuple[str, date, date]]:
-    """Las semanas de un mes contadas **desde el día 1**: (etiqueta, desde, hasta).
-
-    Del 1 al 7, del 8 al 14, y así. La última se corta donde termina el mes, así
-    que un mes de 31 días da cinco tramos y febrero da cuatro: es la «cantidad de
-    semanas reales de cada mes» que pidió el usuario.
-
-    **No son semanas calendario**, y es deliberado. Lunes a domingo haría que la
-    primera y la última se metieran en el mes vecino --agosto de 2026 tocaría seis
-    semanas ISO-- y eso contradice que la base del reporte sea el mes. El costo es
-    que estas semanas no coinciden con las del reporte semanal viejo, que sí eran
-    de lunes a domingo.
-    """
-    ultimo = monthrange(anio, mes)[1]
-    tramos = []
-    dia = 1
-    numero = 1
-    while dia <= ultimo:
-        fin = min(dia + 6, ultimo)
-        tramos.append((f"S{numero} {dia}-{fin}", date(anio, mes, dia), date(anio, mes, fin)))
-        dia = fin + 1
-        numero += 1
-    return tramos
-
-
 def mes_anterior(anio: int, mes: int) -> tuple[int, int]:
     return (anio - 1, 12) if mes == 1 else (anio, mes - 1)
 
@@ -449,33 +357,8 @@ def mes_anterior(anio: int, mes: int) -> tuple[int, int]:
 # devuelve en `ventana_meses`, así que el resto del cálculo no cambia.
 VENTANA_HISTORICO = 0
 
-# De 1 a 12 meses, más la histórica. El usuario las pidió una por una --«1 mes, 2
-# meses, 3 meses, etc hasta llegar a 12 meses»-- para poder acumular y comparar
-# cualquier tramo, no solo los tres de antes (`D-098`).
-#
-# **La ventana de un mes cambia el grano de la serie**: con un solo mes, el
-# desglose de abajo son las semanas de ese mes y no un único punto. Ver
-# `GRANO_SEMANA`.
-VENTANAS_VALIDAS = (VENTANA_HISTORICO, *range(1, 13))
+VENTANAS_VALIDAS = (VENTANA_HISTORICO, 3, 6, 12)
 VENTANA_DEFECTO = 6
-
-# El grano del desglose. **No es un control: se deriva de la ventana.**
-#
-# Con un solo mes, partir la serie en semanas es lo que hace que el desglose diga
-# algo --una barra sola no tiene forma-- y es donde entra el pedido de que la base
-# «sea variable de acuerdo a la cantidad de semanas reales de cada mes». Con dos
-# meses o más, el grano es el mes: semanas por doce meses son 52 barras, y «la
-# semana 5» de un mes que tiene 4 no existe.
-GRANO_MES = "mes"
-GRANO_SEMANA = "semana"
-
-# Contra qué se compara la ventana. Las dos existen porque responden preguntas
-# distintas: «vamos mejor que el trimestre pasado» y «vamos mejor que el año
-# pasado por esta época». La primera es el defecto porque siempre tiene datos; la
-# interanual depende de que exista ese tramo del año anterior.
-COMPARAR_ANTERIOR = "anterior"
-COMPARAR_ANIO_ANTERIOR = "anio_anterior"
-COMPARACIONES_VALIDAS = (COMPARAR_ANTERIOR, COMPARAR_ANIO_ANTERIOR)
 
 
 def _primer_mes_con_datos(db: Session) -> tuple[int, int]:
@@ -549,14 +432,7 @@ def rango_anio_corrido(anio: int, mes: int) -> tuple[date, date]:
     return date(anio, 1, 1), limites(anio, mes)[1]
 
 
-def _metricas(
-    db: Session,
-    desde: date,
-    hasta: date,
-    etiqueta: str,
-    hoy: date | None = None,
-    cache_uf: dict | None = None,
-) -> MetricasMes:
+def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasMes:
     """Las métricas de un rango cualquiera de fechas, con los dos bordes incluidos.
 
     Trabaja con un rango y no con un mes porque las ventanas móviles y el
@@ -648,15 +524,9 @@ def _metricas(
         )
     )
 
-    plata = plata_de_canjes(db, desde, hasta, hoy, cache_uf)
-
     return MetricasMes(
         etiqueta=etiqueta,
         hitos_cerrados=cerrados[0],
-        canjes_valor_venta=plata.valor_venta,
-        canjes_valor_arriendo=plata.valor_arriendo,
-        canjes_comision_dataprop=plata.comision_dataprop,
-        canjes_sin_valorizar=plata.sin_valorizar,
         **{campo: cerrados[i + 1] for i, campo in enumerate(PLATA_DEL_HITO)},
         negocios_iniciados=iniciados or 0,
         canjes_solicitados=solicitados or 0,
@@ -672,14 +542,7 @@ def _clave(f) -> str:
     return f"{d.year:04d}-{d.month:02d}"
 
 
-def _serie_mensual(
-    db: Session,
-    anio: int,
-    mes: int,
-    ventana: int,
-    hoy: date | None = None,
-    cache_uf: dict | None = None,
-) -> list[MetricasMes]:
+def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[MetricasMes]:
     """Los meses de la ventana, uno por uno, con **cuatro consultas** en total.
 
     La forma obvia --llamar a `_metricas` una vez por mes-- costaría cinco
@@ -765,15 +628,9 @@ def _serie_mensual(
         else:
             activos[k] = activos.get(k, 0) + 1
 
-    # La plata de canjes no se puede agrupar en SQL: pide la UF de cada canje y la
-    # regla de tramos del contrato, las dos en Python. Va con una sola consulta
-    # para toda la serie (`D-098`).
-    plata_canje = plata_de_canjes_por_clave(db, desde, hasta, _clave, hoy, cache_uf)
-
     serie = []
     for k in claves:
         n, plata = cerrados.get(k, (0, {campo: CERO for campo in PLATA_DEL_HITO}))
-        pc = plata_canje.get(k)
         serie.append(
             MetricasMes(
                 etiqueta=k,
@@ -784,29 +641,9 @@ def _serie_mensual(
                 canjes_cerrados=cerrados_estado.get(k, 0),
                 canjes_cancelados=cancelados.get(k, 0),
                 canjes_activos=activos.get(k, 0),
-                canjes_valor_venta=pc.valor_venta if pc else CERO,
-                canjes_valor_arriendo=pc.valor_arriendo if pc else CERO,
-                canjes_comision_dataprop=pc.comision_dataprop if pc else CERO,
-                canjes_sin_valorizar=pc.sin_valorizar if pc else 0,
             )
         )
     return serie
-
-
-def _serie_semanal(
-    db: Session, anio: int, mes: int, hoy: date | None = None, cache_uf: dict | None = None
-) -> list[MetricasMes]:
-    """El mes partido en sus semanas, cada una medida como un rango cualquiera.
-
-    Va con `_metricas` por semana y no con una consulta agrupada como la serie
-    mensual: son cuatro o cinco tramos, y reusar el cálculo ya probado vale más que
-    ahorrar cuatro consultas. La serie mensual agrupa porque puede llegar a 46
-    meses.
-    """
-    return [
-        _metricas(db, desde, hasta, etiqueta, hoy, cache_uf)
-        for etiqueta, desde, hasta in semanas_del_mes(anio, mes)
-    ]
 
 
 def _desde_el_inicio(
@@ -1041,13 +878,6 @@ def _comparar(actual: MetricasMes, referencia: MetricasMes) -> Comparacion:
 
 
 def _rotulo_ventana(desde: date, hasta: date) -> str:
-    """«2026-06 a 2026-08», o «2026-07» a secas cuando es un mes solo.
-
-    El caso de un mes aparece con la ventana de un mes, que antes no existía: el
-    rótulo decía «2026-07 a 2026-07», que se lee como un error de la pantalla.
-    """
-    if (desde.year, desde.month) == (hasta.year, hasta.month):
-        return f"{desde:%Y-%m}"
     return f"{desde:%Y-%m} a {hasta:%Y-%m}"
 
 
@@ -1057,88 +887,42 @@ def obtener_reporte_mensual(
     mes: int | None = None,
     ventana: int = VENTANA_DEFECTO,
     hoy: date | None = None,
-    comparacion: str = COMPARAR_ANTERIOR,
 ) -> ReporteMensual:
     hoy = hoy or datetime.now(timezone.utc).date()
     anio = anio or hoy.year
     mes = mes or hoy.month
     if ventana not in VENTANAS_VALIDAS:
         raise ValueError(f"La ventana tiene que ser una de {VENTANAS_VALIDAS}.")
-    if comparacion not in COMPARACIONES_VALIDAS:
-        raise ValueError(f"La comparación tiene que ser una de {COMPARACIONES_VALIDAS}.")
 
     # La histórica se resuelve al número real de meses acá, una sola vez, y de ahí
     # en adelante el cálculo es el mismo que para cualquier otra ventana.
     es_historico = ventana == VENTANA_HISTORICO
     if es_historico:
-        # **Nunca menos de un mes.** El primer mes con datos puede ser posterior al
-        # mes que se está mirando --con la base vacía es el mes actual, y mirando
-        # agosto desde septiembre da cero o negativo-- y una ventana de cero meses
-        # deja la serie vacía y revienta el promedio. El test que lo pedía llevaba
-        # días fallando: pasaba solo mientras el mes mirado fuera el mes en curso.
-        ventana = max(_meses_entre(_primer_mes_con_datos(db), (anio, mes)), 1)
+        ventana = _meses_entre(_primer_mes_con_datos(db), (anio, mes))
 
     inicios = _inicio_por_dominio(db)
 
-    # **La serie de UF entera, de una vez.** La plata de canjes valoriza cada canje
-    # con la UF de su propia fecha, y los cancelados usan la de su solicitud: hay
-    # casi una fecha distinta por canje. Pidiéndolas una por una el reporte tardaba
-    # 21 segundos contra Neon; con la serie en memoria son 252 filas en una
-    # consulta (`D-098`).
-    cache_uf = serie_completa(db)
-
     # El mes calendario, como detalle.
     desde_mes, hasta_mes = limites(anio, mes)
-    detalle = _metricas(db, desde_mes, hasta_mes, f"{anio:04d}-{mes:02d}", hoy, cache_uf)
+    detalle = _metricas(db, desde_mes, hasta_mes, f"{anio:04d}-{mes:02d}")
 
     # La ventana móvil y la inmediatamente anterior, del mismo largo.
     desde_v, hasta_v = rango_ventana(anio, mes, ventana)
     a_prev, m_prev = correr_meses(anio, mes, -ventana)
     desde_p, hasta_p = rango_ventana(a_prev, m_prev, ventana)
 
-    movil = _metricas(db, desde_v, hasta_v, _rotulo_ventana(desde_v, hasta_v), hoy, cache_uf)
-    movil_prev = _metricas(db, desde_p, hasta_p, _rotulo_ventana(desde_p, hasta_p), hoy, cache_uf)
+    movil = _metricas(db, desde_v, hasta_v, _rotulo_ventana(desde_v, hasta_v))
+    movil_prev = _metricas(db, desde_p, hasta_p, _rotulo_ventana(desde_p, hasta_p))
 
     # El año corrido contra el mismo tramo del año anterior.
     desde_a, hasta_a = rango_anio_corrido(anio, mes)
     desde_ap, hasta_ap = rango_anio_corrido(anio - 1, mes)
-    corrido = _metricas(db, desde_a, hasta_a, _rotulo_ventana(desde_a, hasta_a), hoy, cache_uf)
-    corrido_prev = _metricas(db, desde_ap, hasta_ap, _rotulo_ventana(desde_ap, hasta_ap), hoy, cache_uf)
+    corrido = _metricas(db, desde_a, hasta_a, _rotulo_ventana(desde_a, hasta_a))
+    corrido_prev = _metricas(db, desde_ap, hasta_ap, _rotulo_ventana(desde_ap, hasta_ap))
 
     # La serie reemplazó al bucle que contaba los meses vacíos: los vacíos salen
     # de ella, así que ya no hace falta recorrer la ventana dos veces.
-    #
-    # **El grano se deriva de la ventana** (`D-098`): un solo mes se parte en sus
-    # semanas, porque una barra sola no tiene forma; dos o más meses van por mes.
-    grano = GRANO_SEMANA if ventana == 1 and not es_historico else GRANO_MES
-    if grano == GRANO_SEMANA:
-        serie = _serie_semanal(db, anio, mes, hoy, cache_uf)
-    else:
-        serie = _serie_mensual(db, anio, mes, ventana, hoy, cache_uf)
-
-    # La serie con la que se compara, del mismo largo y el mismo grano, para
-    # dibujarla superpuesta. La histórica no tiene un antes, así que va vacía.
-    serie_comparacion: list[MetricasMes] = []
-    rotulo_comparacion = ""
-    if not es_historico:
-        if comparacion == COMPARAR_ANIO_ANTERIOR:
-            a_cmp, m_cmp = anio - 1, mes
-        else:
-            a_cmp, m_cmp = correr_meses(anio, mes, -ventana)
-        if grano == GRANO_SEMANA:
-            serie_comparacion = _serie_semanal(db, a_cmp, m_cmp, hoy, cache_uf)
-        else:
-            serie_comparacion = _serie_mensual(db, a_cmp, m_cmp, ventana, hoy, cache_uf)
-        desde_c, hasta_c = rango_ventana(a_cmp, m_cmp, ventana)
-        rotulo_comparacion = _rotulo_ventana(desde_c, hasta_c)
-
-    # Los bloques nuevos. Las etapas van sobre la ventana --de lo que entró, cómo
-    # está-- y las duraciones son una foto de los abiertos de hoy.
-    etapas_canjes = canjes_por_etapa(db, desde_v, hasta_v)
-    etapas_negocios = negocios_por_etapa(db, desde_v, hasta_v)
-    estados_hitos = hitos_por_estado(db, desde_v, hasta_v)
-    duracion_canjes = duracion_de_canjes_por_etapa(db, hoy)
-    duracion_negocios = duracion_de_negocios_por_etapa(db, hoy)
+    serie = _serie_mensual(db, anio, mes, ventana)
 
     return ReporteMensual(
         mes=detalle,
@@ -1163,14 +947,4 @@ def obtener_reporte_mensual(
             campo: _tendencia(serie, campo, nombre, inicios.get(DOMINIOS[campo]))
             for campo, nombre, _ in METRICAS
         },
-        granularidad=grano,
-        semanas_del_mes=len(semanas_del_mes(anio, mes)),
-        serie_comparacion=serie_comparacion,
-        comparacion=comparacion,
-        rotulo_comparacion=rotulo_comparacion,
-        canjes_por_etapa=etapas_canjes,
-        negocios_por_etapa=etapas_negocios,
-        hitos_por_estado=estados_hitos,
-        duracion_canjes_por_etapa=duracion_canjes,
-        duracion_negocios_por_etapa=duracion_negocios,
     )
