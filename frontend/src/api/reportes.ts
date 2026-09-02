@@ -263,37 +263,6 @@ export type PromedioMes = {
   canjes_cerrados: string
   canjes_cancelados: string
   canjes_activos: string
-  canjes_valor_venta: string
-  canjes_valor_arriendo: string
-  canjes_comision_dataprop: string
-}
-
-/** Cuántas entidades hay en una etapa o en un estado.
- *
- * Se llama así y no `ConteoEtapa` porque ese nombre ya es del resumen de canjes,
- * que trae la etapa con su desglose por estado. Son dos formas distintas del
- * mismo concepto y reusar el nombre habría hecho que una compilara donde va la
- * otra. */
-export type ConteoDeEtapa = {
-  etapa: string | null
-  cantidad: number
-}
-
-/**
- * Cuánto llevan en su etapa los que están abiertos.
- *
- * `n` se muestra siempre: con siete canjes repartidos en cuatro etapas, el
- * promedio de una etapa puede ser un solo caso, y sin el `n` se lee como una
- * tendencia. `sin_historia` son los que no tienen movimiento que registre la
- * entrada a la etapa: ahí se mide desde la solicitud, que no es lo mismo.
- */
-export type DuracionEtapa = {
-  etapa: string | null
-  n: number
-  dias_promedio: number
-  dias_min: number
-  dias_max: number
-  sin_historia: number
 }
 
 export type Comparacion = {
@@ -335,41 +304,13 @@ export type ReporteMensual = {
   promedio: PromedioMes
   /** La tendencia de cada métrica sobre la ventana, indexada por su campo. */
   tendencias: Record<string, Tendencia>
-
-  /** `'mes'` o `'semana'`. **Se deriva de la ventana**, no es un control: con un
-   *  mes el desglose son las semanas de ese mes y con dos o más, los meses. */
-  granularidad: 'mes' | 'semana'
-  /** Cuántas semanas tiene el mes elegido, para la etiqueta del selector. */
-  semanas_del_mes: number
-  /** La serie del período con el que se compara, punto por punto. Vacía en la
-   *  histórica, que no tiene un antes. */
-  serie_comparacion: MetricasMes[]
-  comparacion: Comparar
-  /** «2026-03 a 2026-05», para rotular la serie superpuesta. */
-  rotulo_comparacion: string
-
-  /** De lo que entró en la ventana, cómo está hoy. */
-  canjes_por_etapa: ConteoDeEtapa[]
-  negocios_por_etapa: ConteoDeEtapa[]
-  hitos_por_estado: ConteoDeEtapa[]
-  /** Cuánto llevan los abiertos donde están. **Es una foto, no una serie**: los
-   *  abiertos son los de hoy, así que no depende de la ventana. */
-  duracion_canjes_por_etapa: DuracionEtapa[]
-  duracion_negocios_por_etapa: DuracionEtapa[]
 }
-
-/** Con qué se compara la ventana. Las dos responden preguntas distintas: «mejor
- *  que el trimestre pasado» y «mejor que el año pasado por esta época». */
-export type Comparar = 'anterior' | 'anio_anterior'
 
 /** Cero es la ventana histórica: toda la serie desde el primer registro. El
  *  servidor la resuelve al número real de meses y lo informa en `ventana_meses`. */
 export const VENTANA_HISTORICO = 0
 
-/** De 1 a 12 meses más la histórica. Van en un desplegable y no en botones en
- *  fila: trece opciones no caben. **Con 1 el desglose pasa a semanas** --lo decide
- *  el servidor, ver `granularidad`-- porque una barra sola no tiene forma. */
-export const VENTANAS = [...Array.from({ length: 12 }, (_, i) => i + 1), VENTANA_HISTORICO] as const
+export const VENTANAS = [3, 6, 12, VENTANA_HISTORICO] as const
 
 /**
  * La parte de la serie desde que el dominio que se está mirando existe.
@@ -399,22 +340,17 @@ export function serieDelDominio(
 
 /** Cómo se llama cada ventana en el selector. */
 export function rotuloVentana(v: number): string {
-  if (v === VENTANA_HISTORICO) return 'Histórico'
-  // Un mes en singular: «1 meses» se lee como un error de la pantalla. Y avisa
-  // del grano, que es lo que cambia al elegirlo.
-  return v === 1 ? '1 mes (por semanas)' : `${v} meses`
+  return v === VENTANA_HISTORICO ? 'Histórico' : `${v} meses`
 }
 
 export function obtenerReporteMensual(
   anio: number,
   mes: number,
   ventana: number,
-  comparacion: Comparar = 'anterior',
 ): Promise<ReporteMensual> {
-  return fetch(
-    `/api/reportes/mensual?anio=${anio}&mes=${mes}&ventana=${ventana}&comparacion=${comparacion}`,
-    { credentials: 'include' },
-  ).then(parseOrThrow)
+  return fetch(`/api/reportes/mensual?anio=${anio}&mes=${mes}&ventana=${ventana}`, {
+    credentials: 'include',
+  }).then(parseOrThrow)
 }
 
 
