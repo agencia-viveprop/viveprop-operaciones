@@ -296,12 +296,19 @@ export type PlazosCanjes = {
  * nombre de Dataprop y no percibe nada de él, así que estos montos nunca se suman
  * con los de negocios.
  *
- * Las tres cifras significan cosas distintas: la **cobrada** sale del campo manual
- * de los cerrados y es un hecho; las otras dos salen de la regla y son proyecciones.
+ * Cada cifra significa algo distinto: la **cobrada** sale del campo manual de los
+ * cerrados y es un hecho; las otras salen de la regla y son proyecciones.
+ *
+ * **`potencial_desde_oferta` es un subconjunto de `potencial`, no una cifra que se
+ * le sume** (`D-104`): son los mismos canjes activos, filtrados a los que ya
+ * llegaron a `EN_OFERTA` o más adelante.
  */
 export type PlataCanjes = {
   cobrada: BolsaDeCanjes
+  /** Todos los activos, en cualquier etapa. */
   potencial: BolsaDeCanjes
+  /** Los activos desde la etapa de oferta en adelante. */
+  potencial_desde_oferta: BolsaDeCanjes
   no_concretada: BolsaDeCanjes
   plazos: PlazosCanjes
   uf_de_hoy: string

@@ -4,17 +4,25 @@
 rotulado como tal y nunca se suma con la de negocios. ViveProp opera el programa a
 nombre de Dataprop y no percibe nada de él.
 
-**Tres cifras, y las tres significan cosas distintas.**
+**Cuatro cifras, y cada una responde una pregunta distinta.**
 
 | Cuál | De dónde sale | Qué es |
 |---|---|---|
+| Total | la regla, sobre **todos** los activos | la cartera abierta completa |
+| Potencial desde oferta | la regla, sobre los activos en oferta o más adelante | lo que tiene chance real |
 | Cobrada | el campo manual de los cerrados | un hecho |
-| Potencial | la regla, sobre los activos | una estimación |
 | No concretada | la regla, sobre los cancelados | lo que no se llegó a cobrar |
 
+**Las dos primeras son la misma plata mirada con dos varas, y por eso van juntas**
+(`D-104`). La total dice cuánto hay en la cartera abierta; la de oferta en adelante
+dice cuánto de eso ya pasó el punto donde hay una oferta sobre la mesa. La
+diferencia entre las dos es lo que todavía está en revisión o negociándose el
+acuerdo, y esa es la lectura que el usuario pidió tener a la vista. **No se suman**:
+la segunda es un subconjunto de la primera.
+
 La cobrada **no se calcula: se registra.** Cuando un canje cierra, la comisión se
-negocia y se factura, así que es un dato que alguien escribe. Las otras dos salen
-del motor, porque son proyecciones sobre canjes que todavía no generaron nada.
+negocia y se factura, así que es un dato que alguien escribe. Las otras salen del
+motor, porque son proyecciones sobre canjes que todavía no generaron nada.
 
 **Cada caso usa la UF que le corresponde**, y no la de hoy para todos:
 
@@ -45,11 +53,26 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models.canje import Canje, CanjeEstado
+from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.services.comisiones_canjes import ComisionCanje, calcular
 from app.services.uf import UFNoDisponible, valor_uf
 
 CERO = Decimal("0")
+
+# Las etapas en las que un canje ya tiene una oferta sobre la mesa: de `EN_OFERTA`
+# hacia adelante (`D-104`). Un activo en revisión o negociando el acuerdo puede
+# terminar en nada; uno que llegó a oferta ya tiene una contraparte poniendo un
+# número, así que su comisión es la que tiene chance real de cobrarse.
+#
+# **La etapa `CERRADO` no es el estado `CERRADO`.** Un canje puede estar en la
+# etapa de cierre y seguir con estado activo --el cierre es el trámite, no el
+# hecho-- y de esos hay 31 en producción contra cero cerrados de verdad. Por eso
+# esta lista la incluye: son activos, y de los más avanzados que hay.
+ETAPAS_DESDE_OFERTA = (
+    CanjeEtapa.EN_OFERTA,
+    CanjeEtapa.EN_NEGOCIO,
+    CanjeEtapa.CERRADO,
+)
 
 
 class BolsaDeCanjes(BaseModel):
@@ -89,7 +112,11 @@ class PlazosCanjes(BaseModel):
 
 class PlataCanjes(BaseModel):
     cobrada: BolsaDeCanjes
+    # Todos los activos, en cualquier etapa.
     potencial: BolsaDeCanjes
+    # Los activos desde `EN_OFERTA` en adelante: un subconjunto de `potencial`, no
+    # una cifra aparte que se le sume (`D-104`).
+    potencial_desde_oferta: BolsaDeCanjes
     no_concretada: BolsaDeCanjes
     plazos: PlazosCanjes
     # La UF con la que se valorizó lo potencial, para que el número sea auditable.
@@ -228,9 +255,17 @@ def obtener_plata_canjes(db: Session, hoy: date | None = None) -> PlataCanjes:
 
     uf_hoy = valor_uf(db, hoy)
 
+    # Los activos se valorizan una vez y de ahí salen las dos bolsas: la segunda
+    # es un filtro por etapa sobre la misma lista, no una segunda pasada por el
+    # motor ni una segunda búsqueda de UF.
+    activos = calculados(CanjeEstado.ACTIVO)
+
     return PlataCanjes(
         cobrada=_bolsa_cobrada(por_estado[CanjeEstado.CERRADO]),
-        potencial=_bolsa(calculados(CanjeEstado.ACTIVO)),
+        potencial=_bolsa(activos),
+        potencial_desde_oferta=_bolsa(
+            [(c, m) for c, m in activos if c.etapa in ETAPAS_DESDE_OFERTA]
+        ),
         no_concretada=_bolsa(calculados(CanjeEstado.CANCELADO)),
         plazos=PlazosCanjes(
             sobrevivencia_n=len(sobrevivencia),

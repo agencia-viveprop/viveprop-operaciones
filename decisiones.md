@@ -2952,3 +2952,41 @@ Con las columnas fuera, el bloque también cambia lo que dice de sí mismo: el s
 
 `TotalDelMes` conserva `comision`, `valor_venta` y `valor_arriendo` para los dos dominios, y `_tendencias` sigue ajustando una curva sobre cada uno aunque la pantalla solo dibuje la de «entraron». Es cálculo que ya no se muestra en canjes --incluido el `comision_entraron` semanal, que quedó sin uso desde `D-098`-- y sacarlo aceleraría el reporte, porque es parte de lo que obliga a prefetchear la serie de UF. **No se toca todavía:** el contrato es de los dos dominios y la plata de negocios sí se usa, así que la limpieza es una decisión aparte y está ofrecida.
 
+---
+
+## D-104 · Tres tarjetas sobre lo que gana Dataprop, y la del medio es el corte por etapa
+
+El usuario pidió la forma exacta: *«necesito que existan 3 cuadros siempre sobre lo que gana dataprop, el que está que se llame comisión total, otro donde se vea la comisión potencial de los canjes activos desde la etapa oferta en adelante y otro con las comisiones realmente cobradas por canjes cerrados»*.
+
+| Tarjeta | Población | Qué responde |
+|---|---|---|
+| **Comisión total** | todos los activos, en cualquier etapa | cuánto hay en la cartera abierta |
+| **Potencial desde oferta** | los activos en `EN_OFERTA` o más adelante | cuánto de eso ya tiene una oferta sobre la mesa |
+| **Realmente cobrada** | los cerrados | cuánto se facturó de verdad |
+
+**Las tres van siempre, incluso en cero.** «Realmente cobrada» marca $0 mientras no haya ningún canje cerrado --hoy no hay ninguno-- y esconderla dejaría la pregunta «cuánto se cobró» sin respuesta en pantalla. Fue el pedido explícito: *«que existan 3 cuadros siempre»*.
+
+### La del medio es la que agrega información nueva
+
+Es la única que necesitó backend. `potencial_desde_oferta` es un **subconjunto de `potencial`**: los mismos canjes activos, filtrados por etapa. La diferencia entre las dos tarjetas es lo que todavía está en revisión o negociando el acuerdo --hoy 1 de 4 en `dev`-- y esa resta es la lectura que se buscaba: un activo en revisión puede terminar en nada, y uno que llegó a oferta ya tiene una contraparte poniendo un número.
+
+**Por eso el texto dice que no se suman.** Sumar $1.264.704 con $872.376 contaría tres canjes dos veces, y es exactamente el error que la app viene evitando en cada pantalla de plata (`D-063`, `D-095`).
+
+### La etapa `CERRADO` no es el estado `CERRADO`, y el corte la incluye
+
+Un canje puede estar en la **etapa** de cierre y seguir con **estado** activo: el cierre es el trámite, no el hecho. En producción hay **31 canjes en la etapa Cierre** contra **cero** cerrados de verdad, así que dejarlos fuera del corte «desde oferta en adelante» habría vaciado justo la parte más avanzada de la cartera. `ETAPAS_DESDE_OFERTA` los incluye, y hay un test que fija ese caso porque es el que se presta a confundir.
+
+El corte es **por etapa sobre los activos**, no por etapa a secas: un cancelado que había llegado a `EN_NEGOCIO` no entra. Tiene su propio test.
+
+### Una sola valorización para las dos bolsas
+
+`obtener_plata_canjes` valorizaba los activos una vez; ahora esa lista se guarda en una variable y la segunda bolsa es un filtro en Python sobre ella. **No es una segunda pasada por el motor de comisiones ni una segunda búsqueda de UF**, que es lo que habría costado llamar `calculados(ACTIVO)` de nuevo.
+
+### Lo de los cancelados no se convirtió en una cuarta tarjeta
+
+Sigue en el renglón de referencia, ahora solo: «Ya facturado» subió a tarjeta --es «realmente cobrada»-- y quedó abajo únicamente «No se llegó a cobrar». Las tarjetas son las tres que el usuario definió como *«sobre lo que gana dataprop»*, y lo de los cancelados no es eso (`D-102`).
+
+### Los colores
+
+Total en el índigo principal, potencial desde oferta en el teal de `info`, cobrada en el verde de `good`. El verde no es decorativo: la cobrada es la única de las tres que es un **hecho** y no una estimación, y `good` es el color que la app ya usa para lo logrado. El teal marca la del medio como una lectura derivada de la primera y no como una categoría nueva.
+

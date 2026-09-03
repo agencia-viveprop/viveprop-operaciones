@@ -14,17 +14,24 @@ import StatCard from './StatCard'
  * no percibe nada de él: sumar estos montos con los de negocios sería contar como
  * ingreso propio la comisión de otro.
  *
- * **Solo una de las tres cifras es «la comisión», y es la de los canjes activos**
- * (`D-102`). Las tres estaban al mismo nivel, en tres tarjetas iguales, y con 5
- * activos contra 224 cancelados la más grande de la fila --$39,7 millones-- era la
- * de los cancelados: una plata que no es comisión de nadie y que dominaba el
- * bloque. El usuario lo pidió así: *«las comisiones dataprop en canje deben ser
- * solo por canjes activos en cualquier etapa»*.
+ * **Tres tarjetas, siempre, y las tres son plata que Dataprop gana o ganó**
+ * (`D-104`). El usuario las pidió así: la total, la potencial desde la etapa de
+ * oferta en adelante, y la realmente cobrada en los cerrados.
  *
- * **Las otras dos no se borran, bajan de nivel.** Son ciertas y hacen falta --una
- * ya se facturó, la otra no se va a cobrar-- así que van en un renglón aparte,
- * rotuladas por lo que son y no como comisión. Borrarlas habría escondido la plata
- * facturada, que es el número que importa en cuanto cierre un canje.
+ * | Tarjeta | Población | Qué responde |
+ * |---|---|---|
+ * | Comisión total | todos los activos | cuánto hay en la cartera abierta |
+ * | Potencial desde oferta | los activos en oferta o más adelante | cuánto de eso ya tiene una oferta sobre la mesa |
+ * | Realmente cobrada | los cerrados | cuánto se facturó de verdad |
+ *
+ * **Las dos primeras no se suman:** la segunda son los mismos canjes de la
+ * primera, filtrados por etapa. La diferencia entre ambas es lo que todavía está
+ * en revisión o negociando el acuerdo.
+ *
+ * **Y lo de los cancelados no es una cuarta tarjeta.** Estuvo al mismo nivel y con
+ * 5 activos contra 224 cancelados era la cifra más grande de la fila --$39,7
+ * millones--, o sea plata que no es de nadie dominando el bloque (`D-102`). Vive en
+ * un renglón de referencia, rotulada por lo que es.
  *
  * Cada cifra viaja con el conteo de sobre cuántos canjes se calculó, porque una
  * comisión estimada sobre 121 de 224 cancelados no dice lo mismo que sobre los 224.
@@ -92,30 +99,20 @@ function cuantos(b: BolsaDeCanjes, singular: string, plural: string): string {
 }
 
 /**
- * Lo que no es comisión en juego, en un renglón y no en tarjetas.
+ * Lo que se perdió con los canjes cancelados, en un renglón y no en tarjeta.
  *
- * Las dos cifras son ciertas y hacen falta, pero ninguna es plata que Dataprop
- * esté por cobrar: una ya se facturó y la otra se perdió con el canje. Al mismo
- * nivel que la comisión, la de los cancelados la tapaba por tamaño (`D-102`).
+ * La cifra es cierta y hace falta, pero **no es plata que Dataprop gane ni haya
+ * ganado**, que es lo que dicen las tres tarjetas. Al mismo nivel que ellas era la
+ * más grande de la fila --$39,7 millones contra $1,7-- y dominaba el bloque
+ * (`D-102`).
  */
-function FueraDeLaComision({
-  cobrada,
-  noConcretada,
-}: {
-  cobrada: BolsaDeCanjes
-  noConcretada: BolsaDeCanjes
-}) {
+function FueraDeLaComision({ noConcretada }: { noConcretada: BolsaDeCanjes }) {
   const sinValorizar = noConcretada.canjes - noConcretada.con_monto
 
   return (
     <Stack gap={2}>
       <Text size="xs" c="dimmed">
         Fuera de la comisión, para referencia:
-      </Text>
-      <Text size="xs" c="dimmed">
-        <strong>Ya facturado</strong> {clp(cobrada.comision_dataprop)} ·{' '}
-        {cuantos(cobrada, 'cerrado', 'cerrados')}. Se registra a mano
-        al cerrar el canje, así que es lo que se facturó y no una estimación.
       </Text>
       <Text size="xs" c="dimmed">
         <strong>No se llegó a cobrar</strong> {clp(noConcretada.comision_dataprop)} ·{' '}
@@ -203,12 +200,12 @@ export default function PlataDeCanjes() {
         </Alert>
       </Stack>
 
-      {/* Una sola tarjeta, y a un tercio del ancho: es la única cifra del bloque
-          que es comisión, y ponerla sola la deja mandando sin necesidad de que
-          sea más grande. */}
+      {/* Las tres van siempre, incluso en cero: la de cerrados marca $0 mientras no
+          haya ninguno, y esconderla dejaría la pregunta «cuánto se cobró» sin
+          respuesta en pantalla. */}
       <SimpleGrid cols={{ base: 1, sm: 3 }}>
         <StatCard
-          label="Comisión de los activos"
+          label="Comisión total"
           value={clp(data.potencial.comision_dataprop)}
           color="brand"
           caption={
@@ -217,16 +214,39 @@ export default function PlataDeCanjes() {
               : `${cuantos(data.potencial, 'activo', 'activos')}, en cualquier etapa`
           }
         />
+        <StatCard
+          label="Potencial desde oferta"
+          value={clp(data.potencial_desde_oferta.comision_dataprop)}
+          color="info"
+          caption={
+            data.potencial_desde_oferta.canjes === 0
+              ? 'Ningún activo llegó a oferta'
+              : `${cuantos(data.potencial_desde_oferta, 'activo', 'activos')} en oferta o más adelante`
+          }
+        />
+        <StatCard
+          label="Realmente cobrada"
+          value={clp(data.cobrada.comision_dataprop)}
+          color="good"
+          caption={
+            data.cobrada.canjes === 0
+              ? 'Ningún canje cerrado'
+              : cuantos(data.cobrada, 'cerrado', 'cerrados')
+          }
+        />
       </SimpleGrid>
 
       <Text size="xs" c="dimmed">
-        Es la comisión de los canjes <strong>activos, en cualquier etapa</strong>, y es una
-        estimación: sale de la regla —2% por corredor en venta, medio mes cada uno en arriendo,
-        y sobre eso el 6/5/4% según el tramo en UF o el 8% en arriendo— aplicada al valor de la
-        propiedad, con la UF de hoy. Todo neto, sin IVA.
+        La <strong>total</strong> y la <strong>potencial desde oferta</strong> son la misma plata
+        con dos varas y <strong>no se suman</strong>: la segunda son los mismos canjes activos,
+        dejando fuera los que están en revisión o negociando el acuerdo. Las dos son estimaciones:
+        salen de la regla —2% por corredor en venta, medio mes cada uno en arriendo, y sobre eso
+        el 6/5/4% según el tramo en UF o el 8% en arriendo— aplicada al valor de la propiedad, con
+        la UF de hoy. La <strong>realmente cobrada</strong> no se estima: se registra a mano al
+        cerrar el canje. Todo neto, sin IVA.
       </Text>
 
-      <FueraDeLaComision cobrada={data.cobrada} noConcretada={data.no_concretada} />
+      <FueraDeLaComision noConcretada={data.no_concretada} />
 
       <Plazos p={data.plazos} />
     </Stack>

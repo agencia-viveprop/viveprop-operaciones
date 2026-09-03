@@ -329,3 +329,101 @@ def test_sin_uf_para_su_fecha_el_canje_queda_sin_monto(db):
     assert r.no_concretada.canjes == 1
     assert r.no_concretada.con_monto == 0
     assert r.no_concretada.comision_dataprop == D("0")
+
+
+def test_el_potencial_desde_oferta_es_un_subconjunto_de_los_activos(db):
+    """Los activos desde EN_OFERTA en adelante, y ninguno mas.
+
+    El usuario pidio ver aparte "la comision potencial de los canjes activos desde
+    la etapa oferta en adelante": un activo en revision o negociando el acuerdo
+    puede terminar en nada, y uno que llego a oferta ya tiene una contraparte
+    poniendo un numero.
+    """
+    from datetime import date, datetime, timezone
+
+    from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+    from app.models.uf import UFDiaria
+    from app.services.plata_canjes import obtener_plata_canjes
+
+    hoy = date(2026, 8, 27)
+    db.add(UFDiaria(fecha=hoy, valor=UF))
+
+    def activo(id_, etapa):
+        return Canje(id=id_, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                     estado=CanjeEstado.ACTIVO, etapa=etapa, comuna="Santiago",
+                     tipo_operacion=OperacionTipo.VENTA, valor_prop=10000,
+                     moneda_valor=MonedaTipo.UF)
+
+    db.add_all([
+        # Antes de la oferta: entran al total y no al de oferta en adelante.
+        activo(1, CanjeEtapa.EN_REVISION),
+        activo(2, CanjeEtapa.PROCESO_DE_ACUERDO),
+        # Desde la oferta: entran a los dos.
+        activo(3, CanjeEtapa.EN_OFERTA),
+        activo(4, CanjeEtapa.EN_NEGOCIO),
+        activo(5, CanjeEtapa.CERRADO),
+    ])
+    db.commit()
+
+    r = obtener_plata_canjes(db, hoy=hoy)
+    uno = calcular("VENTA", D("10000"), "UF", UF).comision_dataprop
+
+    assert r.potencial.canjes == 5
+    assert r.potencial.comision_dataprop == uno * 5
+    assert r.potencial_desde_oferta.canjes == 3
+    assert r.potencial_desde_oferta.comision_dataprop == uno * 3
+    # Es un subconjunto: nunca puede pasarse del total.
+    assert r.potencial_desde_oferta.comision_dataprop <= r.potencial.comision_dataprop
+
+
+def test_la_etapa_cerrado_de_un_activo_cuenta_desde_oferta(db):
+    """La etapa CERRADO no es el estado CERRADO.
+
+    Un canje puede estar en la etapa de cierre --el tramite-- y seguir activo. De
+    esos hay 31 en produccion contra cero cerrados de verdad, asi que dejarlos
+    fuera vaciaria la cifra.
+    """
+    from datetime import date, datetime, timezone
+
+    from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+    from app.models.uf import UFDiaria
+    from app.services.plata_canjes import obtener_plata_canjes
+
+    hoy = date(2026, 8, 27)
+    db.add(UFDiaria(fecha=hoy, valor=UF))
+    db.add(Canje(id=1, fecha_solicitud=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                 estado=CanjeEstado.ACTIVO, etapa=CanjeEtapa.CERRADO, comuna="Santiago",
+                 tipo_operacion=OperacionTipo.VENTA, valor_prop=10000,
+                 moneda_valor=MonedaTipo.UF))
+    db.commit()
+
+    r = obtener_plata_canjes(db, hoy=hoy)
+
+    assert r.potencial_desde_oferta.canjes == 1
+    # Y no cuenta como cobrado: no cerro, esta cerrando.
+    assert r.cobrada.canjes == 0
+
+
+def test_un_cancelado_avanzado_no_entra_al_potencial_desde_oferta(db):
+    """El corte es por etapa **sobre los activos**, no por etapa a secas."""
+    from datetime import date, datetime, timezone
+
+    from app.models.canje import Canje, CanjeEstado, CanjeEtapa, MonedaTipo, OperacionTipo
+    from app.models.uf import UFDiaria
+    from app.services.plata_canjes import obtener_plata_canjes
+
+    hoy = date(2026, 8, 27)
+    db.add(UFDiaria(fecha=hoy, valor=UF))
+    db.add(UFDiaria(fecha=date(2026, 6, 1), valor=UF))
+    db.add(Canje(id=1, fecha_solicitud=datetime(2026, 6, 1, tzinfo=timezone.utc),
+                 fecha_cierre=datetime(2026, 6, 15, tzinfo=timezone.utc),
+                 estado=CanjeEstado.CANCELADO, etapa=CanjeEtapa.EN_NEGOCIO, comuna="Santiago",
+                 tipo_operacion=OperacionTipo.VENTA, valor_prop=10000,
+                 moneda_valor=MonedaTipo.UF))
+    db.commit()
+
+    r = obtener_plata_canjes(db, hoy=hoy)
+
+    assert r.potencial.canjes == 0
+    assert r.potencial_desde_oferta.canjes == 0
+    assert r.no_concretada.canjes == 1

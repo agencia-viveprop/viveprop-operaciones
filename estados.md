@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-02 (22 listos + G2 en curso; en canjes la plata sale del «Mes a mes» del reporte semanal)
+**Última actualización:** 2026-09-03 (22 listos + G2 en curso; tres tarjetas de comisión de Dataprop, con el corte desde la etapa de oferta)
 
 ---
 
@@ -125,6 +125,28 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-03 - Tres tarjetas sobre lo que gana Dataprop
+
+Las pediste así y quedaron así, y van **siempre**, incluso en cero:
+
+| Tarjeta | Población | Qué responde |
+|---|---|---|
+| Comisión total | todos los activos, en cualquier etapa | cuánto hay en la cartera abierta |
+| Potencial desde oferta | los activos en oferta o más adelante | cuánto de eso ya tiene una oferta sobre la mesa |
+| Realmente cobrada | los cerrados | cuánto se facturó de verdad |
+
+**La del medio es la que necesitó backend.** Es un subconjunto de la primera: los mismos canjes activos, filtrados desde la etapa `EN_OFERTA`. La resta entre las dos es lo que sigue en revisión o negociando el acuerdo, que es la lectura nueva. El texto de abajo dice que **no se suman**, porque sumarlas contaría los mismos canjes dos veces.
+
+**Un detalle que se presta a confundir y quedó fijado en un test:** la **etapa** Cierre no es el **estado** Cerrado. Un canje puede estar cerrando --el trámite-- y seguir activo, y en producción hay 31 así contra cero cerrados de verdad. El corte los incluye; dejarlos fuera habría vaciado la parte más avanzada de la cartera. Otro test fija que el corte es por etapa **sobre los activos**: un cancelado que llegó a negocio no entra.
+
+**«Realmente cobrada» marca $0** porque no hay ningún canje cerrado todavía. Se muestra igual: esconderla dejaba la pregunta sin respuesta en pantalla.
+
+**Lo de los cancelados no subió a tarjeta:** sigue en el renglón de referencia, ahora solo con «No se llegó a cobrar». Las tarjetas son las tres que definiste como lo que Dataprop gana, y eso no es.
+
+**Los activos se valorizan una sola vez** y la segunda bolsa es un filtro sobre esa lista: no hay segunda pasada por el motor ni segunda búsqueda de UF.
+
+**Verificado en pantalla** contra `dev`: total $1.264.704 sobre 4 activos, desde oferta $872.376 sobre 3, cobrada $0. 3 tests nuevos; el suite del backend pasa completo salvo el rojo del reloj que ya conoces. `npm run build` en cero errores y oxlint limpio (`D-104`).
 
 ### 2026-09-02 - En canjes, «Mes a mes» ya no lleva plata
 
