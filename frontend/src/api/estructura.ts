@@ -52,3 +52,7 @@ export function obtenerEstructuraNegocios(): Promise<EstructuraArchivo> {
 export function obtenerEstructuraHistorial(): Promise<EstructuraArchivo> {
   return pedir('/api/negocios/plantilla-historial/estructura')
 }
+
+export function obtenerEstructuraVisitas(): Promise<EstructuraArchivo> {
+  return pedir('/api/visitas/plantilla/estructura')
+}

@@ -1,33 +1,28 @@
 import { useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, FileButton, Group, List, Modal, Stack, Text } from '@mantine/core'
-import { IconUpload } from '@tabler/icons-react'
-import { CLAVE_VISITAS, importarVisitas, type ResumenCargaVisitas } from '../api/visitas'
+import { IconDownload, IconUpload } from '@tabler/icons-react'
+import { obtenerEstructuraVisitas } from '../api/estructura'
+import {
+  CLAVE_VISITAS,
+  descargarPlantillaVisitas,
+  importarVisitas,
+  type ResumenCargaVisitas,
+} from '../api/visitas'
+import EstructuraArchivo from './EstructuraArchivo'
 
 /** Cuántos errores se listan antes de resumir. Igual criterio que la carga de
  *  negocios: con un archivo muy malo salen cientos, y una lista de cientos no
  *  se lee. */
 const TOPE_ERRORES = 15
 
-const COLUMNAS_ESPERADAS = [
-  'Propiedad',
-  'Dirección',
-  'Tipo',
-  'Mercado',
-  'Cliente',
-  'RUT',
-  'Objetivo de compra',
-  'Fecha/hora solicitada',
-  'Etapa',
-  'Solicitada el',
-]
-
 /**
  * Carga masiva de visitas.
  *
- * A diferencia de la de negocios, no hay botón "Descargar plantilla": el
- * archivo no lo genera ViveProp, sale tal cual de la consola de
- * administración con estas columnas fijas.
+ * La plantilla descargable no es para llenarla a mano --el archivo sale de la
+ * consola de administración, no de esta app--, sino para comparar encabezados
+ * cuando la carga falla y no se entiende por qué: el mismo motivo que tiene la
+ * de Canjes.
  *
  * No hay ID en el archivo de origen, así que cargar el mismo archivo dos
  * veces duplica filas a propósito — se sacan a mano, una por una, desde la
@@ -44,6 +39,13 @@ export default function CargaMasivaVisitasModal({
   const [archivo, setArchivo] = useState<File | null>(null)
   const [resumen, setResumen] = useState<ResumenCargaVisitas | null>(null)
   const resetRef = useRef<() => void>(null)
+
+  const bajar = useMutation({ mutationFn: descargarPlantillaVisitas })
+  const estructura = useQuery({
+    queryKey: ['estructura-archivo', 'visitas'],
+    queryFn: obtenerEstructuraVisitas,
+    enabled: abierto,
+  })
 
   const subir = useMutation({
     mutationFn: () => importarVisitas(archivo!),
@@ -70,13 +72,23 @@ export default function CargaMasivaVisitasModal({
     <Modal opened={abierto} onClose={cerrar} title="Carga masiva de visitas" size="lg">
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          El archivo tiene que traer estas columnas, tal como las exporta la consola:{' '}
-          {COLUMNAS_ESPERADAS.join(' · ')}. No trae un identificador único, así que cada
-          carga agrega todas las filas como registros nuevos: si se sube el mismo archivo dos
-          veces, las filas quedan repetidas y se borran a mano desde la tabla.
+          El archivo no trae un identificador único, así que cada carga agrega todas las
+          filas como registros nuevos: si se sube el mismo archivo dos veces, las filas
+          quedan repetidas y se borran a mano, una por una, desde la tabla.
         </Text>
 
+        <EstructuraArchivo consulta={estructura} />
+
         <Group>
+          <Button
+            variant="light"
+            leftSection={<IconDownload size={16} />}
+            loading={bajar.isPending}
+            onClick={() => bajar.mutate()}
+          >
+            Descargar plantilla
+          </Button>
+
           <FileButton resetRef={resetRef} onChange={setArchivo} accept=".xlsx,.xlsm">
             {(props) => (
               <Button {...props} variant="default">
@@ -96,6 +108,11 @@ export default function CargaMasivaVisitasModal({
           </Button>
         </Group>
 
+        {bajar.isError && (
+          <Alert color="critical" variant="light">
+            {(bajar.error as Error).message}
+          </Alert>
+        )}
         {subir.isError && (
           <Alert color="critical" variant="light" title="El archivo no se pudo leer">
             {(subir.error as Error).message}

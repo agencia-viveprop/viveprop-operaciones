@@ -17,6 +17,7 @@ import openpyxl
 import pytest
 
 from app.services.importar_canjes import COLUMNAS_REQUERIDAS
+from app.services.importar_visitas import COLUMNAS_REQUERIDAS as COLUMNAS_REQUERIDAS_VISITAS
 from app.services.plantilla_canjes import (
     COLUMNAS as COLUMNAS_CANJES,
     estructura_importacion,
@@ -26,6 +27,11 @@ from app.services.plantilla_negocios import (
     COLUMNAS as COLUMNAS_NEGOCIOS,
     NOMBRES,
     estructura_plantilla,
+)
+from app.services.plantilla_visitas import (
+    COLUMNAS as COLUMNAS_VISITAS,
+    estructura_importacion as estructura_visitas,
+    generar_plantilla as plantilla_visitas,
 )
 
 
@@ -149,6 +155,47 @@ def test_los_valores_de_negocios_se_leen_de_la_base(db, catalogos_sembrados):
     assert "NUEVA_ALIANZA" in despues["ALIANZA"]
 
 
+# ------------------------------------------------------------------ visitas
+
+
+def test_las_columnas_de_visitas_son_las_que_la_carga_exige():
+    """Igual que en canjes: la carga rechaza el archivo si falta alguna."""
+    descritas = [c.nombre for c in COLUMNAS_VISITAS]
+
+    assert descritas == list(COLUMNAS_REQUERIDAS_VISITAS), (
+        "plantilla_visitas.COLUMNAS y importar_visitas.COLUMNAS_REQUERIDAS "
+        f"divergieron en: {set(descritas) ^ set(COLUMNAS_REQUERIDAS_VISITAS)}"
+    )
+
+
+def test_la_estructura_de_visitas_agrupa_las_10_columnas():
+    e = estructura_visitas()
+
+    assert e.total_columnas == len(COLUMNAS_REQUERIDAS_VISITAS) == 10
+    assert [g.nombre for g in e.grupos] == ["Propiedad", "Cliente", "Solicitud"]
+    # Solo Propiedad no puede venir vacía: es la única sin la que no se arma la fila.
+    obligatorias = {c.nombre for g in e.grupos for c in g.columnas if c.obligatoria}
+    assert obligatorias == {"Propiedad"}
+    assert all(c.ayuda.strip() for g in e.grupos for c in g.columnas)
+
+
+def test_la_plantilla_de_visitas_trae_los_encabezados_exactos():
+    libro = openpyxl.load_workbook(BytesIO(plantilla_visitas()))
+    hoja = libro["VISITAS"]
+
+    assert [c.value for c in hoja[1] if c.value] == list(COLUMNAS_REQUERIDAS_VISITAS)
+    assert hoja.max_row == 1
+
+
+def test_la_plantilla_de_visitas_la_acepta_su_propia_carga(db):
+    from app.services.importar_visitas import importar_visitas
+
+    resumen = importar_visitas(db, plantilla_visitas())
+
+    assert resumen.errores == []
+    assert resumen.nuevas == 0
+
+
 # ----------------------------------------------------------------- endpoints
 
 
@@ -157,6 +204,7 @@ def test_los_valores_de_negocios_se_leen_de_la_base(db, catalogos_sembrados):
     [
         ("/api/canjes/plantilla/estructura", 16),
         ("/api/negocios/plantilla/estructura", 32),
+        ("/api/visitas/plantilla/estructura", 10),
     ],
 )
 def test_los_endpoints_devuelven_la_estructura(cliente, catalogos_sembrados, url, columnas):
@@ -176,6 +224,15 @@ def test_el_endpoint_baja_la_plantilla_de_canjes(cliente):
     assert "plantilla-canjes.xlsx" in r.headers["content-disposition"]
     libro = openpyxl.load_workbook(BytesIO(r.content))
     assert [c.value for c in libro["CANJES"][1] if c.value] == list(COLUMNAS_REQUERIDAS)
+
+
+def test_el_endpoint_baja_la_plantilla_de_visitas(cliente):
+    r = cliente.get("/api/visitas/plantilla")
+
+    assert r.status_code == 200
+    assert "plantilla-visitas.xlsx" in r.headers["content-disposition"]
+    libro = openpyxl.load_workbook(BytesIO(r.content))
+    assert [c.value for c in libro["VISITAS"][1] if c.value] == list(COLUMNAS_REQUERIDAS_VISITAS)
 
 
 def test_plantilla_no_se_confunde_con_un_id_de_canje(cliente):

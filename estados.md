@@ -126,6 +126,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-09-08 - Visitas: estructura del archivo y plantilla descargable
+
+Pediste agregar la descarga de la estructura de carga al módulo de Visitas, que había quedado sin ella. Se siguió el mismo criterio de Canjes: **el archivo no se llena a mano, pero la plantilla vacía sirve para comparar encabezados** cuando la carga falla.
+
+`GET /visitas/plantilla/estructura` y `GET /visitas/plantilla` --de rol `operaciones`--, con el panel colapsable de siempre (`EstructuraArchivo`) y el botón "Descargar plantilla" en el modal de carga. Solo `Propiedad` va marcada como obligatoria: es la única columna sin la que la fila no se carga (`D-105`).
+
+7 tests nuevos en `test_estructura_archivo.py`, incluido que la plantilla vacía se auto-acepta en la propia carga. Verificado en pantalla contra `dev`: la estructura se despliega agrupada en Propiedad / Cliente / Solicitud y la plantilla se descarga con los 10 encabezados. `npm run build` en cero errores; el suite del backend pasa completo salvo el rojo del reloj ya conocido.
+
 ### 2026-09-08 - Módulo Visitas: importar, ver y borrar de a una
 
 Pediste un módulo nuevo, entre Negocios y Cobranza, para las solicitudes de visita a propiedades que hoy solo se ven en la consola de administración: importar el archivo, verlo en una tabla, y poder borrar registros de a uno.
@@ -134,7 +142,7 @@ Pediste un módulo nuevo, entre Negocios y Cobranza, para las solicitudes de vis
 
 **Backend:** tabla `visitas` (migración `b4e91f2a7c33`), `POST /visitas/importar`, `GET /visitas`, `DELETE /visitas/{id}` --de rol `operaciones`, no `admin`, porque acá no hay historial que perder--. 7 tests nuevos, todos pasando.
 
-**Frontend:** pantalla `Visitas` con tabla desplazable en móvil (mismo patrón que Cobranza), modal de carga sin plantilla descargable --el archivo sale de la consola, no de la app-- y borrado "confirmar en el lugar" en cada fila, igual que los movimientos de un canje. Ítem de menú entre Negocios y Cobranza.
+**Frontend:** pantalla `Visitas` con tabla desplazable en móvil (mismo patrón que Cobranza) y borrado "confirmar en el lugar" en cada fila, igual que los movimientos de un canje. Ítem de menú entre Negocios y Cobranza. (La plantilla descargable se agregó el mismo día, ver la entrada de arriba.)
 
 **Verificado contra `dev`:** migración aplicada, carga de un archivo de dos filas, listado, borrado de una fila desde el navegador (capturas en escritorio y en 375px, sin desborde horizontal del body) y limpieza de los datos de prueba al terminar --la tabla quedó vacía en `dev`, como estaba antes de probar--.
 

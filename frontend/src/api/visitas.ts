@@ -41,6 +41,20 @@ export function importarVisitas(archivo: File): Promise<ResumenCargaVisitas> {
   }).then(parseOrThrow)
 }
 
+/** Baja la plantilla y la guarda. El navegador de la SPA no puede seguir un
+ *  link directo a un endpoint con cookie, así que se pide y se crea el blob. */
+export async function descargarPlantillaVisitas(): Promise<void> {
+  const res = await fetch('/api/visitas/plantilla', { credentials: 'include' })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'plantilla-visitas.xlsx'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export async function eliminarVisita(id: number): Promise<void> {
   const res = await fetch(`/api/visitas/${id}`, {
     method: 'DELETE',

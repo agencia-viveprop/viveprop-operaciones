@@ -9,9 +9,13 @@ from app.auth import get_current_user, require_role
 from app.db import get_db
 from app.models.usuario import RolUsuario, Usuario
 from app.models.visita import Visita
+from app.services.estructura_archivo import EstructuraArchivo
 from app.services.importar_visitas import ImportarVisitasResumen, importar_visitas
+from app.services.plantilla_visitas import estructura_importacion, generar_plantilla
 
 router = APIRouter(prefix="/visitas", tags=["visitas"])
+
+XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 
 class VisitaOut(BaseModel):
@@ -28,6 +32,28 @@ class VisitaOut(BaseModel):
     solicitada_el: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+# Las dos van antes de "/{visita_id}"-like paths por si alguna vez se agrega
+# una, igual que en canjes: FastAPI resuelve por orden de registro.
+@router.get("/plantilla/estructura", response_model=EstructuraArchivo)
+def estructura_del_archivo(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
+    """Qué columnas espera el export de la consola, para verlo antes de subir nada."""
+    return estructura_importacion()
+
+
+@router.get("/plantilla")
+def descargar_plantilla(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
+    """El .xlsx vacío con los 10 encabezados exactos.
+
+    No es para llenarlo a mano --el archivo sale de la consola-- sino para
+    comparar encabezados cuando la carga falla y no se entiende por qué.
+    """
+    return Response(
+        content=generar_plantilla(),
+        media_type=XLSX,
+        headers={"Content-Disposition": 'attachment; filename="plantilla-visitas.xlsx"'},
+    )
 
 
 @router.get("", response_model=list[VisitaOut])

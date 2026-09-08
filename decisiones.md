@@ -3004,3 +3004,9 @@ El usuario pidió un módulo nuevo, entre Negocios y Cobranza, para las solicitu
 
 **Sin catálogo para `Tipo`, `Mercado` ni `Etapa`.** Se guardan como texto libre tal como vienen del archivo: no hay una lista cerrada de valores conocida hoy, y crear un catálogo para tres columnas de solo lectura habría sido diseñar para un problema que no existe todavía.
 
+### Estructura y plantilla descargable, igual que en Canjes
+
+El usuario pidió agregar la descarga de la estructura de carga. Se siguió el mismo criterio que ya existe para Canjes (`backend/app/services/plantilla_canjes.py`): **el archivo no se llena a mano, pero la plantilla vacía sirve para comparar encabezados** cuando la carga falla y el error no alcanza a explicar por qué. `plantilla_visitas.py` expone `estructura_importacion()` --que pinta el panel colapsable `EstructuraArchivo`, agrupado en Propiedad / Cliente / Solicitud-- y `generar_plantilla()`, con los 10 encabezados en la fila 1 y sin fila de datos.
+
+**Solo `Propiedad` va marcada como obligatoria**, a diferencia de Canjes donde las 16 lo son: es la única columna sin la que `importar_visitas` rechaza la fila, y decir que las demás también lo son habría descrito mal un archivo donde `Objetivo de compra` viene vacío seguido. Un test (`test_estructura_archivo.py`) exige que `plantilla_visitas.COLUMNAS` y `importar_visitas.COLUMNAS_REQUERIDAS` no diverjan, igual que para los otros dos dominios.
+
