@@ -20,6 +20,7 @@ FILA_OK = {
     "Objetivo de compra": None,
     "Fecha/hora solicitada": "2026-09-14T16:12:00",
     "Etapa": "Solicitada",
+    "Corredor": "María Teresa Zegers Silva",
     "Solicitada el": "2026-09-07T13:23:53",
 }
 

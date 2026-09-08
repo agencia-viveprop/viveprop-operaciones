@@ -45,6 +45,7 @@ function FilaVisita({
       <Table.Td>{visita.objetivo_compra ?? '—'}</Table.Td>
       <Table.Td>{fechaHora(visita.fecha_solicitada)}</Table.Td>
       <Table.Td>{visita.etapa ?? '—'}</Table.Td>
+      <Table.Td>{visita.corredor ?? '—'}</Table.Td>
       <Table.Td>{fechaHora(visita.solicitada_el)}</Table.Td>
       <Table.Td>
         {!puedeEditar ? null : confirmando ? (
@@ -121,7 +122,7 @@ export default function Visitas({ puedeEditar }: { puedeEditar: boolean }) {
 
       {data && data.length > 0 && (
         <div className="tabla-scroll-x">
-          <Table withRowBorders={false} verticalSpacing={6} miw={1100}>
+          <Table withRowBorders={false} verticalSpacing={6} miw={1250}>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Propiedad</Table.Th>
@@ -133,6 +134,7 @@ export default function Visitas({ puedeEditar }: { puedeEditar: boolean }) {
                 <Table.Th>Objetivo de compra</Table.Th>
                 <Table.Th>Fecha/hora solicitada</Table.Th>
                 <Table.Th>Etapa</Table.Th>
+                <Table.Th>Corredor</Table.Th>
                 <Table.Th>Solicitada el</Table.Th>
                 <Table.Th />
               </Table.Tr>

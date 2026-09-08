@@ -3006,7 +3006,11 @@ El usuario pidió un módulo nuevo, entre Negocios y Cobranza, para las solicitu
 
 ### Estructura y plantilla descargable, igual que en Canjes
 
-El usuario pidió agregar la descarga de la estructura de carga. Se siguió el mismo criterio que ya existe para Canjes (`backend/app/services/plantilla_canjes.py`): **el archivo no se llena a mano, pero la plantilla vacía sirve para comparar encabezados** cuando la carga falla y el error no alcanza a explicar por qué. `plantilla_visitas.py` expone `estructura_importacion()` --que pinta el panel colapsable `EstructuraArchivo`, agrupado en Propiedad / Cliente / Solicitud-- y `generar_plantilla()`, con los 10 encabezados en la fila 1 y sin fila de datos.
+El usuario pidió agregar la descarga de la estructura de carga. Se siguió el mismo criterio que ya existe para Canjes (`backend/app/services/plantilla_canjes.py`): **el archivo no se llena a mano, pero la plantilla vacía sirve para comparar encabezados** cuando la carga falla y el error no alcanza a explicar por qué. `plantilla_visitas.py` expone `estructura_importacion()` --que pinta el panel colapsable `EstructuraArchivo`, agrupado en Propiedad / Cliente / Solicitud-- y `generar_plantilla()`, con los encabezados en la fila 1 y sin fila de datos.
 
 **Solo `Propiedad` va marcada como obligatoria**, a diferencia de Canjes donde las 16 lo son: es la única columna sin la que `importar_visitas` rechaza la fila, y decir que las demás también lo son habría descrito mal un archivo donde `Objetivo de compra` viene vacío seguido. Un test (`test_estructura_archivo.py`) exige que `plantilla_visitas.COLUMNAS` y `importar_visitas.COLUMNAS_REQUERIDAS` no diverjan, igual que para los otros dos dominios.
+
+### La columna Corredor, entre Etapa y Solicitada el
+
+El usuario mostró una captura de la matriz real de carga con una columna `Corredor` que no estaba contemplada, en esa posición exacta. Se agregó texto libre --no hay catálogo de corredores para esta tabla, igual que `Tipo`, `Mercado` y `Etapa`-- como columna 10 de 11, entre `Etapa` y `Solicitada el`. Migración `c8a2e5f9b1d4`, aplicada a `dev`.
 

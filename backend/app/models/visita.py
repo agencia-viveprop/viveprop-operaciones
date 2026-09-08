@@ -30,5 +30,6 @@ class Visita(Base):
     objetivo_compra: Mapped[str | None] = mapped_column(String(255), nullable=True)
     fecha_solicitada: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     etapa: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    corredor: Mapped[str | None] = mapped_column(String(255), nullable=True)
     solicitada_el: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)

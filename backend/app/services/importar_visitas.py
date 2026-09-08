@@ -19,6 +19,7 @@ COLUMNAS_REQUERIDAS = [
     "Objetivo de compra",
     "Fecha/hora solicitada",
     "Etapa",
+    "Corredor",
     "Solicitada el",
 ]
 
@@ -39,6 +40,7 @@ class _FilaParseada:
     objetivo_compra: str | None
     fecha_solicitada: datetime | None
     etapa: str | None
+    corredor: str | None
     solicitada_el: datetime | None
 
 
@@ -77,6 +79,7 @@ def _parsear_fila(headers: dict[str, int], fila: tuple) -> _FilaParseada:
         objetivo_compra=_texto(val("Objetivo de compra")),
         fecha_solicitada=_fecha(val("Fecha/hora solicitada")),
         etapa=_texto(val("Etapa")),
+        corredor=_texto(val("Corredor")),
         solicitada_el=_fecha(val("Solicitada el")),
     )
 
@@ -124,6 +127,7 @@ def importar_visitas(db: Session, contenido_xlsx: bytes) -> ImportarVisitasResum
                 objetivo_compra=datos.objetivo_compra,
                 fecha_solicitada=datos.fecha_solicitada,
                 etapa=datos.etapa,
+                corredor=datos.corredor,
                 solicitada_el=datos.solicitada_el,
             )
         )

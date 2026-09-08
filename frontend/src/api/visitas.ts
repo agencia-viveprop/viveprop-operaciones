@@ -9,6 +9,7 @@ export type Visita = {
   objetivo_compra: string | null
   fecha_solicitada: string | null
   etapa: string | null
+  corredor: string | null
   solicitada_el: string | null
 }
 

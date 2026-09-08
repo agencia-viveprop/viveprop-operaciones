@@ -51,6 +51,7 @@ COLUMNAS: tuple[Columna, ...] = (
 
     Columna("Fecha/hora solicitada", "Solicitud", False, "Cuándo se agendó la visita.", 20),
     Columna("Etapa", "Solicitud", False, "Texto libre: Solicitada, y las que agregue la consola.", 16),
+    Columna("Corredor", "Solicitud", False, "Quién de ViveProp o de la corredora aliada quedó a cargo.", 26),
     Columna("Solicitada el", "Solicitud", False, "Cuándo se generó la solicitud en la consola.", 20),
 )
 
@@ -58,7 +59,7 @@ NOMBRES = tuple(c.nombre for c in COLUMNAS)
 
 
 def estructura_importacion() -> EstructuraArchivo:
-    """Las 10 columnas del export, agrupadas, para mostrarlas en pantalla."""
+    """Las 11 columnas del export, agrupadas, para mostrarlas en pantalla."""
     grupos: list[GrupoColumnas] = []
     for col in COLUMNAS:
         if not grupos or grupos[-1].nombre != col.grupo:
@@ -92,7 +93,7 @@ def estructura_importacion() -> EstructuraArchivo:
 
 
 def generar_plantilla() -> bytes:
-    """El .xlsx vacío con los 10 encabezados exactos, en la fila 1.
+    """El .xlsx vacío con los 11 encabezados exactos, en la fila 1.
 
     Sin fila de grupos: es donde `importar_visitas` los busca, igual que en
     canjes. Coral marca la única columna obligatoria, `Propiedad`; el resto va

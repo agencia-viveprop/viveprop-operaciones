@@ -126,6 +126,10 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-09-08 - Visitas: columna Corredor
+
+Mostraste la matriz real de carga y faltaba una columna, `Corredor`, entre `Etapa` y `Solicitada el`. Se agregó como texto libre --sin catálogo, igual que `Tipo`, `Mercado` y `Etapa`-- en el modelo, la carga, la plantilla y la tabla. Migración `c8a2e5f9b1d4`, aplicada a `dev`. Verificado con un archivo real subido contra `dev` y borrado después de comprobar.
+
 ### 2026-09-08 - Visitas: estructura del archivo y plantilla descargable
 
 Pediste agregar la descarga de la estructura de carga al módulo de Visitas, que había quedado sin ella. Se siguió el mismo criterio de Canjes: **el archivo no se llena a mano, pero la plantilla vacía sirve para comparar encabezados** cuando la carga falla.

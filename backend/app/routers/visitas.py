@@ -29,6 +29,7 @@ class VisitaOut(BaseModel):
     objetivo_compra: str | None
     fecha_solicitada: datetime | None
     etapa: str | None
+    corredor: str | None
     solicitada_el: datetime | None
 
     model_config = {"from_attributes": True}
@@ -44,7 +45,7 @@ def estructura_del_archivo(usuario: Usuario = Depends(require_role(RolUsuario.op
 
 @router.get("/plantilla")
 def descargar_plantilla(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
-    """El .xlsx vacío con los 10 encabezados exactos.
+    """El .xlsx vacío con los 11 encabezados exactos.
 
     No es para llenarlo a mano --el archivo sale de la consola-- sino para
     comparar encabezados cuando la carga falla y no se entiende por qué.

@@ -168,10 +168,10 @@ def test_las_columnas_de_visitas_son_las_que_la_carga_exige():
     )
 
 
-def test_la_estructura_de_visitas_agrupa_las_10_columnas():
+def test_la_estructura_de_visitas_agrupa_las_11_columnas():
     e = estructura_visitas()
 
-    assert e.total_columnas == len(COLUMNAS_REQUERIDAS_VISITAS) == 10
+    assert e.total_columnas == len(COLUMNAS_REQUERIDAS_VISITAS) == 11
     assert [g.nombre for g in e.grupos] == ["Propiedad", "Cliente", "Solicitud"]
     # Solo Propiedad no puede venir vacía: es la única sin la que no se arma la fila.
     obligatorias = {c.nombre for g in e.grupos for c in g.columnas if c.obligatoria}
@@ -204,7 +204,7 @@ def test_la_plantilla_de_visitas_la_acepta_su_propia_carga(db):
     [
         ("/api/canjes/plantilla/estructura", 16),
         ("/api/negocios/plantilla/estructura", 32),
-        ("/api/visitas/plantilla/estructura", 10),
+        ("/api/visitas/plantilla/estructura", 11),
     ],
 )
 def test_los_endpoints_devuelven_la_estructura(cliente, catalogos_sembrados, url, columnas):
