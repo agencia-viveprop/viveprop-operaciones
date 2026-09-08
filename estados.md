@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-03 (22 listos + G2 en curso; tres tarjetas de comisión de Dataprop, con el corte desde la etapa de oferta)
+**Última actualización:** 2026-09-08 (22 listos + G2 en curso; módulo Visitas nuevo, fuera del plan de 23 sprints)
 
 ---
 
@@ -125,6 +125,18 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-08 - Módulo Visitas: importar, ver y borrar de a una
+
+Pediste un módulo nuevo, entre Negocios y Cobranza, para las solicitudes de visita a propiedades que hoy solo se ven en la consola de administración: importar el archivo, verlo en una tabla, y poder borrar registros de a uno.
+
+**El archivo no trae un identificador único** --a diferencia del `ID_CANJE` de Dataprop--, así que confirmamos juntos el comportamiento: **cada carga inserta todas las filas como registros nuevos**, sin buscar ni evitar duplicados. Si el mismo archivo se sube dos veces, las filas quedan repetidas y se sacan a mano con el botón de borrar, que es justo la función que pediste tener (`D-105`).
+
+**Backend:** tabla `visitas` (migración `b4e91f2a7c33`), `POST /visitas/importar`, `GET /visitas`, `DELETE /visitas/{id}` --de rol `operaciones`, no `admin`, porque acá no hay historial que perder--. 7 tests nuevos, todos pasando.
+
+**Frontend:** pantalla `Visitas` con tabla desplazable en móvil (mismo patrón que Cobranza), modal de carga sin plantilla descargable --el archivo sale de la consola, no de la app-- y borrado "confirmar en el lugar" en cada fila, igual que los movimientos de un canje. Ítem de menú entre Negocios y Cobranza.
+
+**Verificado contra `dev`:** migración aplicada, carga de un archivo de dos filas, listado, borrado de una fila desde el navegador (capturas en escritorio y en 375px, sin desborde horizontal del body) y limpieza de los datos de prueba al terminar --la tabla quedó vacía en `dev`, como estaba antes de probar--.
 
 ### 2026-09-03 - Tres tarjetas sobre lo que gana Dataprop
 

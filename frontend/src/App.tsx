@@ -9,6 +9,7 @@ import AdminUsuarios from './pages/AdminUsuarios'
 import Canjes from './pages/Canjes'
 import Bandeja from './pages/Bandeja'
 import Negocios from './pages/Negocios'
+import Visitas from './pages/Visitas'
 import Cobranza from './pages/Cobranza'
 import DashboardNegocios from './pages/DashboardNegocios'
 import ReporteSemanal from './pages/ReporteSemanal'
@@ -50,6 +51,7 @@ function App() {
         <Route path="/bandeja" element={<Bandeja puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios" element={<Negocios puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
+        <Route path="/visitas" element={<Visitas puedeEditar={usuario.rol !== 'gerencia'} />} />
         <Route path="/cobranza" element={<Cobranza />} />
         <Route path="/reportes/semanal" element={<ReporteSemanal />} />
         <Route path="/reportes/mensual" element={<ReporteMensual />} />

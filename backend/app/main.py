@@ -20,6 +20,7 @@ from app.routers import (
     uf,
     dominios,
     usuarios,
+    visitas,
 )
 from app.tareas import ciclo_uf
 
@@ -76,6 +77,7 @@ app.include_router(negocios.router, prefix="/api")
 app.include_router(uf.router, prefix="/api")
 app.include_router(reportes.router, prefix="/api")
 app.include_router(tipos_movimiento.router, prefix="/api")
+app.include_router(visitas.router, prefix="/api")
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 

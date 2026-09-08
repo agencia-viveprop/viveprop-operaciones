@@ -2990,3 +2990,17 @@ Sigue en el renglón de referencia, ahora solo: «Ya facturado» subió a tarjet
 
 Total en el índigo principal, potencial desde oferta en el teal de `info`, cobrada en el verde de `good`. El verde no es decorativo: la cobrada es la única de las tres que es un **hecho** y no una estimación, y `good` es el color que la app ya usa para lo logrado. El teal marca la del medio como una lectura derivada de la primera y no como una categoría nueva.
 
+---
+
+## D-105 · Módulo Visitas: cada carga agrega filas nuevas, sin buscar duplicados
+
+El usuario pidió un módulo nuevo, entre Negocios y Cobranza, para las solicitudes de visita a propiedades que hoy solo viven en la consola de administración: *«debo poder importar este archivo y visualizarlo, debo tener la opción de eliminar registros 1 a 1»*.
+
+**No hay nada parecido a `ID_CANJE` en el archivo de origen.** Canjes y Negocios tienen un identificador (`ID_CANJE`, el código del negocio) que permite que reimportar el mismo archivo actualice en vez de duplicar. Las visitas no traen ninguno: la fila más parecida a una clave es `Propiedad + Cliente + RUT + Fecha/hora solicitada`, y armar una clave sintética a partir de eso agrega una regla nueva que hay que mantener y que puede fallar --dos personas pidiendo la misma propiedad el mismo minuto no es un caso imposible--.
+
+**Se decidió no perseguir duplicados: cada carga inserta todas las filas como registros nuevos**, confirmado explícitamente con el usuario. Si el mismo archivo se sube dos veces, las filas quedan repetidas y se sacan a mano con el borrado de a uno, que es exactamente la función que se pidió tener. Es la opción más simple de las dos evaluadas, y evita una regla de deduplicación que nadie pidió y que sería difícil de verificar sin un identificador real.
+
+**El borrado es de rol `operaciones`, no `admin`.** A diferencia de `DELETE /canjes/{id}` (`D-096`), que exige admin porque borra un canje con su historial completo de movimientos y gestión, acá no hay nada que perder: es una fila importada de un archivo, sin línea de tiempo propia. Exigir admin para limpiar un duplicado de carga sería fricción sin ninguna protección real detrás.
+
+**Sin catálogo para `Tipo`, `Mercado` ni `Etapa`.** Se guardan como texto libre tal como vienen del archivo: no hay una lista cerrada de valores conocida hoy, y crear un catálogo para tres columnas de solo lectura habría sido diseñar para un problema que no existe todavía.
+

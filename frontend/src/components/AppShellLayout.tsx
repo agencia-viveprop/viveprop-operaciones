@@ -24,6 +24,7 @@ import {
   IconInbox,
   IconKey,
   IconLogout,
+  IconMapPin,
   IconPresentation,
   IconReceipt,
   IconMoon,
@@ -145,6 +146,14 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
               label="Negocios"
               leftSection={<IconBriefcase size={18} />}
               active={location.pathname === '/negocios'}
+              variant="filled"
+            />
+            <NavLink
+              component={Link}
+              to="/visitas"
+              label="Visitas"
+              leftSection={<IconMapPin size={18} />}
+              active={location.pathname === '/visitas'}
               variant="filled"
             />
             <NavLink
