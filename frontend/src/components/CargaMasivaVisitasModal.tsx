@@ -24,9 +24,9 @@ const TOPE_ERRORES = 15
  * cuando la carga falla y no se entiende por qué: el mismo motivo que tiene la
  * de Canjes.
  *
- * No hay ID en el archivo de origen, así que cargar el mismo archivo dos
- * veces duplica filas a propósito — se sacan a mano, una por una, desde la
- * tabla de Visitas.
+ * No hay ID en el archivo de origen, así que la carga arma una clave propia
+ * --Propiedad + Cliente + RUT + Fecha/hora solicitada-- para saber si una
+ * fila ya existe. Reimportar el mismo archivo actualiza en vez de duplicar.
  */
 export default function CargaMasivaVisitasModal({
   abierto,
@@ -72,9 +72,10 @@ export default function CargaMasivaVisitasModal({
     <Modal opened={abierto} onClose={cerrar} title="Carga masiva de visitas" size="lg">
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          El archivo no trae un identificador único, así que cada carga agrega todas las
-          filas como registros nuevos: si se sube el mismo archivo dos veces, las filas
-          quedan repetidas y se borran a mano, una por una, desde la tabla.
+          El archivo no trae un identificador único, así que la carga arma uno propio con
+          Propiedad, Cliente, RUT y Fecha/hora solicitada: si esos cuatro datos coinciden
+          con una visita que ya está, se actualiza en vez de duplicarla. Reimportar el mismo
+          archivo no crea filas repetidas.
         </Text>
 
         <EstructuraArchivo consulta={estructura} />
@@ -126,7 +127,9 @@ export default function CargaMasivaVisitasModal({
             title={cargado ? 'Carga lista' : 'No se cargó nada: hay que corregir el archivo'}
           >
             {cargado ? (
-              <Text size="sm">{resumen.nuevas} visitas nuevas</Text>
+              <Text size="sm">
+                {resumen.nuevas} visitas nuevas · {resumen.actualizadas} actualizadas
+              </Text>
             ) : (
               <>
                 <Text size="sm">

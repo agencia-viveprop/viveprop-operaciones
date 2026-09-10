@@ -77,9 +77,9 @@ def estructura_importacion() -> EstructuraArchivo:
         ),
         fila=(
             "Una fila es una solicitud de visita. El archivo no trae un identificador "
-            "único, así que cada carga agrega todas las filas como registros nuevos: "
-            "subir el mismo archivo dos veces duplica, y los duplicados se sacan a "
-            "mano desde la tabla."
+            "único, así que la carga arma uno propio con Propiedad + Cliente + RUT + "
+            "Fecha/hora solicitada: si esos cuatro datos coinciden con una visita que ya "
+            "está, se actualiza en vez de duplicarla."
         ),
         grupos=grupos,
         valores=[],
@@ -88,6 +88,8 @@ def estructura_importacion() -> EstructuraArchivo:
             "no se carga nada y el error dice cuál.",
             "Solo Propiedad no puede venir vacía. Las demás columnas sí, y quedan "
             "en blanco en la tabla.",
+            "Reimportar el mismo archivo no duplica: actualiza Etapa y Corredor de "
+            "las visitas que ya estaban, que son los datos que cambian con el tiempo.",
         ],
     )
 

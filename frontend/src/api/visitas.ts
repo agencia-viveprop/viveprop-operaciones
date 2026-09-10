@@ -29,6 +29,7 @@ export function listarVisitas(): Promise<Visita[]> {
 
 export type ResumenCargaVisitas = {
   nuevas: number
+  actualizadas: number
   errores: string[]
 }
 
@@ -65,4 +66,12 @@ export async function eliminarVisita(id: number): Promise<void> {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail ?? `Error ${res.status}`)
   }
+}
+
+export type EliminarTodasVisitas = {
+  eliminadas: number
+}
+
+export function eliminarTodasVisitas(): Promise<EliminarTodasVisitas> {
+  return fetch('/api/visitas', { method: 'DELETE', credentials: 'include' }).then(parseOrThrow)
 }

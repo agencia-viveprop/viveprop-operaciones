@@ -91,3 +91,22 @@ def eliminar(
     db.delete(visita)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+class EliminarTodasOut(BaseModel):
+    eliminadas: int
+
+
+@router.delete("", response_model=EliminarTodasOut)
+def eliminar_todas(db: Session = Depends(get_db), usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
+    """Vacía la tabla entera, para volver a cargar desde cero.
+
+    **Es recuperable**, y por eso no exige admin como el borrado de un canje
+    (`D-096`): con la carga en modo "actualiza en vez de duplicar", reimportar
+    el mismo archivo repone exactamente lo que había. Existe porque las cargas
+    de antes de esa regla dejaron duplicados que no valía la pena sacar de a
+    uno.
+    """
+    cantidad = db.query(Visita).delete()
+    db.commit()
+    return EliminarTodasOut(eliminadas=cantidad)

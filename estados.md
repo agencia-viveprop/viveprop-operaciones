@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-08 (22 listos + G2 en curso; módulo Visitas nuevo, fuera del plan de 23 sprints)
+**Última actualización:** 2026-09-10 (22 listos + G2 en curso; la carga de Visitas ya no duplica, y se puede vaciar para recargar desde cero)
 
 ---
 
@@ -125,6 +125,20 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-10 - Visitas: la carga ya no duplica, y se puede vaciar todo
+
+Usaste la app real y avisaste: *«carga ok, pero duplica registros, necesito eliminar todos los registros, cargar desde cero, y de futuro cargar solo lo nuevo»*. Se revierte `D-105` --que había decidido insertar siempre-- y se adopta la clave que esa decisión había descartado: `Propiedad + Cliente + RUT + Fecha/hora solicitada` (`D-106`).
+
+**La carga pasa a upsert:** si la clave ya existe, actualiza --incluidos `Etapa` y `Corredor`, que son los datos que avanzan con el tiempo--; si no, inserta. Reimportar el mismo archivo ya no deja duplicados.
+
+**Se agrega `DELETE /visitas`** (sin id), que vacía la tabla entera, con botón "Vaciar todo" en la pantalla y un modal de confirmación. Es recuperable: con la carga en modo upsert, reimportar el mismo archivo repone lo mismo que había, y hay un test que lo fija.
+
+**Un bug se encontró corriendo los tests:** la fecha recién parseada del Excel traía `tzinfo` y la misma fecha leída de la base (en SQLite) volvía sin él, así que la clave nunca hacía match y todo se duplicaba igual. Se corrigió normalizando la fecha a UTC-aware en los dos casos --mismo problema que ya existía documentado en `app/auth.py::_aware`--.
+
+**Verificado contra `dev`, con Postgres real:** cargar dos veces el mismo archivo, la segunda actualiza en vez de duplicar; "Vaciar todo" desde el navegador; reimportar después de vaciar repone las mismas filas. Datos de prueba limpiados al final. 11 tests en `test_visitas_api.py`, todos pasando; el suite completo del backend también, salvo el rojo del reloj ya conocido. `npm run build` en cero errores.
+
+**No se tocó producción desde acá:** no hay conexión a esa base. Una vez desplegado, hay que entrar a la app real, apretar "Vaciar todo" en Visitas y volver a subir el archivo.
 
 ### 2026-09-08 - Visitas: columna Corredor
 

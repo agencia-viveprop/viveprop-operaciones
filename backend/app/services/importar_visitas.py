@@ -4,6 +4,7 @@ from io import BytesIO
 
 import openpyxl
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.visita import Visita
@@ -26,6 +27,7 @@ COLUMNAS_REQUERIDAS = [
 
 class ImportarVisitasResumen(BaseModel):
     nuevas: int = 0
+    actualizadas: int = 0
     errores: list[str] = []
 
 
@@ -61,6 +63,27 @@ def _fecha(valor) -> datetime | None:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
 
+def _clave(datos) -> tuple:
+    """Identifica una visita entre cargas, ya que el archivo no trae ningún ID.
+
+    `Propiedad + Cliente + RUT + Fecha/hora solicitada` es lo que no cambia de
+    una exportación a otra de la misma solicitud --a diferencia de `Etapa` y
+    `Corredor`, que sí avanzan con el tiempo y por eso no entran en la clave--.
+
+    Sirve tanto para una `_FilaParseada` recién leída del Excel como para un
+    `Visita` que ya está en la base. **La fecha se normaliza a UTC-aware en
+    los dos casos** porque SQLite no conserva el `tzinfo` de una columna
+    `timestamptz` al leerla --vuelve "naive"-- mientras que la recién parseada
+    del archivo sí lo trae (`_fecha`); sin esto, la misma solicitud comparaba
+    distinto según viniera de la base o del archivo y nunca hacía match,
+    duplicando en cada carga. Mismo caso que `app/auth.py::_aware`.
+    """
+    fecha = datos.fecha_solicitada
+    if fecha is not None and fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    return (datos.propiedad, datos.cliente, datos.rut, fecha)
+
+
 def _parsear_fila(headers: dict[str, int], fila: tuple) -> _FilaParseada:
     def val(col):
         return fila[headers[col]]
@@ -85,8 +108,12 @@ def _parsear_fila(headers: dict[str, int], fila: tuple) -> _FilaParseada:
 
 
 def importar_visitas(db: Session, contenido_xlsx: bytes) -> ImportarVisitasResumen:
-    """Carga el archivo de visitas: no hay ID en el origen, así que no hay que
-    buscar existentes ni actualizar --cada fila válida es una visita nueva.
+    """Carga el archivo de visitas: solo agrega lo nuevo, sin duplicar.
+
+    **No hay ID en el archivo de origen**, así que la identidad de una visita
+    entre cargas la arma `_clave`. Una fila cuya clave ya existe **actualiza**
+    la visita en vez de crear otra --antes cada carga insertaba todo de nuevo,
+    y reimportar el mismo export duplicaba cada fila--.
 
     Si hay un solo error de formato no se escribe nada, igual que en canjes y
     negocios: media carga es peor que ninguna.
@@ -115,23 +142,38 @@ def importar_visitas(db: Session, contenido_xlsx: bytes) -> ImportarVisitasResum
     if resumen.errores:
         return resumen
 
+    # Una sola consulta para conocer lo que ya existe, igual que en canjes: el
+    # archivo se conoce entero de antemano y no hay razón para ir a la base
+    # fila por fila.
+    existentes = {_clave(v): v for v in db.scalars(select(Visita))}
+
     for datos in parseadas:
-        db.add(
-            Visita(
-                propiedad=datos.propiedad,
-                direccion=datos.direccion,
-                tipo=datos.tipo,
-                mercado=datos.mercado,
-                cliente=datos.cliente,
-                rut=datos.rut,
-                objetivo_compra=datos.objetivo_compra,
-                fecha_solicitada=datos.fecha_solicitada,
-                etapa=datos.etapa,
-                corredor=datos.corredor,
-                solicitada_el=datos.solicitada_el,
-            )
-        )
+        clave = _clave(datos)
+        visita = existentes.get(clave)
+
+        if visita is None:
+            visita = Visita(propiedad=datos.propiedad)
+            db.add(visita)
+            existentes[clave] = visita
+            resumen.nuevas += 1
+        else:
+            resumen.actualizadas += 1
+
+        visita.propiedad = datos.propiedad
+        visita.direccion = datos.direccion
+        visita.tipo = datos.tipo
+        visita.mercado = datos.mercado
+        visita.cliente = datos.cliente
+        visita.rut = datos.rut
+        visita.objetivo_compra = datos.objetivo_compra
+        visita.fecha_solicitada = datos.fecha_solicitada
+        # Etapa y corredor sí se actualizan: son los dos datos que avanzan con
+        # el tiempo para la misma solicitud, y quedarse con la primera versión
+        # cargada los dejaría desactualizados para siempre.
+        visita.etapa = datos.etapa
+        visita.corredor = datos.corredor
+        visita.solicitada_el = datos.solicitada_el
+
     db.commit()
-    resumen.nuevas = len(parseadas)
 
     return resumen

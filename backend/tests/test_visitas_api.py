@@ -1,8 +1,10 @@
-"""Tests del módulo de visitas: importar, listar y borrar de a una.
+"""Tests del módulo de visitas: importar, listar, borrar de a una y vaciar.
 
-No hay ID en el archivo de origen, así que dos cargas del mismo archivo
-duplican filas a propósito (se sacan a mano) y el foco acá es: si hay un
-error no se escribe nada, y si no hay errores se cargan todas las filas.
+No hay ID en el archivo de origen, así que la identidad de una visita entre
+cargas la arma Propiedad + Cliente + RUT + Fecha/hora solicitada. El foco acá
+es: si hay un error no se escribe nada; reimportar la misma fila actualiza en
+vez de duplicar; y Etapa/Corredor sí se actualizan porque son los datos que
+avanzan con el tiempo.
 """
 from io import BytesIO
 
@@ -47,21 +49,42 @@ def _subir(cliente, contenido: bytes):
 def test_importa_todas_las_filas_validas(cliente):
     r = _subir(cliente, _xlsx([FILA_OK, {**FILA_OK, "Cliente": "Marisol Mendoza"}]))
     assert r.status_code == 200, r.text
-    assert r.json() == {"nuevas": 2, "errores": []}
+    assert r.json() == {"nuevas": 2, "actualizadas": 0, "errores": []}
 
     listado = cliente.get("/api/visitas").json()
     assert len(listado) == 2
     assert {v["cliente"] for v in listado} == {"Franco Carozzi", "Marisol Mendoza"}
 
 
-def test_cargar_el_mismo_archivo_dos_veces_duplica(cliente):
-    """Es lo esperado: no hay ID en el origen, y el borrado manual existe
-    justamente para sacar los duplicados que deja repetir una carga."""
+def test_cargar_el_mismo_archivo_dos_veces_no_duplica(cliente):
+    """La clave es Propiedad + Cliente + RUT + Fecha/hora solicitada: sin
+    ningún cambio en esos cuatro datos, la segunda carga actualiza la misma
+    fila en vez de crear otra."""
     _subir(cliente, _xlsx([FILA_OK]))
+    r = _subir(cliente, _xlsx([FILA_OK]))
+
+    assert r.json() == {"nuevas": 0, "actualizadas": 1, "errores": []}
+    listado = cliente.get("/api/visitas").json()
+    assert len(listado) == 1
+
+
+def test_reimportar_actualiza_etapa_y_corredor(cliente):
+    """Son los dos datos que avanzan con el tiempo para la misma solicitud."""
     _subir(cliente, _xlsx([FILA_OK]))
+    _subir(cliente, _xlsx([{**FILA_OK, "Etapa": "Confirmada", "Corredor": "Otro Corredor"}]))
 
     listado = cliente.get("/api/visitas").json()
-    assert len(listado) == 2
+    assert len(listado) == 1
+    assert listado[0]["etapa"] == "Confirmada"
+    assert listado[0]["corredor"] == "Otro Corredor"
+
+
+def test_una_fecha_distinta_es_una_visita_nueva(cliente):
+    """Cambiar cualquiera de los cuatro datos de la clave es otra solicitud."""
+    _subir(cliente, _xlsx([FILA_OK]))
+    _subir(cliente, _xlsx([{**FILA_OK, "Fecha/hora solicitada": "2026-09-20T10:00:00"}]))
+
+    assert len(cliente.get("/api/visitas").json()) == 2
 
 
 def test_una_fila_con_propiedad_vacia_no_escribe_nada(cliente):
@@ -69,6 +92,7 @@ def test_una_fila_con_propiedad_vacia_no_escribe_nada(cliente):
     assert r.status_code == 200, r.text
     resumen = r.json()
     assert resumen["nuevas"] == 0
+    assert resumen["actualizadas"] == 0
     assert len(resumen["errores"]) == 1
 
     assert cliente.get("/api/visitas").json() == []
@@ -95,3 +119,30 @@ def test_eliminar_una_visita(cliente):
 def test_eliminar_una_visita_inexistente_da_404(cliente):
     r = cliente.delete("/api/visitas/999")
     assert r.status_code == 404
+
+
+def test_vaciar_todas_las_visitas(cliente):
+    _subir(cliente, _xlsx([FILA_OK, {**FILA_OK, "Cliente": "Marisol Mendoza"}]))
+
+    r = cliente.delete("/api/visitas")
+    assert r.status_code == 200
+    assert r.json() == {"eliminadas": 2}
+
+    assert cliente.get("/api/visitas").json() == []
+
+
+def test_vaciar_y_recargar_el_mismo_archivo_repone_todo(cliente):
+    """Es la garantía que hace segura la acción: reimportar repone lo mismo."""
+    contenido = _xlsx([FILA_OK, {**FILA_OK, "Cliente": "Marisol Mendoza"}])
+    _subir(cliente, contenido)
+    cliente.delete("/api/visitas")
+
+    r = _subir(cliente, contenido)
+    assert r.json() == {"nuevas": 2, "actualizadas": 0, "errores": []}
+    assert len(cliente.get("/api/visitas").json()) == 2
+
+
+def test_vaciar_con_la_tabla_vacia_no_falla(cliente):
+    r = cliente.delete("/api/visitas")
+    assert r.status_code == 200
+    assert r.json() == {"eliminadas": 0}

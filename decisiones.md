@@ -3014,3 +3014,19 @@ El usuario pidió agregar la descarga de la estructura de carga. Se siguió el m
 
 El usuario mostró una captura de la matriz real de carga con una columna `Corredor` que no estaba contemplada, en esa posición exacta. Se agregó texto libre --no hay catálogo de corredores para esta tabla, igual que `Tipo`, `Mercado` y `Etapa`-- como columna 10 de 11, entre `Etapa` y `Solicitada el`. Migración `c8a2e5f9b1d4`, aplicada a `dev`.
 
+---
+
+## D-106 · Se revierte D-105: la carga actualiza en vez de duplicar, y se agrega vaciar todo
+
+`D-105` decidió que cada carga insertara todas las filas como nuevas, confirmado explícitamente con el usuario. Usado contra la app real, el resultado no sirvió: *«carga ok, pero duplica registros, necesito eliminar todos los registros, cargar desde cero, y de futuro cargar solo lo nuevo»*. La opción más simple resultó ser la que generaba el problema que se pidió resolver.
+
+**La clave que `D-105` había evaluado y descartado por «difícil de verificar sin un identificador real» se adoptó igual: `Propiedad + Cliente + RUT + Fecha/hora solicitada`.** Es la combinación de datos que no cambia entre una exportación y la siguiente de la misma solicitud. `Etapa` y `Corredor` quedan **fuera** de la clave a propósito: son los dos datos que sí avanzan con el tiempo --una visita puede pasar de «Solicitada» a otra etapa, o que le asignen corredor después--, así que entrarían en la clave harían que el mismo cambio de estado se leyera como una solicitud distinta.
+
+**`importar_visitas` pasa de insertar siempre a upsert:** busca la clave entre lo que ya hay --una sola consulta, con el mismo criterio de rendimiento que `importar_canjes` (`D-049`)-- y si existe, actualiza todos los campos, incluidos `Etapa` y `Corredor`; si no, inserta. El resumen ahora es `nuevas` + `actualizadas`, no solo `nuevas`.
+
+**Un bug real, encontrado corriendo los tests después de escribir la clave:** reimportar el mismo archivo seguía duplicando. La fecha recién parseada del Excel viene con `tzinfo` (`_fecha` se lo pone); la misma fecha leída de una `Visita` guardada en SQLite vuelve **sin él** --SQLite no conserva el `tzinfo` de una columna `timestamptz`, el mismo caso ya documentado en `app/auth.py::_aware`--. Dos datetimes que representan el mismo instante pero difieren en `tzinfo` tienen **hash distinto**, así que la clave nunca hacía match contra lo guardado y todo entraba como fila nueva. Se arregla normalizando la fecha a UTC-aware dentro de `_clave`, sea que venga del archivo o de la base. En Postgres (`dev` y producción) el síntoma no se habría notado en una prueba manual corta porque ahí sí vuelve con `tzinfo` -- lo encontró el test contra la base de test en SQLite, que es exactamente para lo que sirve.
+
+**Se agrega `DELETE /visitas`, sin id, que vacía la tabla entera.** Existe porque las cargas de antes de esta regla dejaron duplicados que no valía la pena sacar de a uno. Rol `operaciones`, no `admin` --mismo criterio que el borrado individual (`D-105`)--: **es recuperable**, porque con la carga en modo upsert, reimportar el mismo archivo repone exactamente lo que había. Un test lo fija explícitamente: vaciar y volver a cargar el mismo archivo da el mismo resultado que la primera carga.
+
+**La producción no se tocó desde acá.** No hay conexión a esa base; el plan es que el usuario, una vez desplegado, apriete el botón «Vaciar todo» que se agregó en la pantalla y vuelva a subir el archivo real.
+
