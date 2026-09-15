@@ -51,12 +51,15 @@ function vacio() {
     fecha_solicitud: '',
     corredor_solicitante_nombre: '',
     corredor_solicitante_email: '',
+    corredor_solicitante_telefono: '',
     corredor_propietario_nombre: '',
     corredor_propietario_email: '',
+    corredor_propietario_telefono: '',
     tipo_operacion: '',
     tipo_inmueble: '',
     comuna: '',
     direccion: '',
+    codigo_propiedad: '',
     valor_prop: '' as number | '',
     moneda_valor: '',
     link_propiedad: '',
@@ -179,12 +182,15 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
       fecha_solicitud: c.fecha_solicitud?.slice(0, 10) ?? '',
       corredor_solicitante_nombre: c.corredor_solicitante_nombre ?? '',
       corredor_solicitante_email: c.corredor_solicitante_email ?? '',
+      corredor_solicitante_telefono: c.corredor_solicitante_telefono ?? '',
       corredor_propietario_nombre: c.corredor_propietario_nombre ?? '',
       corredor_propietario_email: c.corredor_propietario_email ?? '',
+      corredor_propietario_telefono: c.corredor_propietario_telefono ?? '',
       tipo_operacion: c.tipo_operacion ?? '',
       tipo_inmueble: c.tipo_inmueble ?? '',
       comuna: c.comuna ?? '',
       direccion: c.direccion ?? '',
+      codigo_propiedad: c.codigo_propiedad ?? '',
       valor_prop: c.valor_prop ?? '',
       moneda_valor: c.moneda_valor ?? '',
       link_propiedad: c.link_propiedad ?? '',
@@ -427,6 +433,11 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 onChange={(e) => setForm({ ...form, corredor_solicitante_email: e.currentTarget.value })}
               />
               <TextInput
+                label="Teléfono solicitante"
+                value={form.corredor_solicitante_telefono}
+                onChange={(e) => setForm({ ...form, corredor_solicitante_telefono: e.currentTarget.value })}
+              />
+              <TextInput
                 label="Corredor propietario"
                 value={form.corredor_propietario_nombre}
                 onChange={(e) => setForm({ ...form, corredor_propietario_nombre: e.currentTarget.value })}
@@ -435,6 +446,11 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 label="Email propietario"
                 value={form.corredor_propietario_email}
                 onChange={(e) => setForm({ ...form, corredor_propietario_email: e.currentTarget.value })}
+              />
+              <TextInput
+                label="Teléfono propietario"
+                value={form.corredor_propietario_telefono}
+                onChange={(e) => setForm({ ...form, corredor_propietario_telefono: e.currentTarget.value })}
               />
               <Select
                 label="Tipo operación"
@@ -446,6 +462,7 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
               <TextInput label="Tipo inmueble" value={form.tipo_inmueble} onChange={(e) => setForm({ ...form, tipo_inmueble: e.currentTarget.value })} />
               <TextInput label="Comuna" value={form.comuna} onChange={(e) => setForm({ ...form, comuna: e.currentTarget.value })} />
               <TextInput label="Dirección" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.currentTarget.value })} />
+              <TextInput label="Código propiedad" value={form.codigo_propiedad} onChange={(e) => setForm({ ...form, codigo_propiedad: e.currentTarget.value })} />
               <Group gap="xs" align="flex-end">
                 <NumberInput
                   label="Valor propiedad"

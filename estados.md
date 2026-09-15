@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-10 (22 listos + G2 en curso; la carga de Visitas ya no duplica, y se puede vaciar para recargar desde cero)
+**Última actualización:** 2026-09-15 (22 listos + G2 en curso; la carga de Canjes suma teléfonos de los dos corredores y código de propiedad)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-15 - Canjes: teléfonos de los dos corredores y código de propiedad
+
+Mostraste una captura de la plantilla real de Dataprop con tres columnas nuevas: `TELEFONO_CORREDOR_SOLICITANTE`, `TELEFONO_CORREDOR_PROPIETARIO` y `CODIGO_PROPIEDAD`. Se agregaron al modelo, la carga, la plantilla y el formulario de edición (`D-107`).
+
+Van en las mismas 19 columnas obligatorias del archivo --todas tienen que estar en el encabezado, aunque el valor de cada fila pueda venir vacío, igual que `NOMBRE_CORREDOR_*` y `EMAIL_CORREDOR_*`--. `CODIGO_PROPIEDAD` es el código de Dataprop para la propiedad, distinto del `id` del canje, que es el de la solicitud.
+
+Migración `d4f7a2c8e6b1`, aplicada a `dev`. Verificado contra Postgres real: plantilla con los 19 encabezados, un canje de prueba importado y visto en el formulario de edición con los tres campos nuevos, borrado al terminar. `pytest` completo salvo el rojo del reloj ya conocido; `npm run build` en cero errores.
 
 ### 2026-09-10 - Visitas: la carga ya no duplica, y se puede vaciar todo
 

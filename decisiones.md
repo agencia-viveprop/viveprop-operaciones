@@ -3030,3 +3030,15 @@ El usuario mostró una captura de la matriz real de carga con una columna `Corre
 
 **La producción no se tocó desde acá.** No hay conexión a esa base; el plan es que el usuario, una vez desplegado, apriete el botón «Vaciar todo» que se agregó en la pantalla y vuelva a subir el archivo real.
 
+---
+
+## D-107 · Tres columnas nuevas en el export de canjes: teléfonos y código de propiedad
+
+Dataprop agregó `TELEFONO_CORREDOR_SOLICITANTE`, `TELEFONO_CORREDOR_PROPIETARIO` y `CODIGO_PROPIEDAD` a la plantilla real, mostrada por captura. Se incorporan siguiendo el mismo patrón que las 16 columnas existentes: van en `Canje` (dos `String(50)` para los teléfonos, un `String(60)` para el código, los tres nullable --igual que `NOMBRE_CORREDOR_*` y `EMAIL_CORREDOR_*`, que tampoco exigen valor pese a que la columna sea obligatoria en el archivo--), en `COLUMNAS_REQUERIDAS`, en el parseo y en `_aplicar` --tanto al crear como al actualizar--. Migración `d4f7a2c8e6b1`.
+
+**Ubicación de los campos:** los teléfonos van junto a nombre y correo de cada corredor, en el grupo «Corredores»; `CODIGO_PROPIEDAD` va junto a `DIRECCION_PROPIEDAD`, en «Propiedad». Es el código de Dataprop para la propiedad, **distinto** del `id` del canje, que es el de la solicitud --el mismo tipo de distinción que ya existe entre el `id_canje` de una gestión y el `id` de la propiedad que se gestiona--.
+
+**Se completó el circuito hasta el formulario de edición**, no solo la carga: `CanjeOut`, `CanjeCreate` y `CanjeUpdate` en el router, el tipo `Canje` del frontend, y tres campos nuevos en el modal de alta/edición de `Canjes.tsx` --Teléfono solicitante, Teléfono propietario, Código propiedad--, en las mismas posiciones que en la plantilla. Sin esto los datos se habrían cargado pero habrían quedado sin ningún lugar donde verlos o corregirlos a mano.
+
+Verificado contra `dev` con Postgres real: plantilla descargada con los 19 encabezados en el orden esperado, un canje de prueba importado con las tres columnas y confirmado en la API, visto y editable en el formulario real. Canje de prueba borrado al terminar.
+

@@ -2,7 +2,7 @@
 
 **El archivo no se llena a mano: sale de Dataprop.** Es el resultado de una query
 contra su base, con alias fijos que ya se validaron contra la fuente. Por eso las
-16 columnas son todas obligatorias --si falta una, el export está mal armado-- y
+19 columnas son todas obligatorias --si falta una, el export está mal armado-- y
 por eso la plantilla no sirve para tipear canjes, sino para **comparar** cuando la
 carga falla y no se entiende por qué.
 
@@ -67,11 +67,14 @@ COLUMNAS: tuple[Columna, ...] = (
     Columna("NOMBRE_CORREDOR_PROPIETARIO", "Corredores", "Quién tiene la propiedad.", 30),
     Columna("EMAIL_CORREDOR_SOLICITANTE", "Corredores", "Correo del solicitante.", 30),
     Columna("EMAIL_CORREDOR_PROPIETARIO", "Corredores", "Correo del propietario.", 30),
+    Columna("TELEFONO_CORREDOR_SOLICITANTE", "Corredores", "Teléfono del solicitante.", 20),
+    Columna("TELEFONO_CORREDOR_PROPIETARIO", "Corredores", "Teléfono del propietario.", 20),
 
     Columna("TIPO_OPERACION", "Propiedad", "Venta, Arriendo u Otro/Desconocido.", 18),
     Columna("TIPO_PROPIEDAD", "Propiedad", "Texto libre tal como viene de Dataprop: DEPTO, CASA, OFICINA.", 18),
     Columna("COMUNA_PROPIEDAD", "Propiedad", "Comuna.", 20),
     Columna("DIRECCION_PROPIEDAD", "Propiedad", "Calle y número.", 34),
+    Columna("CODIGO_PROPIEDAD", "Propiedad", "El código de la propiedad en Dataprop, distinto del N° de solicitud.", 18),
 
     Columna("VALOR_PROP", "Valor", "El monto publicado, en la moneda de la columna siguiente.", 14),
     Columna("MONEDA_VALOR", "Valor", "CLP, UF u Otra.", 14),
@@ -83,7 +86,7 @@ NOMBRES = tuple(c.nombre for c in COLUMNAS)
 
 
 def estructura_importacion() -> EstructuraArchivo:
-    """Las 16 columnas del export, agrupadas, para mostrarlas en pantalla.
+    """Las 19 columnas del export, agrupadas, para mostrarlas en pantalla.
 
     No recibe sesión: a diferencia de negocios, ningún valor de este archivo sale
     de la base. Los cuatro que no son texto libre son enums fijos, y se leen de
@@ -138,7 +141,7 @@ def estructura_importacion() -> EstructuraArchivo:
 
 
 def generar_plantilla() -> bytes:
-    """El .xlsx vacío con los 16 encabezados exactos y los valores que se aceptan.
+    """El .xlsx vacío con los 19 encabezados exactos y los valores que se aceptan.
 
     **Los encabezados van en la fila 1, sin fila de grupos**, porque es donde
     `importar_canjes` los busca. La plantilla de negocios sí tiene dos filas --su

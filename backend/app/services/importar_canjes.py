@@ -21,10 +21,13 @@ COLUMNAS_REQUERIDAS = [
     "NOMBRE_CORREDOR_PROPIETARIO",
     "EMAIL_CORREDOR_SOLICITANTE",
     "EMAIL_CORREDOR_PROPIETARIO",
+    "TELEFONO_CORREDOR_SOLICITANTE",
+    "TELEFONO_CORREDOR_PROPIETARIO",
     "TIPO_OPERACION",
     "TIPO_PROPIEDAD",
     "COMUNA_PROPIEDAD",
     "DIRECCION_PROPIEDAD",
+    "CODIGO_PROPIEDAD",
     "VALOR_PROP",
     "MONEDA_VALOR",
     "LINK_PROPIEDAD",
@@ -69,10 +72,13 @@ class _FilaParseada:
     corredor_propietario_nombre: str | None
     corredor_solicitante_email: str | None
     corredor_propietario_email: str | None
+    corredor_solicitante_telefono: str | None
+    corredor_propietario_telefono: str | None
     tipo_operacion: OperacionTipo | None
     tipo_inmueble: str | None
     comuna: str | None
     direccion: str | None
+    codigo_propiedad: str | None
     valor_prop: float | None
     moneda_valor: MonedaTipo | None
     link_propiedad: str | None
@@ -136,10 +142,13 @@ def _parsear_fila(headers: dict[str, int], fila: tuple) -> _FilaParseada:
         corredor_propietario_nombre=_texto(val("NOMBRE_CORREDOR_PROPIETARIO")),
         corredor_solicitante_email=_texto(val("EMAIL_CORREDOR_SOLICITANTE")),
         corredor_propietario_email=_texto(val("EMAIL_CORREDOR_PROPIETARIO")),
+        corredor_solicitante_telefono=_texto(val("TELEFONO_CORREDOR_SOLICITANTE")),
+        corredor_propietario_telefono=_texto(val("TELEFONO_CORREDOR_PROPIETARIO")),
         tipo_operacion=_mapear(val("TIPO_OPERACION"), OPERACION_MAP, "TIPO_OPERACION"),
         tipo_inmueble=_texto(val("TIPO_PROPIEDAD")),
         comuna=_texto(val("COMUNA_PROPIEDAD")),
         direccion=_texto(val("DIRECCION_PROPIEDAD")),
+        codigo_propiedad=_texto(val("CODIGO_PROPIEDAD")),
         valor_prop=_numero(val("VALOR_PROP")),
         moneda_valor=_mapear(val("MONEDA_VALOR"), MONEDA_MAP, "MONEDA_VALOR"),
         link_propiedad=_texto(val("LINK_PROPIEDAD")),
@@ -179,10 +188,13 @@ def _aplicar(
             corredor_propietario_nombre=datos.corredor_propietario_nombre,
             corredor_solicitante_email=datos.corredor_solicitante_email,
             corredor_propietario_email=datos.corredor_propietario_email,
+            corredor_solicitante_telefono=datos.corredor_solicitante_telefono,
+            corredor_propietario_telefono=datos.corredor_propietario_telefono,
             tipo_operacion=datos.tipo_operacion,
             tipo_inmueble=datos.tipo_inmueble,
             comuna=datos.comuna,
             direccion=datos.direccion,
+            codigo_propiedad=datos.codigo_propiedad,
             valor_prop=datos.valor_prop,
             moneda_valor=datos.moneda_valor,
             link_propiedad=datos.link_propiedad,
@@ -204,10 +216,13 @@ def _aplicar(
     canje.corredor_propietario_nombre = datos.corredor_propietario_nombre
     canje.corredor_solicitante_email = datos.corredor_solicitante_email
     canje.corredor_propietario_email = datos.corredor_propietario_email
+    canje.corredor_solicitante_telefono = datos.corredor_solicitante_telefono
+    canje.corredor_propietario_telefono = datos.corredor_propietario_telefono
     canje.tipo_operacion = datos.tipo_operacion
     canje.tipo_inmueble = datos.tipo_inmueble
     canje.comuna = datos.comuna
     canje.direccion = datos.direccion
+    canje.codigo_propiedad = datos.codigo_propiedad
     canje.valor_prop = datos.valor_prop
     canje.moneda_valor = datos.moneda_valor
     canje.link_propiedad = datos.link_propiedad

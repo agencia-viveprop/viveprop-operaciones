@@ -19,12 +19,15 @@ export type Canje = {
   etapa: CanjeEtapa
   corredor_solicitante_nombre: string | null
   corredor_solicitante_email: string | null
+  corredor_solicitante_telefono: string | null
   corredor_propietario_nombre: string | null
   corredor_propietario_email: string | null
+  corredor_propietario_telefono: string | null
   tipo_operacion: OperacionTipo | null
   tipo_inmueble: string | null
   comuna: string | null
   direccion: string | null
+  codigo_propiedad: string | null
   valor_prop: number | null
   moneda_valor: MonedaTipo | null
   link_propiedad: string | null

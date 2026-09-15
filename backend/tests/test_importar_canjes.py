@@ -33,6 +33,17 @@ def test_importa_filas_nuevas_y_mapea_los_campos(db, fila, construir_xlsx):
     assert canje.gestionado_en_app is False
 
 
+def test_importa_telefonos_y_codigo_de_propiedad(db, fila, construir_xlsx):
+    """Las tres columnas que Dataprop agregó al export."""
+    resumen = importar_canjes(db, construir_xlsx([fila(103)]))
+
+    assert resumen.errores == []
+    canje = db.get(Canje, 103)
+    assert canje.corredor_solicitante_telefono == "+56911111111"
+    assert canje.corredor_propietario_telefono == "+56922222222"
+    assert canje.codigo_propiedad == "DP-2037"
+
+
 def test_reimportar_actualiza_las_no_gestionadas(db, fila, construir_xlsx):
     importar_canjes(db, construir_xlsx([fila(201)]))
 

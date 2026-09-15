@@ -56,10 +56,10 @@ def test_las_columnas_descritas_son_las_que_la_carga_exige():
     )
 
 
-def test_la_estructura_de_canjes_agrupa_las_16_columnas():
+def test_la_estructura_de_canjes_agrupa_las_19_columnas():
     e = estructura_importacion()
 
-    assert e.total_columnas == len(COLUMNAS_REQUERIDAS) == 16
+    assert e.total_columnas == len(COLUMNAS_REQUERIDAS) == 19
     # Los grupos son solo para la pantalla y tienen que ser contiguos, así que
     # salen del orden del export: LINK_PROPIEDAD viene al final, después del
     # valor, y por eso queda solo en el suyo.
@@ -202,7 +202,7 @@ def test_la_plantilla_de_visitas_la_acepta_su_propia_carga(db):
 @pytest.mark.parametrize(
     "url,columnas",
     [
-        ("/api/canjes/plantilla/estructura", 16),
+        ("/api/canjes/plantilla/estructura", 19),
         ("/api/negocios/plantilla/estructura", 32),
         ("/api/visitas/plantilla/estructura", 11),
     ],

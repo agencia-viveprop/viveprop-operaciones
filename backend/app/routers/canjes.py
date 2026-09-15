@@ -53,12 +53,15 @@ class CanjeOut(BaseModel):
     etapa: CanjeEtapa
     corredor_solicitante_nombre: str | None
     corredor_solicitante_email: str | None
+    corredor_solicitante_telefono: str | None
     corredor_propietario_nombre: str | None
     corredor_propietario_email: str | None
+    corredor_propietario_telefono: str | None
     tipo_operacion: OperacionTipo | None
     tipo_inmueble: str | None
     comuna: str | None
     direccion: str | None
+    codigo_propiedad: str | None
     valor_prop: float | None
     moneda_valor: MonedaTipo | None
     link_propiedad: str | None
@@ -79,12 +82,15 @@ class CanjeCreate(BaseModel):
     etapa: CanjeEtapa = CanjeEtapa.EN_REVISION
     corredor_solicitante_nombre: str | None = None
     corredor_solicitante_email: str | None = None
+    corredor_solicitante_telefono: str | None = None
     corredor_propietario_nombre: str | None = None
     corredor_propietario_email: str | None = None
+    corredor_propietario_telefono: str | None = None
     tipo_operacion: OperacionTipo | None = None
     tipo_inmueble: str | None = None
     comuna: str | None = None
     direccion: str | None = None
+    codigo_propiedad: str | None = None
     valor_prop: float | None = None
     moneda_valor: MonedaTipo | None = None
     link_propiedad: str | None = None
@@ -101,12 +107,15 @@ class CanjeUpdate(BaseModel):
     etapa: CanjeEtapa | None = None
     corredor_solicitante_nombre: str | None = None
     corredor_solicitante_email: str | None = None
+    corredor_solicitante_telefono: str | None = None
     corredor_propietario_nombre: str | None = None
     corredor_propietario_email: str | None = None
+    corredor_propietario_telefono: str | None = None
     tipo_operacion: OperacionTipo | None = None
     tipo_inmueble: str | None = None
     comuna: str | None = None
     direccion: str | None = None
+    codigo_propiedad: str | None = None
     valor_prop: float | None = None
     moneda_valor: MonedaTipo | None = None
     link_propiedad: str | None = None
@@ -169,7 +178,7 @@ def estructura_del_archivo(usuario: Usuario = Depends(require_role(RolUsuario.op
 
 @router.get("/plantilla")
 def descargar_plantilla(usuario: Usuario = Depends(require_role(RolUsuario.operaciones))):
-    """El .xlsx vacío con los 16 encabezados exactos.
+    """El .xlsx vacío con los 19 encabezados exactos.
 
     No es para llenarlo a mano --el archivo sale de Dataprop-- sino para comparar
     encabezados cuando la carga falla y no se entiende por qué.

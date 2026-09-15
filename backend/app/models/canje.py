@@ -132,13 +132,19 @@ class Canje(Base):
 
     corredor_solicitante_nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     corredor_solicitante_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    corredor_solicitante_telefono: Mapped[str | None] = mapped_column(String(50), nullable=True)
     corredor_propietario_nombre: Mapped[str | None] = mapped_column(String(255), nullable=True)
     corredor_propietario_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    corredor_propietario_telefono: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     tipo_operacion: Mapped[OperacionTipo | None] = mapped_column(Enum(OperacionTipo, name="operacion_tipo"), nullable=True)
     tipo_inmueble: Mapped[str | None] = mapped_column(String(120), nullable=True)
     comuna: Mapped[str | None] = mapped_column(String(120), nullable=True)
     direccion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # El código propio de la propiedad en Dataprop, distinto de `id` --que es el
+    # de la solicitud de canje--. Texto libre porque el formato de Dataprop no
+    # está documentado, igual que `tipo_inmueble`.
+    codigo_propiedad: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
     valor_prop: Mapped[float | None] = mapped_column(Numeric(16, 2), nullable=True)
     moneda_valor: Mapped[MonedaTipo | None] = mapped_column(Enum(MonedaTipo, name="moneda_tipo"), nullable=True)
