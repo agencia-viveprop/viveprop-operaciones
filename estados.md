@@ -126,6 +126,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
 
+### 2026-09-15 - Canjes: script para completar teléfonos y código en lo ya cargado
+
+Preguntaste cómo actualizar, por única vez, los canjes que ya estaban cargados con las tres columnas nuevas. La carga normal no sirve para eso: ignora entero cualquier canje `gestionado_en_app`, que es el estado de la mayoría de los activos.
+
+`app/scripts/completar_telefonos_y_codigo.py` --calcado de `aplicar_monedas_canjes.py`-- toma el mismo `.xlsx` de Dataprop y escribe **solo** `corredor_solicitante_telefono`, `corredor_propietario_telefono` y `codigo_propiedad`, incluso en los gestionados: es seguro porque esas tres columnas son nuevas y ningún canje pudo tenerlas editadas a mano todavía. En seco por default, `--aplicar` para escribir.
+
+Probado contra `dev`: un canje sintético `gestionado_en_app=True` con un nombre de corredor distinto en el archivo de prueba, para confirmar que el backfill solo tocaba los tres campos nuevos y dejaba todo lo demás --nombre, etapa, `gestionado_en_app`-- igual. Verificado y borrado.
+
+Se corre una sola vez, con el export real, cuando el usuario lo decida.
+
 ### 2026-09-15 - Canjes: teléfonos de los dos corredores y código de propiedad
 
 Mostraste una captura de la plantilla real de Dataprop con tres columnas nuevas: `TELEFONO_CORREDOR_SOLICITANTE`, `TELEFONO_CORREDOR_PROPIETARIO` y `CODIGO_PROPIEDAD`. Se agregaron al modelo, la carga, la plantilla y el formulario de edición (`D-107`).

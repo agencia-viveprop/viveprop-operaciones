@@ -3042,3 +3042,13 @@ Dataprop agregó `TELEFONO_CORREDOR_SOLICITANTE`, `TELEFONO_CORREDOR_PROPIETARIO
 
 Verificado contra `dev` con Postgres real: plantilla descargada con los 19 encabezados en el orden esperado, un canje de prueba importado con las tres columnas y confirmado en la API, visto y editable en el formulario real. Canje de prueba borrado al terminar.
 
+### El backfill de los canjes que ya existían
+
+La carga normal ignora entero cualquier canje `gestionado_en_app` (`D-096`), y la mayoría de los activos ya están en ese estado --así que nunca iban a recibir las tres columnas nuevas por la vía normal, ni resubiendo el export actualizado--. Se agregó `app/scripts/completar_telefonos_y_codigo.py`, calcado de `aplicar_monedas_canjes.py`: mismo `.xlsx` real de Dataprop como entrada, en seco por default y `--aplicar` para escribir.
+
+**Es seguro tocar también a los gestionados** porque las tres columnas son nuevas: ningún canje pudo tener ahí un valor puesto a mano, gestionado o no, porque la columna no existía en el esquema hasta este deploy. No hay ninguna edición humana que este script pueda pisar.
+
+**Y por eso mismo es deliberadamente más angosto que la carga normal:** solo escribe `corredor_solicitante_telefono`, `corredor_propietario_telefono` y `codigo_propiedad`. No toca `estado`, `etapa`, nombre ni correo del corredor, fecha de cierre, ni nada del resto de lo que `importar_canjes` sí actualizaría en un canje no gestionado --el objetivo es rellenar lo que antes no existía, no repetir esa lógica ni sus efectos secundarios.
+
+Probado contra `dev` con un canje sintético marcado `gestionado_en_app=True`, con nombre de corredor **distinto** en el archivo de prueba: el backfill puso los tres campos nuevos y dejó nombre, etapa y `gestionado_en_app` exactamente como estaban. Se corre una sola vez, después de desplegar, con el export real de Dataprop.
+
