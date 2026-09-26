@@ -120,7 +120,7 @@ function VaciarTodoModal({
       <Stack gap="md">
         <Alert color="critical" variant="light" icon={<IconAlertTriangle size={18} />}>
           <Text size="sm">
-            Se van a borrar las {cantidad} visitas cargadas. Podés recuperarlas volviendo a
+            Se van a borrar las {cantidad} visitas cargadas. Puedes recuperarlas volviendo a
             subir el mismo archivo: la carga ya no duplica, así que repone lo mismo que
             había.
           </Text>
@@ -174,7 +174,7 @@ export default function Visitas({ puedeEditar }: { puedeEditar: boolean }) {
 
       {data && data.length === 0 && (
         <Text size="sm" c="dimmed">
-          Todavía no hay visitas cargadas. Usá "Cargar archivo" para importar el Excel.
+          Todavía no hay visitas cargadas. Usa "Cargar archivo" para importar el Excel.
         </Text>
       )}
 
