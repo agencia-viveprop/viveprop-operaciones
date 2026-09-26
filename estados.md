@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-15 (22 listos + G2 en curso; la carga de Canjes suma teléfonos de los dos corredores y código de propiedad)
+**Última actualización:** 2026-09-26 (22 listos + G2 en curso; el listado de Canjes desempata por N° de solicitud, no solo por fecha)
 
 ---
 
@@ -125,6 +125,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-26 - Canjes: el listado desempata por N° de solicitud
+
+Mostraste el listado real con el 385 arriba del 386, mismo día, y pediste que siempre venga del más nuevo al más antiguo.
+
+**La causa:** `ORDER BY fecha_solicitud DESC` sin segundo criterio. Varios canjes del mismo día empatan ahí, y Postgres no promete ningún orden entre las filas empatadas. Verificado contra `dev` con datos reales: los canjes 355 a 358 comparten fecha y el orden entre ellos no era predecible.
+
+**El arreglo:** se agrega `Canje.id.desc()` como desempate. El N° de solicitud crece con el tiempo igual que la fecha --confirmado con tu propia cartera: 375 < 381 < 385 < 386 < 387, en el mismo orden que las fechas-- así que ordena consistentemente sin necesitar la hora exacta, que el archivo tampoco trae (`D-108`).
+
+Un test nuevo fija el caso exacto: cuatro canjes con la misma fecha, se exige el orden descendente por N°. `pytest` completo pasa salvo el rojo del reloj ya conocido; `npm run build` en cero errores. Verificado también contra `dev` con datos reales antes y después del cambio.
 
 ### 2026-09-15 - Canjes: script para completar teléfonos y código en lo ya cargado
 

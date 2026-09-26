@@ -236,7 +236,12 @@ def listar(
             # `cast` porque `id` es `bigint`: sin él no hay `like`. Con 303 filas
             # el índice que se pierde no cambia nada medible.
             query = query.where(cast(Canje.id, String).like(f"{digitos}%"))
-    query = query.order_by(Canje.fecha_solicitud.desc())
+    # `fecha_solicitud` sola no alcanza: dos canjes del mismo día empatan ahí, y
+    # sin un segundo criterio Postgres los devuelve en el orden que le
+    # convenga --no necesariamente el de carga--, así que el más nuevo podía
+    # aparecer abajo del más viejo. El N° de solicitud desempata porque crece
+    # con el tiempo, igual que la fecha.
+    query = query.order_by(Canje.fecha_solicitud.desc(), Canje.id.desc())
     return db.scalars(query).all()
 
 

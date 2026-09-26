@@ -79,6 +79,23 @@ def test_el_numero_se_combina_con_los_otros_filtros(cliente, cartera):
     assert _numeros(cliente, numero="36", comuna="florida") == [364]
 
 
+# ------------------------------------------------------- orden del listado
+
+
+def test_el_listado_viene_del_mas_nuevo_al_mas_antiguo(cliente, cartera):
+    """El caso real: dos canjes del mismo día aparecían en cualquier orden.
+
+    Los cuatro canjes de `cartera` comparten la misma `fecha_solicitud`, así
+    que ordenar solo por fecha los deja empatados y Postgres puede devolverlos
+    en el orden que le convenga --no necesariamente el de llegada--. El N° de
+    solicitud desempata: crece con el tiempo, igual que la fecha, así que el
+    más nuevo tiene que quedar primero.
+    """
+    r = cliente.get("/api/canjes")
+    assert r.status_code == 200, r.text
+    assert [c["id"] for c in r.json()] == [3640, 401, 364, 36]
+
+
 # ------------------------------------------------- filtros por corredor
 
 

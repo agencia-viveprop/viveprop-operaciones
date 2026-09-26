@@ -3052,3 +3052,15 @@ La carga normal ignora entero cualquier canje `gestionado_en_app` (`D-096`), y l
 
 Probado contra `dev` con un canje sintético marcado `gestionado_en_app=True`, con nombre de corredor **distinto** en el archivo de prueba: el backfill puso los tres campos nuevos y dejó nombre, etapa y `gestionado_en_app` exactamente como estaban. Se corre una sola vez, después de desplegar, con el export real de Dataprop.
 
+---
+
+## D-108 · El listado de canjes desempata por N° de solicitud, no solo por fecha
+
+El usuario mostró el listado real con el 385 apareciendo arriba del 386 --mismo día, orden invertido-- y pidió que el orden sea siempre del más nuevo al más antiguo.
+
+**La causa: `ORDER BY fecha_solicitud DESC` sin un segundo criterio.** Varios canjes del mismo día quedan empatados en esa columna, y Postgres no promete ningún orden entre las filas empatadas --puede devolverlas en el que le resulte más barato, y ese no tiene por qué coincidir con el de llegada--. Verificado contra `dev` con datos reales: los canjes 355 a 358 comparten fecha (`2026-08-05`) y antes del fix el orden entre ellos no era predecible.
+
+**El arreglo es agregar `Canje.id.desc()` como segundo criterio.** El N° de solicitud es el mismo `ID_CANJE` de Dataprop y crece con el tiempo --confirmado con la cartera real: 375 < 381 < 385 < 386 < 387, en el mismo orden que sus fechas--, así que sirve de desempate sin necesitar la hora exacta de la solicitud, que el archivo tampoco trae.
+
+**El test fija el caso exacto que rompía**, no solo el resultado ya sabido: cuatro canjes con la misma `fecha_solicitud`, y se exige que el listado los devuelva en orden descendente de `id` (`test_el_listado_viene_del_mas_nuevo_al_mas_antiguo`, en `test_canjes_api.py`). Sin la fecha real por hora no hay otra forma honesta de probarlo que empatándola a propósito.
+
