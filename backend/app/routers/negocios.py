@@ -863,6 +863,38 @@ def actualizar_hito(
     return hito
 
 
+@router.delete("/{negocio_id}/hitos/{hito_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_hito(
+    negocio_id: int,
+    hito_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Borra una liquidación de más, típicamente una creada por error.
+
+    **Un negocio no puede quedarse sin ninguna**: si es la última, hay que
+    borrar el negocio entero (fuera del alcance de este endpoint), no dejarlo
+    con cero liquidaciones -- ninguna pantalla contempla ese caso.
+
+    Las obligaciones del hito se van con él (`ondelete=CASCADE` en
+    `obligaciones.hito_id`), y no hay nada más que dependa de un hito puntual:
+    los movimientos son del negocio, no de la liquidación.
+    """
+    negocio = _cargar(db, negocio_id)
+    hito = next((h for h in negocio.hitos if h.id == hito_id), None)
+    if hito is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND,
+            f"El hito {hito_id} no pertenece al negocio {negocio.codigo}.",
+        )
+    if len(negocio.hitos) == 1:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Un negocio no puede quedar sin liquidaciones. Si ya no corresponde, borrá el negocio entero.",
+        )
+    db.delete(hito)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 def _a_movimiento_out(db: Session, m: Movimiento) -> MovimientoOut:

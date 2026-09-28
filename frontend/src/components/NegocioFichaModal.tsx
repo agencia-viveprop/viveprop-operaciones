@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -14,9 +15,9 @@ import {
   Text,
   Title,
 } from '@mantine/core'
-import { IconAlertTriangle, IconPencil, IconPlus } from '@tabler/icons-react'
+import { IconAlertTriangle, IconCheck, IconPencil, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
-import { obtenerNegocio, type Hito } from '../api/negocios'
+import { eliminarHito, obtenerNegocio, type Hito } from '../api/negocios'
 import HitoFormModal from './HitoFormModal'
 import NegocioEditarModal from './NegocioEditarModal'
 import NegocioPipeline from './NegocioPipeline'
@@ -48,14 +49,25 @@ function FichaHito({
   negocioId,
   hito,
   onEditar,
+  /** Nulo para gerencia, o si es la única liquidación del negocio: no se
+   *  puede dejar un negocio sin ninguna (lo rechaza la API igual, pero no
+   *  tiene sentido ni mostrar el botón). */
+  onEliminar,
 }: {
   negocioId: number
   hito: Hito
   /** Nulo para gerencia: puede leer la ficha pero no cambiar la plata. */
   onEditar: (() => void) | null
+  onEliminar: (() => void) | null
 }) {
   const dif = descuadre(hito)
   const usaManual = hito.valor_clp_manual !== null
+  const [confirmando, setConfirmando] = useState(false)
+
+  const eliminar = useMutation({
+    mutationFn: () => eliminarHito(negocioId, hito.id),
+    onSuccess: () => onEliminar?.(),
+  })
 
   return (
     <Card withBorder radius="md" p="md">
@@ -76,8 +88,47 @@ function FichaHito({
               {hito.estado === 'ACTIVO' ? 'Cerrar o editar' : 'Editar'}
             </Button>
           )}
+          {onEliminar &&
+            (confirmando ? (
+              <Group gap={4} wrap="nowrap">
+                <ActionIcon
+                  variant="subtle"
+                  color="critical"
+                  size="sm"
+                  aria-label="Confirmar borrado"
+                  loading={eliminar.isPending}
+                  onClick={() => eliminar.mutate()}
+                >
+                  <IconCheck size={14} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  size="sm"
+                  aria-label="Cancelar"
+                  onClick={() => setConfirmando(false)}
+                >
+                  <IconX size={14} />
+                </ActionIcon>
+              </Group>
+            ) : (
+              <ActionIcon
+                variant="subtle"
+                color="critical"
+                size="sm"
+                aria-label={`Borrar la liquidación ${hito.nombre ?? ''}`}
+                onClick={() => setConfirmando(true)}
+              >
+                <IconTrash size={14} />
+              </ActionIcon>
+            ))}
         </Group>
       </Group>
+      {eliminar.isError && (
+        <Alert color="critical" variant="light" mb="sm">
+          {(eliminar.error as Error).message}
+        </Alert>
+      )}
 
       <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm" mb="sm">
         <Dato label="Valor">
@@ -194,6 +245,7 @@ export default function NegocioFichaModal({
   const [editandoNegocio, setEditandoNegocio] = useState(false)
 
 
+  const queryClient = useQueryClient()
   const { data: catalogos } = useQuery({ queryKey: ['catalogos'], queryFn: obtenerCatalogos })
   const consulta = useQuery({
     queryKey: ['negocio', negocioId],
@@ -201,6 +253,13 @@ export default function NegocioFichaModal({
     enabled: negocioId !== null,
   })
   const { data: negocio } = consulta
+
+  const alBorrarHito = () => {
+    queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
+    // El listado muestra "Abierto" y el total de comisión: pueden cambiar si
+    // el hito borrado no era el más reciente o tenía plata.
+    queryClient.invalidateQueries({ queryKey: ['negocios'] })
+  }
 
   const nombreCatalogo = (id: number | null) => {
     if (id === null || !catalogos) return '—'
@@ -295,6 +354,7 @@ export default function NegocioFichaModal({
               negocioId={negocio.id}
               hito={h}
               onEditar={puedeEditar ? () => setEditando(h) : null}
+              onEliminar={puedeEditar && negocio.hitos.length > 1 ? alBorrarHito : null}
             />
           ))}
 

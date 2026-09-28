@@ -601,6 +601,56 @@ def test_cerrar_un_hito_abierto_no_pide_confirmacion(
     assert r.json()["estado"] == "CERRADO"
 
 
+def test_eliminar_un_hito_de_mas(cliente, catalogos_sembrados, uf_cargada):
+    """El caso real: una liquidación vacía creada por error, junto a la buena."""
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-DOS-HITOS",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 12", "comuna": "Santiago"},
+        "hitos": [{"fecha_inicio": "2026-01-02", "estado": "ACTIVO"}],
+    }).json()
+    negocio_id = creado["id"]
+    bueno = creado["hitos"][0]["id"]
+
+    vacio = cliente.post(f"/api/negocios/{negocio_id}/hitos", json={
+        "fecha_inicio": "2026-01-03", "estado": "ACTIVO",
+    }).json()
+
+    r = cliente.delete(f"/api/negocios/{negocio_id}/hitos/{vacio['id']}")
+    assert r.status_code == 204
+
+    restante = cliente.get(f"/api/negocios/{negocio_id}").json()
+    assert [h["id"] for h in restante["hitos"]] == [bueno]
+
+
+def test_no_se_puede_dejar_un_negocio_sin_liquidaciones(cliente, catalogos_sembrados, uf_cargada):
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-UN-SOLO-HITO",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 13", "comuna": "Santiago"},
+        "hitos": [{"fecha_inicio": "2026-01-02", "estado": "ACTIVO"}],
+    }).json()
+    unico = creado["hitos"][0]["id"]
+
+    r = cliente.delete(f"/api/negocios/{creado['id']}/hitos/{unico}")
+
+    assert r.status_code == 400
+    assert cliente.get(f"/api/negocios/{creado['id']}").json()["hitos"] != []
+
+
+def test_eliminar_un_hito_que_no_pertenece_al_negocio_da_404(cliente, catalogos_sembrados, uf_cargada):
+    creado = cliente.post("/api/negocios", json={
+        "codigo": "VVP-PARA-404",
+        "modelo": "MERCADO_PRIMARIO",
+        "propiedad": {"direccion": "Calle 14", "comuna": "Santiago"},
+        "hitos": [{"fecha_inicio": "2026-01-02", "estado": "ACTIVO"}],
+    }).json()
+
+    r = cliente.delete(f"/api/negocios/{creado['id']}/hitos/999999")
+
+    assert r.status_code == 404
+
+
 def test_la_guarda_mira_los_siete_montos_no_solo_la_comision_real(
     cliente, db, catalogos_sembrados, uf_cargada
 ):

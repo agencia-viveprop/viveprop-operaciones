@@ -285,6 +285,17 @@ export function actualizarHito(
   return json(`/api/negocios/${negocioId}/hitos/${hitoId}`, 'PATCH', payload)
 }
 
+export async function eliminarHito(negocioId: number, hitoId: number): Promise<void> {
+  const res = await fetch(`/api/negocios/${negocioId}/hitos/${hitoId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `Error ${res.status}`)
+  }
+}
+
 export function buscarPropiedades(q: string): Promise<Propiedad[]> {
   return fetch(`/api/negocios/propiedades?q=${encodeURIComponent(q)}`, {
     credentials: 'include',

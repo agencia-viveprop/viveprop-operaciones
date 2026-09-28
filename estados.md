@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-26 (22 listos + G2 en curso; el listado de Canjes desempata por N° de solicitud, no solo por fecha)
+**Última actualización:** 2026-09-28 (22 listos + G2 en curso; se puede borrar una liquidación de más sin dejar el negocio sin ninguna)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-28 - Negocios: se puede borrar una liquidación de más
+
+Encontramos por qué el reporte semanal marcaba 4 "Liquidaciones iniciadas" en septiembre con solo 2 negocios nuevos en la lista: `VVP-20` y `VVP-21` tenían dos hitos cada uno --uno con valores, otro vacío, sobrante de reintentar el alta mientras el campo Código quedaba vacío sin que se notara--. El reporte cuenta liquidaciones, no negocios.
+
+No existía forma de borrar un hito de más. Se agrega `DELETE /negocios/{negocio_id}/hitos/{hito_id}`: no deja borrar el último (un negocio no puede quedar sin ninguna liquidación), rol `operaciones`, y en la ficha un botón de borrar con confirmar/cancelar en el lugar, que solo aparece si hay más de un hito (`D-109`).
+
+Verificado contra `dev` con Postgres real: negocio con dos hitos --uno con valores y uno vacío, la forma exacta del caso real--, borrado desde la ficha de verdad, confirmado que quedó solo el bueno. Negocio y propiedad de prueba borrados al terminar. `pytest` completo salvo el rojo del reloj ya conocido; `npm run build` en cero errores.
 
 ### 2026-09-26 - Canjes: el listado desempata por N° de solicitud
 

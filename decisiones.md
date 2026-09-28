@@ -3064,3 +3064,19 @@ El usuario mostró el listado real con el 385 apareciendo arriba del 386 --mismo
 
 **El test fija el caso exacto que rompía**, no solo el resultado ya sabido: cuatro canjes con la misma `fecha_solicitud`, y se exige que el listado los devuelva en orden descendente de `id` (`test_el_listado_viene_del_mas_nuevo_al_mas_antiguo`, en `test_canjes_api.py`). Sin la fecha real por hora no hay otra forma honesta de probarlo que empatándola a propósito.
 
+---
+
+## D-109 · Se puede borrar una liquidación de más, sin dejar el negocio sin ninguna
+
+Investigando por qué "Liquidaciones iniciadas" del reporte semanal marcaba 4 en septiembre cuando la lista de Negocios activos solo mostraba 2 recién creados, apareció la causa real: esos dos negocios (`VVP-20` y `VVP-21`) tenían **dos hitos cada uno** -- uno con los valores reales y otro vacío, sobrante de reintentar el alta más de una vez mientras el campo Código quedaba vacío sin que se notara (el placeholder "VVP-20" se leía como un valor ya puesto). El reporte semanal cuenta liquidaciones, no negocios, y contaba las cuatro.
+
+**No existía ninguna forma de borrar un hito.** `POST /{id}/hitos` y `PATCH /{id}/hitos/{hito_id}` sí, pero nada para sacar uno de más. Se agrega `DELETE /negocios/{negocio_id}/hitos/{hito_id}`, con el mismo criterio que el resto de las guardas de esta app:
+
+- **No puede ser el último.** Un negocio no puede quedar con cero liquidaciones -- ninguna pantalla contempla ese caso, y la creación misma exige al menos una (`Field(min_length=1)`). Si el negocio entero ya no corresponde, se borra el negocio, no su única liquidación.
+- **Las obligaciones del hito se van con él**, vía `ondelete=CASCADE` en `obligaciones.hito_id`: no hay nada que limpiar aparte.
+- **Rol `operaciones`**, igual que crear y editar un hito -- no hay razón para pedir más para borrar uno de más que para crear uno nuevo.
+
+En la ficha, el botón de borrar (un tacho, con confirmar/cancelar en el lugar, mismo patrón que en Visitas y en los movimientos de un canje) solo aparece si el negocio tiene más de un hito.
+
+Verificado contra `dev` con Postgres real: negocio con dos hitos --uno con valores, uno vacío, la forma exacta del caso real--, borrado del vacío desde la ficha de verdad, y confirmado que quedó solo el que tenía valores. Negocio y propiedad de prueba borrados al terminar.
+
