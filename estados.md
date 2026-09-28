@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-28 (22 listos + G2 en curso; se puede borrar una liquidación de más sin dejar el negocio sin ninguna)
+**Última actualización:** 2026-09-28 (22 listos + G2 en curso; Reporte Mensual y Vista Directorio ya muestran la comisión potencial de los negocios en curso)
 
 ---
 
@@ -125,6 +125,16 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-28 - Comisión potencial (negocios en curso) en Reporte Mensual y Vista Directorio
+
+Charlamos sobre cómo ver, además de lo cerrado, cuánta comisión y cuántos negocios siguen en curso -- pediste que se pudiera ver en gráficos y en datos, sin romper lo que ya funciona. Armamos el plan juntos antes de tocar código.
+
+Dos campos nuevos (`comision_potencial`, `negocios_en_curso`) agrupados por fecha de **inicio** del hito activo -- no tiene fecha de cierre--, agregados al catálogo `METRICAS_NEGOCIOS` para que las tablas comparativas ("Últimos N meses", "Año corrido") los sumen solas, sin código aparte (`D-110`).
+
+En pantalla: un panel nuevo "Comisión potencial en curso" (compartido por Reporte Mensual y Vista Directorio), una tercera barra en "Liquidaciones y negocios por mes" en las dos pantallas, y un `Tile` "NEGOCIOS EN CURSO" en Reporte Mensual.
+
+Verificado contra `dev` con un negocio activo de prueba: aparecen el panel y las barras nuevas, con las cifras correctas, y **nada de lo cerrado se movió** -- confirmado explícitamente comparando antes/después. Revisado también en 375px, sin desborde. `pytest` completo salvo el rojo del reloj ya conocido; `npm run build` en cero errores. Negocio y propiedad de prueba borrados al terminar.
 
 ### 2026-09-28 - Negocios: se puede borrar una liquidación de más
 

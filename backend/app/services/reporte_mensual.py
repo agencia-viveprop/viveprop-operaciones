@@ -102,6 +102,15 @@ class MetricasMes(BaseModel):
     rebate_concentrador: Decimal
     comision_real_vp: Decimal
     negocios_iniciados: int
+    # Lo que sigue **en curso**: hitos `ACTIVO` con valor, por su propio mes
+    # de inicio (no tienen fecha de cierre). Separado a propósito de
+    # `comision_real_vp` de arriba, que es solo lo cerrado -- mezclarlos haría
+    # que un mes se leyera como "ganado" cuando la mitad todavía es teórico.
+    comision_potencial: Decimal = CERO
+    # Negocios con al menos un hito activo, contados una vez cada uno, en el
+    # mes de ese hito. Mismo criterio que `negocios_iniciados` pero solo
+    # sobre lo que sigue abierto.
+    negocios_en_curso: int = 0
 
     # Canjes
     canjes_solicitados: int
@@ -144,6 +153,8 @@ class PromedioMes(BaseModel):
     rebate_concentrador: Decimal
     comision_real_vp: Decimal
     negocios_iniciados: Decimal
+    comision_potencial: Decimal
+    negocios_en_curso: Decimal
     canjes_solicitados: Decimal
     canjes_cerrados: Decimal
     canjes_cancelados: Decimal
@@ -286,6 +297,8 @@ METRICAS_NEGOCIOS: tuple[tuple[str, str, bool], ...] = (
     ("comision_real_vp", "Comisión real ViveProp", True),
     ("hitos_cerrados", "Liquidaciones cerradas", False),
     ("negocios_iniciados", "Negocios iniciados", False),
+    ("comision_potencial", "Comisión potencial en curso", True),
+    ("negocios_en_curso", "Negocios en curso", False),
 )
 
 # Canjes no tiene eje de plata, y no es un olvido. Sí genera comisión --la de
@@ -475,6 +488,35 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
         .where(primeros.c.inicio >= desde, primeros.c.inicio <= hasta)
     )
 
+    # Lo que sigue en curso: mismo criterio que "cerrados" pero con estado
+    # ACTIVO y por fecha de inicio, que es la única fecha que tiene un hito
+    # que todavía no cierra.
+    potencial = db.scalar(
+        select(func.coalesce(func.sum(NegocioHito.comision_real_vp), 0)).where(
+            NegocioHito.estado == EstadoNegocio.ACTIVO,
+            NegocioHito.fecha_inicio >= desde,
+            NegocioHito.fecha_inicio <= hasta,
+        )
+    )
+    # Mismo criterio que "iniciados" -un negocio cuenta una vez, en el mes de
+    # su hito mas antiguo- pero restringido a los hitos activos: un negocio
+    # con la promesa cerrada y la escritura activa sigue en curso.
+    primeros_activos = (
+        select(
+            NegocioHito.negocio_id.label("negocio_id"),
+            func.min(NegocioHito.fecha_inicio).label("inicio"),
+        )
+        .where(NegocioHito.estado == EstadoNegocio.ACTIVO)
+        .group_by(NegocioHito.negocio_id)
+        .subquery()
+    )
+    en_curso = db.scalar(
+        select(func.count())
+        .select_from(primeros_activos)
+        .join(Negocio, Negocio.id == primeros_activos.c.negocio_id)
+        .where(primeros_activos.c.inicio >= desde, primeros_activos.c.inicio <= hasta)
+    )
+
     solicitados = db.scalar(
         select(func.count()).select_from(Canje).where(
             Canje.fecha_solicitud >= inicio, Canje.fecha_solicitud <= fin
@@ -529,6 +571,8 @@ def _metricas(db: Session, desde: date, hasta: date, etiqueta: str) -> MetricasM
         hitos_cerrados=cerrados[0],
         **{campo: cerrados[i + 1] for i, campo in enumerate(PLATA_DEL_HITO)},
         negocios_iniciados=iniciados or 0,
+        comision_potencial=potencial,
+        negocios_en_curso=en_curso or 0,
         canjes_solicitados=solicitados or 0,
         canjes_cerrados=canjes_cerrados or 0,
         canjes_cancelados=cancelados or 0,
@@ -543,7 +587,7 @@ def _clave(f) -> str:
 
 
 def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[MetricasMes]:
-    """Los meses de la ventana, uno por uno, con **cuatro consultas** en total.
+    """Los meses de la ventana, uno por uno, con **seis consultas** en total.
 
     La forma obvia --llamar a `_metricas` una vez por mes-- costaría cinco
     consultas por mes, o sesenta para una ventana de doce. Acá se traen las filas
@@ -606,6 +650,37 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
         k = _clave(fecha)
         iniciados[k] = iniciados.get(k, 0) + 1
 
+    # Lo que sigue en curso, por mes de inicio del hito activo: mismo criterio
+    # que "cerrados" e "iniciados" de arriba, pero sobre `estado == ACTIVO`.
+    potencial: dict[str, Decimal] = {}
+    for fecha, comision in db.execute(
+        select(NegocioHito.fecha_inicio, NegocioHito.comision_real_vp).where(
+            NegocioHito.estado == EstadoNegocio.ACTIVO,
+            NegocioHito.fecha_inicio >= desde,
+            NegocioHito.fecha_inicio <= hasta,
+        )
+    ).all():
+        k = _clave(fecha)
+        potencial[k] = potencial.get(k, CERO) + Decimal(comision or 0)
+
+    primeros_activos = (
+        select(
+            NegocioHito.negocio_id.label("negocio_id"),
+            func.min(NegocioHito.fecha_inicio).label("inicio"),
+        )
+        .where(NegocioHito.estado == EstadoNegocio.ACTIVO)
+        .group_by(NegocioHito.negocio_id)
+        .subquery()
+    )
+    en_curso: dict[str, int] = {}
+    for (fecha,) in db.execute(
+        select(primeros_activos.c.inicio)
+        .join(Negocio, Negocio.id == primeros_activos.c.negocio_id)
+        .where(primeros_activos.c.inicio >= desde, primeros_activos.c.inicio <= hasta)
+    ).all():
+        k = _clave(fecha)
+        en_curso[k] = en_curso.get(k, 0) + 1
+
     # Los cuatro salen del mismo recorrido, y los cuatro por fecha de solicitud:
     # `canjes` no guarda cuando se cancelo, asi que "cancelados en agosto" no se
     # puede saber. Contando por solicitud, los tres estados parten exacto el total
@@ -637,6 +712,8 @@ def _serie_mensual(db: Session, anio: int, mes: int, ventana: int) -> list[Metri
                 hitos_cerrados=n,
                 **plata,
                 negocios_iniciados=iniciados.get(k, 0),
+                comision_potencial=potencial.get(k, CERO),
+                negocios_en_curso=en_curso.get(k, 0),
                 canjes_solicitados=solicitados.get(k, 0),
                 canjes_cerrados=cerrados_estado.get(k, 0),
                 canjes_cancelados=cancelados.get(k, 0),

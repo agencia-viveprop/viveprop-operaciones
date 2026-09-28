@@ -225,6 +225,20 @@ export default function PlataDeNegocios({
           esPlata
         />
       )}
+
+      {/* Potencial, no cerrado: nunca se suma con la comisión real de arriba.
+          Panel propio y no una serie más de "Comisión real ViveProp por mes"
+          --mezclarlas ahí rompería la lectura de esa barra como "lo que se
+          ganó", que es justo el error que ya se corrigió en D-063/D-095/D-102. */}
+      <EvolucionMensual
+        titulo="Comisión potencial en curso"
+        subtitulo="Negocios activos, todavía sin cerrar, con su comisión real VP calculada. Va por mes de inicio --no de cierre, porque uno abierto no tiene-- y nunca se suma con lo ya ganado."
+        serie={serie}
+        series={[{ campo: 'comision_potencial', nombre: 'Comisión potencial', tono: 'terciaria' }]}
+        promedio={Number(promedio.comision_potencial)}
+        tendencia={tendencias.comision_potencial}
+        esPlata
+      />
     </>
   )
 }

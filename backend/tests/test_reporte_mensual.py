@@ -278,6 +278,54 @@ def test_un_negocio_con_dos_hitos_se_inicia_una_sola_vez(db):
     assert (agosto.mes.hitos_cerrados, septiembre.mes.hitos_cerrados) == (1, 1)
 
 
+def test_lo_activo_se_ve_como_potencial_y_no_como_cerrado(db):
+    """Los mismos tres estados que `test_solo_los_cerrados_cuentan_como_cerrados`,
+    mirando el otro lado: lo potencial es del activo, y no se mezcla ni con lo
+    cerrado ni con lo perdido."""
+    _negocio(db, "G-1", [_hito(date(2026, 8, 1), date(2026, 8, 10), real=D("100"))])
+    _negocio(db, "A-1", [_hito(date(2026, 8, 5), None, EstadoNegocio.ACTIVO, real=D("999"))])
+    _negocio(db, "P-1", [_hito(date(2026, 8, 1), None, EstadoNegocio.PERDIDO, real=D("999"))])
+
+    r = _reporte(db)
+
+    assert r.mes.comision_potencial == D("999")
+    assert r.mes.negocios_en_curso == 1
+    # Lo cerrado no se movió: sigue siendo exactamente lo de antes.
+    assert r.mes.hitos_cerrados == 1
+    assert r.mes.comision_real_vp == D("100")
+
+
+def test_un_hito_cerrado_y_otro_activo_del_mismo_negocio_sigue_en_curso(db):
+    """Promesa cerrada, escritura activa: el negocio sigue en curso, y cada
+    hito cuenta en su propio mes -- igual que ya pasa con lo cerrado."""
+    _negocio(db, "G-1", [
+        _hito(date(2026, 8, 5), date(2026, 8, 20), estado=EstadoNegocio.CERRADO, real=D("100"), nombre="PROMESA"),
+        _hito(date(2026, 9, 5), None, estado=EstadoNegocio.ACTIVO, real=D("200"), nombre="ESCRITURA"),
+    ])
+
+    agosto = _reporte(db, 2026, 8)
+    septiembre = _reporte(db, 2026, 9)
+
+    assert (agosto.mes.negocios_en_curso, agosto.mes.comision_potencial) == (0, D("0"))
+    assert (septiembre.mes.negocios_en_curso, septiembre.mes.comision_potencial) == (1, D("200"))
+    # Y lo cerrado de agosto sigue exactamente igual que antes de este cambio.
+    assert agosto.mes.hitos_cerrados == 1
+    assert agosto.mes.comision_real_vp == D("100")
+
+
+def test_la_serie_tambien_trae_el_potencial_por_mes(db):
+    _negocio(db, "A-1", [_hito(date(2026, 7, 10), None, EstadoNegocio.ACTIVO, real=D("50"))])
+    _negocio(db, "A-2", [_hito(date(2026, 8, 3), None, EstadoNegocio.ACTIVO, real=D("70"))])
+
+    r = _reporte(db, 2026, 8, ventana=3)
+    por_mes = {m.etiqueta: m for m in r.serie}
+
+    assert por_mes["2026-07"].comision_potencial == D("50")
+    assert por_mes["2026-07"].negocios_en_curso == 1
+    assert por_mes["2026-08"].comision_potencial == D("70")
+    assert por_mes["2026-08"].negocios_en_curso == 1
+
+
 def test_los_canjes_cerrados_van_por_fecha_de_solicitud(db):
     """Los tres estados con la misma base, para que el apilado cierre.
 
@@ -533,6 +581,8 @@ def test_las_metricas_se_declaran_separadas_por_dominio():
         "valor_venta", "valor_arriendo", "comision_total", "comision_broker", "comision_equipo",
         "comision_tercero", "rebate_concentrador", "comision_real_vp",
         "hitos_cerrados", "negocios_iniciados",
+        # Lo que sigue en curso, separado de lo cerrado de arriba.
+        "comision_potencial", "negocios_en_curso",
     }
     assert campos_can == {
         "canjes_solicitados", "canjes_activos", "canjes_cerrados", "canjes_cancelados",

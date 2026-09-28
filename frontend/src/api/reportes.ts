@@ -193,6 +193,11 @@ export type MetricasMes = {
   rebate_concentrador: string
   comision_real_vp: string
   negocios_iniciados: number
+  /** Lo que sigue en curso: hitos activos con valor, por su propio mes de
+   *  inicio (no tienen fecha de cierre). Separado a propósito de
+   *  `comision_real_vp`, que es solo lo cerrado. */
+  comision_potencial: string
+  negocios_en_curso: number
   canjes_solicitados: number
   canjes_cerrados: number
   canjes_cancelados: number
@@ -265,6 +270,8 @@ export type PromedioMes = {
   rebate_concentrador: string
   comision_real_vp: string
   negocios_iniciados: string
+  comision_potencial: string
+  negocios_en_curso: string
   canjes_solicitados: string
   canjes_cerrados: string
   canjes_cancelados: string

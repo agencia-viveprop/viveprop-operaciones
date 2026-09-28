@@ -308,6 +308,11 @@ export default function ReporteMensual() {
                 pie="cerradas en la ventana"
               />
               <Tile rotulo="NEGOCIOS INICIADOS" valor={data.movil.actual.negocios_iniciados} />
+              <Tile
+                rotulo="NEGOCIOS EN CURSO"
+                valor={data.movil.actual.negocios_en_curso}
+                pie="activos, todavía sin cerrar"
+              />
             </SimpleGrid>
           ) : (
             <SimpleGrid cols={{ base: 2, md: 4 }}>
@@ -357,11 +362,12 @@ export default function ReporteMensual() {
               />
               <EvolucionMensual
                 titulo="Liquidaciones y negocios por mes"
-                subtitulo="Cuántos cerraron y cuántos entraron. Van en un gráfico aparte del de plata: un mismo eje para montos y unidades deja elegir la escala a gusto."
+                subtitulo="Cuántos cerraron, cuántos entraron y cuántos siguen en curso. Van en un gráfico aparte del de plata: un mismo eje para montos y unidades deja elegir la escala a gusto."
                 serie={serie}
                 series={[
                   { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
                   { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
+                  { campo: 'negocios_en_curso', nombre: 'Negocios en curso', tono: 'terciaria' },
                 ]}
                 tendencia={data.tendencias.hitos_cerrados}
               />

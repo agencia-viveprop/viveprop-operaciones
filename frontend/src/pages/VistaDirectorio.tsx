@@ -288,11 +288,12 @@ export default function VistaDirectorio() {
       <PlataDeNegocios serie={serie} promedio={data.promedio} tendencias={data.tendencias} />
       <EvolucionMensual
         titulo="Liquidaciones y negocios por mes"
-        subtitulo="Cuántos cerraron y cuántos entraron."
+        subtitulo="Cuántos cerraron, cuántos entraron y cuántos siguen en curso."
         serie={serie}
         series={[
           { campo: 'hitos_cerrados', nombre: 'Liquidaciones cerradas', tono: 'principal' },
           { campo: 'negocios_iniciados', nombre: 'Negocios iniciados', tono: 'secundaria' },
+          { campo: 'negocios_en_curso', nombre: 'Negocios en curso', tono: 'terciaria' },
         ]}
         tendencia={data.tendencias.hitos_cerrados}
       />

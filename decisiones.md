@@ -3080,3 +3080,20 @@ En la ficha, el botón de borrar (un tacho, con confirmar/cancelar en el lugar, 
 
 Verificado contra `dev` con Postgres real: negocio con dos hitos --uno con valores, uno vacío, la forma exacta del caso real--, borrado del vacío desde la ficha de verdad, y confirmado que quedó solo el que tenía valores. Negocio y propiedad de prueba borrados al terminar.
 
+---
+
+## D-110 · Comisión potencial (negocios en curso), en Reporte Mensual y Vista Directorio
+
+Reporte Mensual y Vista Directorio solo mostraban plata de negocios ya cerrados (`D-063`, `D-095`, `D-102`: mezclar plata real con plata teórica llevó a errores de lectura antes). El usuario pidió una vista complementaria de lo que sigue **en curso** --activo, con valor cargado, todavía sin cerrar-- en gráficos y en datos, sin tocar lo que ya funciona.
+
+**Se agrupa por fecha de inicio, no de cierre:** un hito activo no tiene fecha de cierre, así que no hay otro eje posible. Dos campos nuevos en `MetricasMes` (y su reflejo en `PromedioMes`): `comision_potencial` (suma de `comision_real_vp` de hitos `ACTIVO`, por su mes de inicio) y `negocios_en_curso` (negocios con al menos un hito activo, contados una vez cada uno --mismo criterio que `negocios_iniciados`, pero solo sobre lo que sigue abierto--).
+
+**Se agregan a `METRICAS_NEGOCIOS`, no a mano en cada función.** `_comparar()` (móvil vs año corrido) y el diccionario de `tendencias` ya iteran sobre ese catálogo, así que las dos tablas comparativas ("Últimos N meses", "Año corrido") ganaron las dos filas nuevas sin escribir código adicional para ellas. Es la misma razón por la que agregar un tercer estado a canjes (`D-071`) no tocó la lógica de comparación en su momento.
+
+**En el frontend, todo lo nuevo es agregado y no reemplazo:**
+- Un cuarto panel en `PlataDeNegocios.tsx` (compartido por las dos pantallas): "Comisión potencial en curso", panel propio y no una serie más de "Comisión real ViveProp por mes" --meterlo ahí rompería la lectura de esa barra como "lo que se ganó"--. Tono `terciaria` (el teal ya usado para "potencial" en Canjes, `D-104`).
+- Una tercera barra (`negocios_en_curso`) en el gráfico ya existente "Liquidaciones y negocios por mes", en las dos pantallas (ese gráfico de cantidades no está en un componente compartido, a diferencia del de plata).
+- Un `Tile` "NEGOCIOS EN CURSO" en Reporte Mensual. En Vista Directorio no se agregó uno --ya existe una tarjeta "EN PROCESO" con un cálculo de pipeline distinto y anterior (`data.pipeline`), y duplicarla habría confundido dos lecturas de "lo abierto" en la misma pantalla--.
+
+Ningún gráfico ni tabla existente cambió de forma, de escala o de serie: se verificó explícitamente contra `dev` con un negocio activo de prueba, confirmando que las cifras de lo cerrado (comisión real VP, liquidaciones, montos de venta/arriendo) no se movieron ni un peso.
+
