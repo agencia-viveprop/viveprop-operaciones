@@ -459,8 +459,24 @@ export default function Canjes({ puedeEditar }: { puedeEditar: boolean }) {
                 onChange={(v) => setForm({ ...form, tipo_operacion: v ?? '' })}
                 clearable
               />
-              <TextInput label="Tipo inmueble" value={form.tipo_inmueble} onChange={(e) => setForm({ ...form, tipo_inmueble: e.currentTarget.value })} />
-              <TextInput label="Comuna" value={form.comuna} onChange={(e) => setForm({ ...form, comuna: e.currentTarget.value })} />
+              {/* Autocomplete y no Select, igual que los filtros de arriba: sugiere
+                  mientras se escribe pero no obliga a elegir uno de la lista, para
+                  poder cargar un tipo de inmueble o una comuna que todavia no
+                  existe en la base. */}
+              <Autocomplete
+                label="Tipo inmueble"
+                data={opciones?.tipos_inmueble ?? []}
+                value={form.tipo_inmueble}
+                onChange={(v) => setForm({ ...form, tipo_inmueble: v })}
+                limit={10}
+              />
+              <Autocomplete
+                label="Comuna"
+                data={opciones?.comunas ?? []}
+                value={form.comuna}
+                onChange={(v) => setForm({ ...form, comuna: v })}
+                limit={10}
+              />
               <TextInput label="Dirección" value={form.direccion} onChange={(e) => setForm({ ...form, direccion: e.currentTarget.value })} />
               <TextInput label="Código propiedad" value={form.codigo_propiedad} onChange={(e) => setForm({ ...form, codigo_propiedad: e.currentTarget.value })} />
               <Group gap="xs" align="flex-end">

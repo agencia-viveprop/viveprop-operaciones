@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-28 (22 listos + G2 en curso; Reporte Mensual y Vista Directorio ya muestran la comisión potencial de los negocios en curso)
+**Última actualización:** 2026-09-29 (22 listos + G2 en curso; Tipo inmueble y Comuna del alta manual de Canjes ahora sugieren mientras se escriben)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-29 - Canjes: "Tipo inmueble" y "Comuna" del alta manual, con búsqueda
+
+Pediste que esos dos campos del modal "Nuevo canje" fueran listas desplegables con búsqueda, en vez de texto libre, para evitar variantes que después no calzan con el resto de los datos ("Depto" vs "DEPARTAMENTO").
+
+Se reutilizó el mismo `Autocomplete` que ya resolvía esto para el filtro de Comuna de la lista: sugiere mientras se escribe, pero no obliga a elegir uno de la lista -- sigue aceptando un valor nuevo y legítimo. `GET /api/canjes/filtros` ganó una cuarta lista, `tipos_inmueble` (9 valores en `dev`), con el mismo helper que ya arma las otras tres (`D-111`).
+
+Verificado contra `dev` (sesión fabricada, sin guardar ningún canje de prueba): "casa" sugiere CASA y CASA EN CONDOMINIO, "vitac" sugiere Vitacura, y en ambos casos se puede seguir escribiendo texto libre. Revisado también a 375px. `pytest` completo salvo el rojo del reloj ya conocido (no relacionado); `npm run build` en cero errores.
 
 ### 2026-09-28 - Comisión potencial (negocios en curso) en Reporte Mensual y Vista Directorio
 

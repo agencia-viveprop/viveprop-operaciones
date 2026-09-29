@@ -22,15 +22,15 @@ def cartera(db):
     solicitante en dos canjes y como propietario en otro.** Si los dos filtros
     miraran la misma columna, o una sola, ese cruce pasaria desapercibido.
     """
-    for id_, comuna, estado, solicitante, propietario in (
-        (36, "Nunoa", CanjeEstado.ACTIVO, "JORGE ROMAN VIVANCO", "MARIA BELEN COX"),
-        (364, "La Florida", CanjeEstado.ACTIVO, "JORGE ROMAN VIVANCO", "DATABROKERS"),
-        (3640, "Vitacura", CanjeEstado.CANCELADO, "VICENTE FARIAS", "JORGE ROMAN VIVANCO"),
-        (401, "Las Condes", CanjeEstado.ACTIVO, "KAREN ORTIZ DELGADO", None),
+    for id_, comuna, tipo_inmueble, estado, solicitante, propietario in (
+        (36, "Nunoa", "DEPARTAMENTO", CanjeEstado.ACTIVO, "JORGE ROMAN VIVANCO", "MARIA BELEN COX"),
+        (364, "La Florida", "CASA", CanjeEstado.ACTIVO, "JORGE ROMAN VIVANCO", "DATABROKERS"),
+        (3640, "Vitacura", "DEPARTAMENTO", CanjeEstado.CANCELADO, "VICENTE FARIAS", "JORGE ROMAN VIVANCO"),
+        (401, "Las Condes", "OFICINA", CanjeEstado.ACTIVO, "KAREN ORTIZ DELGADO", None),
     ):
         db.add(Canje(
             id=id_, fecha_solicitud=SOLICITUD, estado=estado,
-            etapa=CanjeEtapa.EN_REVISION, comuna=comuna,
+            etapa=CanjeEtapa.EN_REVISION, comuna=comuna, tipo_inmueble=tipo_inmueble,
             corredor_solicitante_nombre=solicitante,
             corredor_propietario_nombre=propietario,
         ))
@@ -159,6 +159,13 @@ def test_las_comunas_tambien_se_sugieren(cliente, cartera):
     comunas = cliente.get("/api/canjes/filtros").json()["comunas"]
 
     assert comunas == ["La Florida", "Las Condes", "Nunoa", "Vitacura"]
+
+
+def test_los_tipos_de_inmueble_tambien_se_sugieren(cliente, cartera):
+    """Mismo caso que las comunas: DEPARTAMENTO se repite y aparece una sola vez."""
+    tipos = cliente.get("/api/canjes/filtros").json()["tipos_inmueble"]
+
+    assert tipos == ["CASA", "DEPARTAMENTO", "OFICINA"]
 
 
 def test_las_sugerencias_no_dependen_de_los_filtros(cliente, cartera):

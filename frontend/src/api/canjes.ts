@@ -329,12 +329,13 @@ export function obtenerPlataCanjes(): Promise<PlataCanjes> {
  *  listado ya filtrado, elegir un valor haria desaparecer al resto de las
  *  opciones y para cambiarlo habria que limpiar primero.
  *
- *  Las tres listas vienen juntas porque se piden en el mismo momento --al abrir
- *  la pantalla-- y son cortas: 106, 134 y 43 valores. */
+ *  Las cuatro listas vienen juntas porque se piden en el mismo momento --al
+ *  abrir la pantalla-- y son cortas: 106, 134, 43 y 9 valores. */
 export type OpcionesDeFiltro = {
   solicitantes: string[]
   propietarios: string[]
   comunas: string[]
+  tipos_inmueble: string[]
 }
 
 /** La clave de la consulta de opciones, en un solo lugar. Ver el porqué en el

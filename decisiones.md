@@ -3097,3 +3097,15 @@ Reporte Mensual y Vista Directorio solo mostraban plata de negocios ya cerrados 
 
 Ningún gráfico ni tabla existente cambió de forma, de escala o de serie: se verificó explícitamente contra `dev` con un negocio activo de prueba, confirmando que las cifras de lo cerrado (comisión real VP, liquidaciones, montos de venta/arriendo) no se movieron ni un peso.
 
+---
+
+## D-111 · "Tipo inmueble" y "Comuna" del alta manual de Canjes, con búsqueda
+
+En el modal "Nuevo canje", esos dos campos eran texto libre. El usuario pidió que fueran listas desplegables con búsqueda, para no arriesgar variantes ("Depto" vs "DEPARTAMENTO", "Nunoa" vs "Ñuñoa") que después no calzan con el resto de los datos.
+
+**Se reutiliza el mismo patrón que ya resolvía esto para el filtro de Comuna de la lista** (`Canjes.tsx`, el `Autocomplete` alimentado por `GET /api/canjes/filtros`): sugiere mientras se escribe, pero no obliga a elegir uno de la lista. Un `Select` habría sido más estricto, pero un valor legítimo y nuevo --una comuna o un tipo de inmueble que todavía no existe en la base-- tiene que poder cargarse igual, mismo criterio que ya regía para el filtro.
+
+**`GET /api/canjes/filtros` gana una cuarta lista, `tipos_inmueble`**, con el mismo helper `_distintos()` que ya arma `comunas`/`solicitantes`/`propietarios` -- sin consulta nueva ni endpoint nuevo. En `dev` son 9 valores (DEPARTAMENTO, CASA, CASA EN CONDOMINIO, PARCELA, TERRENO - SITIO, LOCAL COMERCIAL, BODEGA, OFICINA, INDUSTRIAL), un universo chico y ya estandarizado por Dataprop.
+
+Verificado contra `dev` (sesión fabricada, sin guardar ningún canje de prueba): escribir "casa" en Tipo inmueble sugiere CASA y CASA EN CONDOMINIO; escribir "vitac" en Comuna sugiere Vitacura; en ambos casos se puede seguir escribiendo un valor no listado y el campo lo acepta igual. Revisado también a 375px: una sola columna, sin desborde horizontal.
+

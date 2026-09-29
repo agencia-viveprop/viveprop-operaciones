@@ -252,14 +252,15 @@ class OpcionesDeFiltro(BaseModel):
     en «solicitante» a alguien que solo aparece como propietario daria una
     sugerencia que no devuelve nada.
 
-    Las tres listas viajan juntas en una sola respuesta. Son listas cortas del
-    mismo origen y se piden todas al abrir la pantalla: tres endpoints serian tres
-    viajes para el mismo momento.
+    Las cuatro listas viajan juntas en una sola respuesta. Son listas cortas del
+    mismo origen y se piden todas al abrir la pantalla: cuatro endpoints serian
+    cuatro viajes para el mismo momento.
     """
 
     solicitantes: list[str]
     propietarios: list[str]
     comunas: list[str]
+    tipos_inmueble: list[str]
 
 
 @router.get("/filtros", response_model=OpcionesDeFiltro)
@@ -271,9 +272,10 @@ def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends
     desaparecer al resto de las opciones y el filtro se volveria un callejon: para
     cambiar de corredor habria que limpiar primero.
 
-    Son 106 solicitantes, 134 propietarios y 43 comunas en produccion, asi que se
-    manda todo y el campo filtra en el navegador mientras se escribe. Paginar o
-    consultar por tecla seria resolver un problema que no existe.
+    Son 106 solicitantes, 134 propietarios, 43 comunas y 9 tipos de inmueble en
+    produccion, asi que se manda todo y el campo filtra en el navegador mientras
+    se escribe. Paginar o consultar por tecla seria resolver un problema que no
+    existe.
     """
     def _distintos(columna):
         return [
@@ -287,6 +289,7 @@ def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends
         solicitantes=_distintos(Canje.corredor_solicitante_nombre),
         propietarios=_distintos(Canje.corredor_propietario_nombre),
         comunas=_distintos(Canje.comuna),
+        tipos_inmueble=_distintos(Canje.tipo_inmueble),
     )
 
 
