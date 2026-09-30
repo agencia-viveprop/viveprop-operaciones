@@ -245,6 +245,25 @@ def listar(
     return db.scalars(query).all()
 
 
+#: Los tipos de inmueble que reconoce Dataprop, aunque todavia no haya ningun
+#: canje cargado con alguno de ellos (a diferencia de comunas/corredores, que
+#: solo tiene sentido sugerir si ya aparecieron en un canje real). Sin esta
+#: base fija, un tipo poco frecuente --OFICINA, BODEGA, INDUSTRIAL-- podia
+#: faltar en la sugerencia simplemente porque todavia no se habia cargado
+#: ningun canje de ese tipo, y la carga manual lo necesita igual.
+TIPOS_INMUEBLE_BASE = [
+    "BODEGA",
+    "CASA",
+    "CASA EN CONDOMINIO",
+    "DEPARTAMENTO",
+    "INDUSTRIAL",
+    "LOCAL COMERCIAL",
+    "OFICINA",
+    "PARCELA",
+    "TERRENO - SITIO",
+]
+
+
 class OpcionesDeFiltro(BaseModel):
     """Los valores que existen, para que los filtros sugieran en vez de adivinar.
 
@@ -272,10 +291,15 @@ def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends
     desaparecer al resto de las opciones y el filtro se volveria un callejon: para
     cambiar de corredor habria que limpiar primero.
 
-    Son 106 solicitantes, 134 propietarios, 43 comunas y 9 tipos de inmueble en
-    produccion, asi que se manda todo y el campo filtra en el navegador mientras
-    se escribe. Paginar o consultar por tecla seria resolver un problema que no
-    existe.
+    Son 106 solicitantes, 134 propietarios y 43 comunas en produccion, asi que se
+    manda todo y el campo filtra en el navegador mientras se escribe. Paginar o
+    consultar por tecla seria resolver un problema que no existe.
+
+    **`tipos_inmueble` no sale solo de la base:** se completa con
+    `TIPOS_INMUEBLE_BASE`, los 9 tipos que reconoce Dataprop, para que uno poco
+    usado siga sugerido aunque ningun canje cargado tenga ese valor todavia.
+    Un valor real que no esta en esa base --un tipo nuevo o una variante-- se
+    sigue sumando igual: es una union, no un reemplazo.
     """
     def _distintos(columna):
         return [
@@ -289,7 +313,7 @@ def opciones_de_filtro(db: Session = Depends(get_db), usuario: Usuario = Depends
         solicitantes=_distintos(Canje.corredor_solicitante_nombre),
         propietarios=_distintos(Canje.corredor_propietario_nombre),
         comunas=_distintos(Canje.comuna),
-        tipos_inmueble=_distintos(Canje.tipo_inmueble),
+        tipos_inmueble=sorted(set(TIPOS_INMUEBLE_BASE) | set(_distintos(Canje.tipo_inmueble))),
     )
 
 

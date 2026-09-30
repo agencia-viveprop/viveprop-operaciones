@@ -3109,3 +3109,15 @@ En el modal "Nuevo canje", esos dos campos eran texto libre. El usuario pidió q
 
 Verificado contra `dev` (sesión fabricada, sin guardar ningún canje de prueba): escribir "casa" en Tipo inmueble sugiere CASA y CASA EN CONDOMINIO; escribir "vitac" en Comuna sugiere Vitacura; en ambos casos se puede seguir escribiendo un valor no listado y el campo lo acepta igual. Revisado también a 375px: una sola columna, sin desborde horizontal.
 
+---
+
+## D-112 · `tipos_inmueble` no sale solo de los datos: se completa con una base fija
+
+A un día de `D-111`, el usuario mostró que "OFICINA" no aparecía como sugerencia al crear un canje manualmente, aunque es un tipo de inmueble real y reconocido por Dataprop.
+
+**La causa: `tipos_inmueble` salía de `_distintos(Canje.tipo_inmueble)`, igual que comunas y corredores** -- un tipo se sugería solo si ya existía al menos un canje cargado con ese valor. Para comunas y corredores esa regla tiene sentido (no hay un catálogo cerrado de corredores). Para tipo de inmueble no: Dataprop reconoce un catálogo chico y estable (9 valores, verificado contra `dev`), y uno poco frecuente --OFICINA, BODEGA, INDUSTRIAL, los tres con un solo canje en `dev`-- podía faltar en producción simplemente porque todavía no se había cargado ninguno, justo cuando la carga manual lo necesita.
+
+**El arreglo: `TIPOS_INMUEBLE_BASE`, una lista fija con los 9 tipos de Dataprop, unida (no reemplazada) con lo que ya existe en la base.** `tipos_inmueble=sorted(set(TIPOS_INMUEBLE_BASE) | set(_distintos(...)))`. Un valor real que no esté en la base fija --un tipo nuevo o una variante que alguien cargue-- se sigue sumando igual, porque es una unión.
+
+Cubierto con dos tests nuevos en `test_canjes_api.py`: uno confirma que los 9 tipos de la base se sugieren aunque la cartera de prueba solo use 3, y otro que un valor cargado fuera de la base (`ESTACIONAMIENTO`) se sigue sumando.
+

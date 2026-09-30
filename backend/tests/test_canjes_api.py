@@ -162,10 +162,43 @@ def test_las_comunas_tambien_se_sugieren(cliente, cartera):
 
 
 def test_los_tipos_de_inmueble_tambien_se_sugieren(cliente, cartera):
-    """Mismo caso que las comunas: DEPARTAMENTO se repite y aparece una sola vez."""
+    """A diferencia de las comunas, los 9 tipos de Dataprop se sugieren siempre
+    --incluidos BODEGA, CASA EN CONDOMINIO, INDUSTRIAL, LOCAL COMERCIAL,
+    PARCELA y TERRENO - SITIO, que ningun canje de la cartera de prueba usa--,
+    ver test_un_tipo_de_inmueble_sin_ningun_canje_igual_se_sugiere.
+    """
     tipos = cliente.get("/api/canjes/filtros").json()["tipos_inmueble"]
 
-    assert tipos == ["CASA", "DEPARTAMENTO", "OFICINA"]
+    assert tipos == [
+        "BODEGA", "CASA", "CASA EN CONDOMINIO", "DEPARTAMENTO", "INDUSTRIAL",
+        "LOCAL COMERCIAL", "OFICINA", "PARCELA", "TERRENO - SITIO",
+    ]
+
+
+def test_un_tipo_de_inmueble_sin_ningun_canje_igual_se_sugiere(cliente, db):
+    """El caso que motiva la base fija: un tipo poco frecuente puede no tener
+    ningun canje cargado todavia y necesita sugerirse igual al crear uno nuevo.
+    """
+    tipos = cliente.get("/api/canjes/filtros").json()["tipos_inmueble"]
+
+    assert "OFICINA" in tipos
+    assert "BODEGA" in tipos
+    assert "INDUSTRIAL" in tipos
+
+
+def test_un_tipo_de_inmueble_nuevo_se_suma_a_la_base_fija(cliente, db):
+    """La base fija no reemplaza lo real: un valor cargado que no esta en la
+    base --un tipo nuevo o una variante-- se sigue sumando."""
+    db.add(Canje(
+        id=9001, fecha_solicitud=SOLICITUD, estado=CanjeEstado.ACTIVO,
+        etapa=CanjeEtapa.EN_REVISION, tipo_inmueble="ESTACIONAMIENTO",
+    ))
+    db.commit()
+
+    tipos = cliente.get("/api/canjes/filtros").json()["tipos_inmueble"]
+
+    assert "ESTACIONAMIENTO" in tipos
+    assert "OFICINA" in tipos
 
 
 def test_las_sugerencias_no_dependen_de_los_filtros(cliente, cartera):

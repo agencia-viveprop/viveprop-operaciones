@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-29 (22 listos + G2 en curso; Tipo inmueble y Comuna del alta manual de Canjes ahora sugieren mientras se escriben)
+**Última actualización:** 2026-09-30 (22 listos + G2 en curso; en Canjes, los tipos de inmueble poco usados --OFICINA, BODEGA, INDUSTRIAL-- ya se sugieren siempre)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-09-30 - Canjes: OFICINA (y el resto de los tipos poco usados) ya se sugiere siempre
+
+Mostraste que "OFICINA" no salía como sugerencia al crear un canje a mano. La causa: la lista de tipos de inmueble solo sugería lo que ya existía en algún canje cargado, y OFICINA (como BODEGA e INDUSTRIAL) tenía muy pocos o ningún canje con ese valor.
+
+Se agregó una base fija con los 9 tipos que reconoce Dataprop, unida a lo que ya hay en la base -- no reemplazada, así que un valor nuevo que alguien cargue se sigue sumando igual (`D-112`).
+
+`pytest` completo salvo el rojo del reloj ya conocido (no relacionado); `npm run build` en cero errores.
 
 ### 2026-09-29 - Canjes: "Tipo inmueble" y "Comuna" del alta manual, con búsqueda
 
