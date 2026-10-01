@@ -14,7 +14,7 @@ from app.models.movimiento import EntityType, Movimiento, TipoMovimiento
 from app.models.negocio import Negocio, NegocioHito, clave_de_orden, Propiedad
 from app.models.usuario import RolUsuario, Usuario
 from app.services import negocios as servicio
-from app.services.movimientos import MovimientoError, crear_movimiento_negocio
+from app.services.movimientos import MovimientoError, crear_movimiento_negocio, eliminar_movimiento_negocio
 from app.services.obligaciones import (
     ObligacionError,
     ObligacionOut,
@@ -969,6 +969,29 @@ def crear_movimiento(
         db.rollback()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
     return _a_movimiento_out(db, movimiento)
+
+
+@router.delete(
+    "/{negocio_id}/movimientos/{movimiento_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+def eliminar_movimiento(
+    negocio_id: int,
+    movimiento_id: int,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(require_role(RolUsuario.operaciones)),
+):
+    """Borra un movimiento mal registrado, igual que en canjes.
+
+    La etapa se vuelve a derivar de lo que queda, y si el borrado era un
+    desenlace (negocio perdido o desistido) sin que quede otro del mismo tipo,
+    las liquidaciones que había tocado vuelven a quedar activas.
+    """
+    try:
+        eliminar_movimiento_negocio(db, negocio_id, movimiento_id)
+    except MovimientoError as exc:
+        db.rollback()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 class AvanceIn(BaseModel):

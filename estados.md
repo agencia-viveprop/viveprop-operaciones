@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-09-30 (22 listos + G2 en curso; en Canjes, los tipos de inmueble poco usados --OFICINA, BODEGA, INDUSTRIAL-- ya se sugieren siempre)
+**Última actualización:** 2026-10-01 (22 listos + G2 en curso; en Negocios, se puede borrar una entrada de la bitácora)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-01 - Negocios: se puede borrar una entrada de la bitácora
+
+Mostraste la ficha de un negocio con varias gestiones de seguimiento y pediste poder borrar una. No existía: se podía registrar movimientos, pero no sacar uno de más, igual que pasaba con los hitos antes de `D-109`.
+
+Se agregó `DELETE /negocios/{id}/movimientos/{id}`, con el mismo criterio que ya usa el borrado de movimientos de canjes: la etapa se recalcula de lo que queda, y si el movimiento borrado era un "negocio perdido" o "desistimiento" sin que quede otro del mismo tipo, las liquidaciones que había tocado vuelven a quedar activas (`D-113`). En la ficha, el mismo tacho con confirmar en el lugar que ya tienen Visitas y los hitos.
+
+`pytest` completo salvo el rojo del reloj ya conocido (no relacionado); `npm run build` en cero errores. Verificado contra `dev`: registrado y borrado un movimiento por la UI real, y probado aparte por API el caso de revertir liquidaciones de un "negocio perdido" borrado.
 
 ### 2026-09-30 - Canjes: OFICINA (y el resto de los tipos poco usados) ya se sugiere siempre
 

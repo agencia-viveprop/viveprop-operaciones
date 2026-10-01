@@ -434,3 +434,65 @@ def crear_movimiento_negocio(
     db.commit()
     db.refresh(movimiento)
     return movimiento
+
+
+def eliminar_movimiento_negocio(db: Session, negocio_id: int, movimiento_id: int) -> None:
+    """Borra un movimiento de negocio y deja el negocio como si nunca se hubiera registrado.
+
+    **Mismo criterio que `eliminar_movimiento_canje`: un borrado de verdad, y lo
+    que arrastra se recalcula, no se adivina.**
+
+    - La etapa se vuelve a derivar de los movimientos que quedan **cuando alguno
+      declara una**. Si ninguno lo hace, la etapa del negocio no se toca --los
+      negocios migrados del histórico no tienen un movimiento que la haya
+      puesto, igual que en canjes.
+    - **Un desenlace (`NEG_PERDIDA`/`NEG_DESISTIMIENTO`) se revierte solo si no
+      queda otro movimiento del mismo tipo.** Aplicarlo pone en ese estado a
+      todas las liquidaciones que estaban `ACTIVO` en ese momento (ver
+      `crear_movimiento_negocio`); no hay forma de saber cuáles tocó *ese*
+      movimiento en particular, pero si no queda ningún otro del mismo tipo, no
+      hay otra causa posible para las que sigan en ese estado, así que
+      revertirlas todas a `ACTIVO` es correcto y no una adivinanza. Si queda
+      otro, no se toca nada: podría haber sido el responsable.
+    """
+    negocio = db.get(Negocio, negocio_id)
+    if negocio is None:
+        raise MovimientoError(f"No existe el negocio {negocio_id}")
+
+    movimiento = db.get(Movimiento, movimiento_id)
+    if (
+        movimiento is None
+        or movimiento.entity_type != EntityType.negocio
+        or movimiento.entity_id != negocio_id
+    ):
+        raise MovimientoError(
+            f"El movimiento {movimiento_id} no pertenece al negocio {negocio_id}."
+        )
+
+    tipo_borrado = movimiento.tipo_movimiento
+    db.delete(movimiento)
+    # Sin el flush, el movimiento borrado seguiria contando en las consultas de
+    # abajo y el recalculo daria lo mismo que antes.
+    db.flush()
+
+    vigente = _etapa_vigente(db, EntityType.negocio, negocio_id)
+    if vigente is not None:
+        negocio.etapa = vigente
+
+    if tipo_borrado in DESENLACES:
+        queda_otro = db.scalar(
+            select(Movimiento.id)
+            .where(
+                Movimiento.entity_type == EntityType.negocio,
+                Movimiento.entity_id == negocio_id,
+                Movimiento.tipo_movimiento == tipo_borrado,
+            )
+            .limit(1)
+        )
+        if queda_otro is None:
+            desenlace = DESENLACES[tipo_borrado]
+            for hito in negocio.hitos:
+                if hito.estado == desenlace:
+                    hito.estado = EstadoNegocio.ACTIVO
+
+    db.commit()

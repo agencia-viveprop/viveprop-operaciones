@@ -19,6 +19,7 @@ TIPOS = [
     ("NEG_E3_PROMESA", "Negociación, reserva y promesa", "E3", 3),
     ("NEG_E7_TERMINADO", "Terminado", "E7", 7),
     ("NEG_PERDIDA", "Negocio perdido", None, 8),
+    ("NEG_DESISTIMIENTO", "Desistimiento", None, 9),
     ("NEG_COMENTARIO", "Comentario general", None, 10),
 ]
 
@@ -196,3 +197,117 @@ def test_movimiento_sobre_un_negocio_inexistente(cliente, pipeline):
         "/api/negocios/9999/movimientos", json={"tipo_movimiento": "NEG_E3_PROMESA"}
     )
     assert r.status_code == 404
+
+
+# --------------------------------------------------- borrar un movimiento
+
+
+def test_borrar_un_movimiento_devuelve_la_etapa_que_habia(cliente, pipeline):
+    """Mismo criterio que en canjes: la etapa se deriva de lo que queda."""
+    negocio = _crear(cliente)
+    cliente.post(f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_E3_PROMESA"})
+    ultimo = cliente.post(
+        f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_E7_TERMINADO"}
+    ).json()
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["etapa"] == "E7"
+
+    r = cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/{ultimo['id']}")
+
+    assert r.status_code == 204
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["etapa"] == "E3"
+
+
+def test_borrar_el_unico_movimiento_no_retrocede_la_etapa(cliente, pipeline):
+    """Si no queda ningún movimiento que la sostenga, la etapa no se toca.
+
+    Igual que con los 297 canjes migrados de Dataprop (`eliminar_movimiento_canje`):
+    la etapa pudo haberla puesto la carga histórica, no un movimiento, así que
+    borrar el único movimiento no es evidencia de que haya que devolverla a la
+    inicial.
+    """
+    negocio = _crear(cliente)
+    avance = cliente.post(
+        f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_E3_PROMESA"}
+    ).json()
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["etapa"] == "E3"
+
+    cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/{avance['id']}")
+
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["etapa"] == "E3"
+
+
+def test_borrar_la_perdida_revierte_las_liquidaciones_que_toco(cliente, pipeline):
+    """Corregir un «negocio perdido» registrado de más también deshace su efecto."""
+    negocio = _crear(cliente, hitos=[
+        {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "estado": "ACTIVO",
+         "valor_negocio": "1000", "moneda": "UF", "pct_lado_comprador": "0.02",
+         "pct_vp_comprador": "0.008", "pct_equipo": "0.10"},
+        {"nombre": "ESCRITURA", "fecha_inicio": "2026-01-02", "estado": "ACTIVO",
+         "valor_negocio": "1000", "moneda": "UF", "pct_lado_comprador": "0.01",
+         "pct_vp_comprador": "0.004", "pct_equipo": "0.10"},
+    ])
+    perdida = cliente.post(
+        f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_PERDIDA"}
+    ).json()
+    hitos = {h["nombre"]: h for h in cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"]}
+    assert hitos["PROMESA"]["estado"] == "PERDIDO"
+    assert hitos["ESCRITURA"]["estado"] == "PERDIDO"
+
+    cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/{perdida['id']}")
+
+    hitos = {h["nombre"]: h for h in cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"]}
+    assert hitos["PROMESA"]["estado"] == "ACTIVO"
+    assert hitos["ESCRITURA"]["estado"] == "ACTIVO"
+
+
+def test_borrar_una_liquidacion_ya_cerrada_no_se_revierte(cliente, pipeline):
+    """Lo que la perdida no tocó al registrarse, borrarla tampoco lo toca."""
+    negocio = _crear(cliente, hitos=[
+        {"nombre": "PROMESA", "fecha_inicio": "2026-01-02", "fecha_cierre": "2026-03-01", "estado": "CERRADO",
+         "valor_negocio": "1000", "moneda": "UF", "pct_lado_comprador": "0.02",
+         "pct_vp_comprador": "0.008", "pct_equipo": "0.10"},
+        {"nombre": "ESCRITURA", "fecha_inicio": "2026-01-02", "estado": "ACTIVO",
+         "valor_negocio": "1000", "moneda": "UF", "pct_lado_comprador": "0.01",
+         "pct_vp_comprador": "0.004", "pct_equipo": "0.10"},
+    ])
+    perdida = cliente.post(
+        f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_PERDIDA"}
+    ).json()
+
+    cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/{perdida['id']}")
+
+    hitos = {h["nombre"]: h for h in cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"]}
+    assert hitos["PROMESA"]["estado"] == "CERRADO"
+    assert hitos["ESCRITURA"]["estado"] == "ACTIVO"
+
+
+def test_si_queda_otra_perdida_no_se_revierte(cliente, pipeline):
+    """No hay forma de saber cuál de las dos lo causó, así que no se toca."""
+    negocio = _crear(cliente)
+    primera = cliente.post(
+        f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_PERDIDA"}
+    ).json()
+    cliente.post(f"/api/negocios/{negocio['id']}/movimientos", json={"tipo_movimiento": "NEG_PERDIDA"})
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"][0]["estado"] == "PERDIDO"
+
+    cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/{primera['id']}")
+
+    assert cliente.get(f"/api/negocios/{negocio['id']}").json()["hitos"][0]["estado"] == "PERDIDO"
+
+
+def test_borrar_un_movimiento_de_otro_negocio_da_error(cliente, pipeline):
+    a = _crear(cliente, codigo="VVP-20")
+    b = _crear(cliente, codigo="VVP-21")
+    mov = cliente.post(f"/api/negocios/{a['id']}/movimientos", json={"tipo_movimiento": "NEG_COMENTARIO"}).json()
+
+    r = cliente.delete(f"/api/negocios/{b['id']}/movimientos/{mov['id']}")
+
+    assert r.status_code == 400
+
+
+def test_borrar_un_movimiento_inexistente_da_error(cliente, pipeline):
+    negocio = _crear(cliente)
+
+    r = cliente.delete(f"/api/negocios/{negocio['id']}/movimientos/9999")
+
+    assert r.status_code == 400

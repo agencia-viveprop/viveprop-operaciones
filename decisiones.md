@@ -3121,3 +3121,18 @@ A un día de `D-111`, el usuario mostró que "OFICINA" no aparecía como sugeren
 
 Cubierto con dos tests nuevos en `test_canjes_api.py`: uno confirma que los 9 tipos de la base se sugieren aunque la cartera de prueba solo use 3, y otro que un valor cargado fuera de la base (`ESTACIONAMIENTO`) se sigue sumando.
 
+---
+
+## D-113 · Se puede borrar una entrada de la bitácora de un negocio
+
+El usuario mostró la ficha de un negocio con varias entradas de bitácora (seguimiento de gestión con un corredor, sobre un alzamiento con el banco) y pidió poder eliminarlas. No existía ninguna forma de hacerlo: `POST /{id}/movimientos` sí, nada para sacar una de más -- mismo vacío que motivó `D-109` para los hitos.
+
+**Se agrega `DELETE /negocios/{negocio_id}/movimientos/{movimiento_id}`, calcando `eliminar_movimiento_canje`:** un borrado de verdad (no un anulado, por las mismas cinco razones ya documentadas para canjes), que recalcula lo que depende de la línea de tiempo en vez de adivinarlo:
+
+- **La etapa se deriva de nuevo de lo que queda**, y si ningún movimiento restante declara una, no se toca -- los negocios con etapa puesta por la carga histórica (`D-082`) no tienen ningún movimiento que la sostenga, igual que los 297 canjes migrados de Dataprop.
+- **Un desenlace (`NEG_PERDIDA`/`NEG_DESISTIMIENTO`) revierte las liquidaciones que había tocado, solo si no queda otro movimiento del mismo tipo.** Aplicarlo pone en ese estado a todas las liquidaciones que estaban `ACTIVO` en ese momento; no hay forma de saber cuáles tocó *ese* movimiento en particular, pero si no queda ningún otro del mismo tipo, no hay otra causa posible para las que sigan en ese estado, así que revertirlas a `ACTIVO` es correcto y no una adivinanza.
+
+Mismo rol que crear un movimiento (`operaciones`) -- no hay razón para pedir más para corregir uno de más que para registrarlo. En la ficha, el mismo patrón de confirmar en el lugar que ya usan Visitas y los hitos de negocio (tacho, Sí/Cancelar).
+
+Verificado contra `dev` (sesión fabricada, dos negocios de prueba borrados al terminar): registrado y borrado un movimiento vía la UI real, confirmado por API que la bitácora queda vacía y la etapa no se mueve sola; y por API directa, registrado un "Negocio perdido" sobre dos liquidaciones activas (las dos pasan a `PERDIDO`), borrado el movimiento, y las dos vuelven a `ACTIVO`.
+

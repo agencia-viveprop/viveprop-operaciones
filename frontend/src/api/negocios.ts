@@ -325,6 +325,17 @@ export function crearMovimiento(
   return json(`/api/negocios/${negocioId}/movimientos`, 'POST', payload)
 }
 
+export async function eliminarMovimiento(negocioId: number, movimientoId: number): Promise<void> {
+  const res = await fetch(`/api/negocios/${negocioId}/movimientos/${movimientoId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `Error ${res.status}`)
+  }
+}
+
 // ------------------------------------------------------------------ reportería
 
 export type Bucket = {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -15,9 +16,9 @@ import {
   Timeline,
   Title,
 } from '@mantine/core'
-import { IconArrowRight, IconMessage } from '@tabler/icons-react'
+import { IconArrowRight, IconMessage, IconTrash } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
-import { crearMovimiento, listarMovimientos, listarTiposMovimiento } from '../api/negocios'
+import { crearMovimiento, eliminarMovimiento, listarMovimientos, listarTiposMovimiento } from '../api/negocios'
 import { fecha } from './negociosFormato'
 
 /** Cuántos días hacia adelante se agenda el próximo paso cuando no se indica uno.
@@ -79,6 +80,9 @@ export default function NegocioPipeline({
   // por defecto, que el backend resuelve como "ahora" y "en tres días".
   const [cuando, setCuando] = useState('')
   const [proxima, setProxima] = useState('')
+  // Qué movimiento está esperando confirmación, igual que en el seguimiento de
+  // canjes: borrar historial no puede pasar con un clic distraído.
+  const [confirmando, setConfirmando] = useState<number | null>(null)
 
   const { data: tipos } = useQuery({
     queryKey: ['tipos-movimiento-negocio'],
@@ -106,6 +110,18 @@ export default function NegocioPipeline({
       queryClient.invalidateQueries({ queryKey: ['movimientos-negocio', negocioId] })
       // El movimiento puede haber movido la etapa y cerrado hitos, así que la
       // ficha y el listado se recargan.
+      queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
+      queryClient.invalidateQueries({ queryKey: ['negocios'] })
+    },
+  })
+
+  const borrar = useMutation({
+    mutationFn: (movimientoId: number) => eliminarMovimiento(negocioId, movimientoId),
+    onSuccess: () => {
+      setConfirmando(null)
+      queryClient.invalidateQueries({ queryKey: ['movimientos-negocio', negocioId] })
+      // Un desenlace borrado puede devolver liquidaciones a activo y la etapa
+      // puede recalcularse, igual que al registrar un movimiento.
       queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
       queryClient.invalidateQueries({ queryKey: ['negocios'] })
     },
@@ -194,6 +210,12 @@ export default function NegocioPipeline({
         </Stack>
       )}
 
+      {borrar.isError && (
+        <Alert color="critical" variant="light" mb="sm">
+          {(borrar.error as Error).message}
+        </Alert>
+      )}
+
       {/* **La lista llega del más reciente al más antiguo**, y `active` cubre a
           todos los ítems a propósito.
           En una línea de tiempo Mantine pinta dos estados: cumplido y todavía no.
@@ -210,12 +232,25 @@ export default function NegocioPipeline({
               key={m.id}
               bullet={m.etapa_resultante ? undefined : <IconMessage size={12} />}
               title={
-                <Group gap="xs">
-                  <Text size="sm" fw={600}>{m.tipo_nombre}</Text>
-                  {m.etapa_resultante && (
-                    <Badge size="xs" variant="light" color="brand">
-                      → {m.etapa_resultante}
-                    </Badge>
+                <Group justify="space-between" wrap="nowrap" gap="xs">
+                  <Group gap="xs">
+                    <Text size="sm" fw={600}>{m.tipo_nombre}</Text>
+                    {m.etapa_resultante && (
+                      <Badge size="xs" variant="light" color="brand">
+                        → {m.etapa_resultante}
+                      </Badge>
+                    )}
+                  </Group>
+                  {puedeEditar && confirmando !== m.id && (
+                    <ActionIcon
+                      variant="subtle"
+                      color="critical"
+                      size="sm"
+                      aria-label={`Borrar ${m.tipo_nombre}`}
+                      onClick={() => setConfirmando(m.id)}
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
                   )}
                 </Group>
               }
@@ -230,6 +265,23 @@ export default function NegocioPipeline({
                 {m.autor_nombre && ` · ${m.autor_nombre}`}
                 {m.proximo_seguimiento && ` · vuelve el ${fecha(m.proximo_seguimiento)}`}
               </Text>
+
+              {confirmando === m.id && (
+                <Group gap="xs" mt={6}>
+                  <Text size="xs">¿Borrar este movimiento?</Text>
+                  <Button
+                    size="compact-xs"
+                    color="critical"
+                    loading={borrar.isPending}
+                    onClick={() => borrar.mutate(m.id)}
+                  >
+                    Sí, borrar
+                  </Button>
+                  <Button size="compact-xs" variant="default" onClick={() => setConfirmando(null)}>
+                    Cancelar
+                  </Button>
+                </Group>
+              )}
             </Timeline.Item>
           ))}
         </Timeline>
