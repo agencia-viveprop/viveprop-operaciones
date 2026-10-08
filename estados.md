@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la duración por etapa de los canjes muestra las cifras aunque haya pocos casos)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la duración por etapa de los canjes cuenta canjes y cuadra con el listado)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: la duración por etapa cuadra con el listado
+
+Mostraste que la tabla no cuadraba con los 7 activos del listado. La columna «Casos» contaba pasos por la etapa --un canje en oferta sumaba también en revisión y en acuerdo-- y el #334, en negocio sin fecha de inicio, no aparecía en ninguna parte. Ahora hay columnas separadas: «Hoy en la etapa», que sale de la etapa de la ficha y cuadra siempre con el listado (los que no tienen fecha de inicio se cuentan y se marcan), y «Ya pasaron». Se eliminó la marca «pocos casos», como pediste (`D-118`).
+
+`pytest` completo salvo el rojo del reloj ya conocido, con un test nuevo para el caso del #334; `npm run build` y `npm run lint` en cero errores. Pantalla revisada con los números de tu captura, en escritorio y a 375 px: «Hoy en la etapa» suma 7.
 
 ### 2026-10-08 - Canjes: la duración por etapa se muestra aunque haya pocos casos
 

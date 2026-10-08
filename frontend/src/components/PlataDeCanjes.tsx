@@ -144,30 +144,20 @@ function dias(n: number): string {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 1 })
 }
 
-/** Las tres celdas de un grupo.
- *
- *  **Con pocos casos se muestran igual los números**, marcados como tales
- *  (`D-117`). La primera versión los escondía tras «Pocos casos (2)», y el
- *  usuario pidió verlos: con siete canjes activos, casi todas las celdas
- *  quedaban así y la tabla no decía nada. La marca avisa que el promedio es el de
- *  esos pocos canjes y no todavía el de la etapa. */
-function CeldasDeGrupo({
-  g,
-  minimo,
-  final,
-}: {
-  g: DuracionDeGrupo
-  minimo: number
-  final: boolean
-}) {
-  if (g.casos === 0 || g.promedio === null || g.mediana === null) {
+/** Promedio, mediana y rango de un grupo. «—» cuando no hay ningún canje con
+ *  días medibles, que no es lo mismo que cero días. */
+function CeldasDeDias({ g }: { g: DuracionDeGrupo }) {
+  if (g.promedio === null || g.mediana === null) {
     return (
-      <Table.Td colSpan={3} c="dimmed">
-        {final ? '— · etapa final' : 'Sin casos'}
-      </Table.Td>
+      <>
+        {[0, 1, 2].map((i) => (
+          <Table.Td key={i} ta={i < 2 ? 'right' : undefined} c="dimmed">
+            —
+          </Table.Td>
+        ))}
+      </>
     )
   }
-  const pocos = g.casos < minimo
   return (
     <>
       <Table.Td ta="right" ff="monospace" fw={600}>
@@ -177,17 +167,28 @@ function CeldasDeGrupo({
         {dias(g.mediana)} d
       </Table.Td>
       <Table.Td c="dimmed">
-        {g.casos}
-        {g.en_curso > 0 && ` · ${g.en_curso} en curso`}
-        {g.casos > 1 && ` · de ${g.minimo} a ${g.maximo} d`}
-        {pocos && (
-          <Text span size="xs" c="warning.7" fw={600}>
-            {' '}
-            · pocos casos
-          </Text>
-        )}
+        {g.minimo === g.maximo ? `${g.minimo} d` : `${g.minimo} a ${g.maximo} d`}
       </Table.Td>
     </>
+  )
+}
+
+/** Cuántos activos están hoy en la etapa. Los que no tienen fecha de inicio se
+ *  cuentan igual --si no, el número dejaría de cuadrar con el listado-- y se dice
+ *  cuántos son, porque no entran al promedio. */
+function HoyEnEtapa({ g }: { g: DuracionDeGrupo }) {
+  return (
+    <Table.Td ta="right">
+      {g.hoy_en_etapa}
+      {g.sin_fecha_de_inicio > 0 && (
+        <Text span size="xs" c="dimmed">
+          {' '}
+          ({g.sin_fecha_de_inicio === g.hoy_en_etapa
+            ? 'sin fecha de inicio'
+            : `${g.sin_fecha_de_inicio} sin fecha de inicio`})
+        </Text>
+      )}
+    </Table.Td>
   )
 }
 
@@ -198,54 +199,59 @@ function CeldasDeGrupo({
  * **Promedio y mediana van juntos** porque el usuario pidió el promedio y el panel
  * de arriba usa mediana por una razón que sigue valiendo: un caso raro corre el
  * promedio. Si los dos se separan mucho, es que hay un canje que se quedó pegado.
+ *
+ * **Los conteos son de canjes y se comparan con el listado** (`D-118`). Antes
+ * había una sola columna «Casos» que contaba pasos por la etapa: un canje en
+ * oferta sumaba también en revisión y en acuerdo, y con siete activos la tabla
+ * mostraba nueve casos.
  */
 function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
   return (
     <Stack gap="xs" mt="sm">
       <Title order={6}>Cuánto dura cada etapa</Title>
       <Text size="xs" c="dimmed">
-        Desde que el canje entra a una etapa hasta que pasa a otra, según la bitácora. En los
-        activos, la etapa en la que están hoy cuenta desde que empezó hasta hoy («en curso»), así
-        que esos casos siguen creciendo. Una cancelación no termina la etapa: un cancelado aporta
-        solo las etapas que alcanzó a terminar. Activos e inactivos según el estado de hoy. Con
-        menos de {d.minimo_casos} casos la cifra se muestra igual, marcada «pocos casos»: es el
-        promedio de esos canjes y todavía no el de la etapa.
+        Desde que el canje entra a una etapa hasta que pasa a otra, según la bitácora.{' '}
+        <strong>Hoy en la etapa</strong> son los activos que están ahí ahora, igual que en el
+        listado; sus días se cuentan hasta hoy, así que van creciendo. <strong>Ya pasaron</strong>{' '}
+        son los que terminaron la etapa y siguieron a otra. Un canje que llegó a una etapa sin que
+        quedara registro de cuándo se cuenta, pero no entra al promedio. Una cancelación no
+        termina la etapa: un cancelado aporta solo las que alcanzó a terminar.
       </Text>
       <div className="tabla-scroll-x">
         <Table withTableBorder withColumnBorders fz="xs" className="tabla-una-linea">
           <Table.Thead>
             <Table.Tr>
               <Table.Th rowSpan={2}>Etapa</Table.Th>
-              <Table.Th colSpan={3} ta="center">
+              <Table.Th colSpan={5} ta="center">
                 Activos
               </Table.Th>
-              <Table.Th colSpan={3} ta="center">
+              <Table.Th colSpan={4} ta="center">
                 Inactivos
               </Table.Th>
             </Table.Tr>
             <Table.Tr>
-              {[0, 1].flatMap((i) => [
-                <Table.Th key={`p${i}`} ta="right">
-                  Promedio
-                </Table.Th>,
-                <Table.Th key={`m${i}`} ta="right">
-                  Mediana
-                </Table.Th>,
-                <Table.Th key={`c${i}`}>Casos</Table.Th>,
-              ])}
+              <Table.Th ta="right">Promedio</Table.Th>
+              <Table.Th ta="right">Mediana</Table.Th>
+              <Table.Th>Rango</Table.Th>
+              <Table.Th ta="right">Hoy en la etapa</Table.Th>
+              <Table.Th ta="right">Ya pasaron</Table.Th>
+              <Table.Th ta="right">Promedio</Table.Th>
+              <Table.Th ta="right">Mediana</Table.Th>
+              <Table.Th>Rango</Table.Th>
+              <Table.Th ta="right">Ya pasaron</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
-            {d.etapas.map((e) => {
-              const final = e.etapa === 'CERRADO'
-              return (
-                <Table.Tr key={e.etapa}>
-                  <Table.Td fw={600}>{e.rotulo}</Table.Td>
-                  <CeldasDeGrupo g={e.activos} minimo={d.minimo_casos} final={final} />
-                  <CeldasDeGrupo g={e.inactivos} minimo={d.minimo_casos} final={final} />
-                </Table.Tr>
-              )
-            })}
+            {d.etapas.map((e) => (
+              <Table.Tr key={e.etapa}>
+                <Table.Td fw={600}>{e.rotulo}</Table.Td>
+                <CeldasDeDias g={e.activos} />
+                <HoyEnEtapa g={e.activos} />
+                <Table.Td ta="right">{e.activos.pasaron}</Table.Td>
+                <CeldasDeDias g={e.inactivos} />
+                <Table.Td ta="right">{e.inactivos.pasaron}</Table.Td>
+              </Table.Tr>
+            ))}
           </Table.Tbody>
         </Table>
       </div>

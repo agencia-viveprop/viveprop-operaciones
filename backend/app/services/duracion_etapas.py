@@ -42,19 +42,24 @@ from sqlalchemy.orm import Session
 from app.models.canje import ETAPA_LABELS, Canje, CanjeEstado, CanjeEtapa
 from app.models.movimiento import EntityType, Movimiento
 
-# Con menos casos que esto la pantalla no muestra promedio: con uno o dos tramos,
-# el número es la anécdota de ese canje y no la duración de la etapa. Viaja en la
-# respuesta para que el texto de la pantalla no lo escriba a mano (`D-048`).
-MINIMO_CASOS = 3
-
-
 class DuracionDeGrupo(BaseModel):
-    """Los tramos de un grupo. `None` es "no hay casos", no cero."""
+    """Los tramos de un grupo. `None` es "no hay casos", no cero.
 
-    casos: int
-    # Cuántos de `casos` son la etapa en curso de un activo, medida hasta hoy.
-    # Esos van a seguir creciendo, así que la pantalla dice cuántos son.
-    en_curso: int
+    **Los conteos son de canjes y se comparan con el listado** (`D-118`). La
+    primera versión mostraba un solo «casos» que contaba pasos por la etapa: un
+    canje en oferta sumaba también en revisión y en acuerdo, y el número no
+    cuadraba con ningún filtro del listado.
+    """
+
+    # Los canjes que terminaron la etapa y siguieron a otra.
+    pasaron: int
+    # Los activos que están hoy en la etapa, según la ficha. Cuadra siempre con
+    # el listado filtrado por estado y etapa. Siempre cero en los inactivos: un
+    # cancelado ya no está en ninguna etapa.
+    hoy_en_etapa: int
+    # Cuántos de `hoy_en_etapa` no tienen fecha de inicio conocida, así que están
+    # contados pero no entran en el promedio. Ver el docstring del módulo.
+    sin_fecha_de_inicio: int
     promedio: float | None
     mediana: float | None
     minimo: int | None
@@ -70,7 +75,6 @@ class DuracionDeEtapa(BaseModel):
 
 class DuracionPorEtapa(BaseModel):
     etapas: list[DuracionDeEtapa]
-    minimo_casos: int
 
 
 def _dia(valor: datetime | date) -> date:
@@ -89,11 +93,13 @@ def _mediana(valores: list[int]) -> float | None:
     return (ordenados[n // 2 - 1] + ordenados[n // 2]) / 2
 
 
-def _grupo(tramos: list[tuple[int, bool]]) -> DuracionDeGrupo:
+def _grupo(tramos: list[tuple[int, bool]], hoy_en_etapa: int = 0) -> DuracionDeGrupo:
     dias = [d for d, _ in tramos]
+    en_curso = sum(1 for _, actual in tramos if actual)
     return DuracionDeGrupo(
-        casos=len(dias),
-        en_curso=sum(1 for _, en_curso in tramos if en_curso),
+        pasaron=len(dias) - en_curso,
+        hoy_en_etapa=hoy_en_etapa,
+        sin_fecha_de_inicio=hoy_en_etapa - en_curso,
         promedio=round(sum(dias) / len(dias), 1) if dias else None,
         mediana=_mediana(dias),
         minimo=min(dias) if dias else None,
@@ -164,10 +170,13 @@ def obtener_duracion_por_etapa(db: Session, hoy: date | None = None) -> Duracion
         estampas[canje_id].append((fecha, etapa))
 
     dias: dict[tuple[CanjeEtapa, bool], list[tuple[int, bool]]] = defaultdict(list)
+    hoy_en: dict[CanjeEtapa, int] = defaultdict(int)
     # Se recorren todos los canjes y no solo los que tienen estampas: un activo
     # sin ninguna puede estar en revisión desde la solicitud.
     for canje in canjes.values():
         activo = canje.estado == CanjeEstado.ACTIVO
+        if activo:
+            hoy_en[canje.etapa] += 1
         for etapa, d, en_curso in tramos_del_canje(
             canje.fecha_solicitud,
             estampas.get(canje.id, []),
@@ -181,10 +190,9 @@ def obtener_duracion_por_etapa(db: Session, hoy: date | None = None) -> Duracion
             DuracionDeEtapa(
                 etapa=etapa,
                 rotulo=ETAPA_LABELS[etapa],
-                activos=_grupo(dias[(etapa, True)]),
+                activos=_grupo(dias[(etapa, True)], hoy_en[etapa]),
                 inactivos=_grupo(dias[(etapa, False)]),
             )
             for etapa in CanjeEtapa
-        ],
-        minimo_casos=MINIMO_CASOS,
+        ]
     )

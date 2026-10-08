@@ -3194,3 +3194,26 @@ Revierte otro punto de `D-115`. Con menos de 3 casos la celda decía «Pocos cas
 **Se muestran promedio, mediana, casos y rango siempre que haya al menos un caso**, y bajo `minimo_casos` la columna de casos agrega «pocos casos» en color de advertencia. El riesgo que motivaba esconderlos --que un promedio de dos canjes se lea como la duración de la etapa-- se cubre con la marca y con el texto del panel, que lo dice. Con un solo caso no se muestra rango: «de 6 a 6 d» no agrega nada.
 
 Sin cambios en el backend: `minimo_casos` sigue viajando en la respuesta y ahora decide la marca en vez de esconder la cifra.
+
+**Revertido por `D-118`**: el usuario pidió eliminar la marca «pocos casos», y `minimo_casos` salió de la respuesta.
+
+---
+
+## D-118 · La duración por etapa cuenta canjes, no pasos por la etapa
+
+El usuario comparó la tabla con el listado de canjes activos y no cuadraban. El listado tenía 7 activos: 3 en revisión, 1 en acuerdo, 2 en oferta y 1 en negocio. La tabla mostraba 5 casos en revisión, 2 en acuerdo, 2 en oferta y ninguno en negocio. También pidió que se fuera la marca «pocos casos» (`D-117`) y no entendía «2 · 1 en curso · de 1 a 9 d».
+
+**Dos causas:**
+
+- **«Casos» contaba pasos por la etapa, no canjes.** Un canje que hoy está en oferta sumaba también en revisión y en acuerdo, si se conocían esas fechas. Los 5 de revisión eran los 3 que están ahí más 2 que ya salieron.
+- **Un activo sin fecha de inicio desaparecía.** El #334 está en negocio sin ningún registro de cuándo entró, así que no tenía días que calcular y no se contaba en ninguna parte.
+
+**Ahora cada grupo trae tres conteos de canjes en vez de uno:**
+
+- `hoy_en_etapa`: los activos que están hoy en la etapa según la ficha. Sale directo de `canjes.etapa`, así que **cuadra siempre con el listado filtrado por estado y etapa**, incluidos los que no tienen fecha de inicio. Siempre cero en inactivos.
+- `sin_fecha_de_inicio`: cuántos de esos están contados pero no entran al promedio. La pantalla lo dice al lado del número.
+- `pasaron`: los que terminaron la etapa y siguieron a otra.
+
+Promedio, mediana y rango no cambian: incluyen a los que ya pasaron y a los que están hoy con inicio conocido, medidos hasta hoy (`D-116`). La pantalla tiene columnas separadas: Promedio, Mediana, Rango, Hoy en la etapa y Ya pasaron en Activos; lo mismo sin «Hoy en la etapa» en Inactivos.
+
+**Se elimina la marca «pocos casos» y `minimo_casos`.** Con los conteos a la vista, el que lee ya sabe sobre cuántos canjes está el promedio.

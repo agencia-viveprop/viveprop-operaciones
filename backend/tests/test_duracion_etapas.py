@@ -146,17 +146,20 @@ def test_activos_e_inactivos_van_separados_y_la_cancelacion_no_cierra(db):
 
     r = _por_etapa(obtener_duracion_por_etapa(db, HOY))
 
-    assert r[CanjeEtapa.EN_REVISION].activos.casos == 1
+    assert r[CanjeEtapa.EN_REVISION].activos.pasaron == 1
     assert r[CanjeEtapa.EN_REVISION].activos.promedio == 4
-    assert r[CanjeEtapa.EN_REVISION].inactivos.casos == 1
+    assert r[CanjeEtapa.EN_REVISION].inactivos.pasaron == 1
     assert r[CanjeEtapa.EN_REVISION].inactivos.promedio == 6
-    assert r[CanjeEtapa.EN_REVISION].activos.en_curso == 0
-    assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.casos == 1
-    assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.en_curso == 1
+    assert r[CanjeEtapa.EN_REVISION].activos.hoy_en_etapa == 0
+    assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.pasaron == 0
+    assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.hoy_en_etapa == 1
+    assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.sin_fecha_de_inicio == 0
     assert r[CanjeEtapa.PROCESO_DE_ACUERDO].activos.promedio == 25
     assert r[CanjeEtapa.PROCESO_DE_ACUERDO].inactivos.promedio == 3
     # El cancelado se cayó en oferta: esa etapa no entra, ni hasta hoy.
-    assert r[CanjeEtapa.EN_OFERTA].inactivos.casos == 0
+    assert r[CanjeEtapa.EN_OFERTA].inactivos.pasaron == 0
+    # Un cancelado no está hoy en ninguna etapa.
+    assert r[CanjeEtapa.EN_OFERTA].inactivos.hoy_en_etapa == 0
     # Las cinco etapas van siempre, en el orden del ciclo.
     assert [e for e in r] == list(CanjeEtapa)
 
@@ -171,4 +174,21 @@ def test_promedio_mediana_y_rango(db):
     db.commit()
 
     g = _por_etapa(obtener_duracion_por_etapa(db, HOY))[CanjeEtapa.EN_REVISION].activos
-    assert (g.casos, g.promedio, g.mediana, g.minimo, g.maximo) == (3, 12.0, 4.0, 2, 30)
+    assert (g.pasaron, g.promedio, g.mediana, g.minimo, g.maximo) == (3, 12.0, 4.0, 2, 30)
+
+
+def test_hoy_en_la_etapa_cuadra_con_el_listado_aunque_falte_el_inicio(db):
+    """Como el #334: está en negocio sin ningún registro de cuándo entró."""
+    db.add(TipoMovimiento(codigo="LLAMADA", entity_type=EntityType.canje, nombre="Llamada"))
+    db.flush()
+    _canje(db, 1, CanjeEstado.ACTIVO, CanjeEtapa.EN_NEGOCIO, _dt(1))
+    # Otro en negocio con inicio conocido.
+    _canje(db, 2, CanjeEstado.ACTIVO, CanjeEtapa.EN_NEGOCIO, _dt(1))
+    _mov(db, 2, _dt(20), "EN_NEGOCIO")
+    _mov(db, 2, _dt(10), "EN_REVISION")
+    db.commit()
+
+    g = _por_etapa(obtener_duracion_por_etapa(db, HOY))[CanjeEtapa.EN_NEGOCIO].activos
+    assert (g.hoy_en_etapa, g.sin_fecha_de_inicio, g.pasaron) == (2, 1, 0)
+    # El promedio es solo del que tiene inicio: del 20 al 30.
+    assert g.promedio == 10

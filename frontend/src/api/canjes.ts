@@ -296,9 +296,12 @@ export type PlazosCanjes = {
 
 /** Los tramos de un grupo. `null` es "no hay casos", no cero. */
 export type DuracionDeGrupo = {
-  casos: number
-  /** Cuántos de `casos` son la etapa en curso de un activo, medida hasta hoy. */
-  en_curso: number
+  /** Canjes que terminaron la etapa y siguieron a otra. */
+  pasaron: number
+  /** Activos que están hoy en la etapa: cuadra con el listado. Cero en inactivos. */
+  hoy_en_etapa: number
+  /** Cuántos de `hoy_en_etapa` no tienen fecha de inicio y no entran al promedio. */
+  sin_fecha_de_inicio: number
   promedio: number | null
   mediana: number | null
   minimo: number | null
@@ -309,8 +312,7 @@ export type DuracionDeGrupo = {
  * Cuánto dura cada etapa, separando los canjes activos de los inactivos
  * (`D-115`). Se reconstruye de la bitácora: un tramo termina cuando el canje pasa
  * a **otra** etapa, nunca cuando se cancela. La etapa en curso de un activo cuenta
- * hasta hoy.
- * `minimo_casos` lo manda la API: bajo eso no se muestra promedio.
+ * hasta hoy. Los conteos son de canjes, no de pasos por la etapa (`D-118`).
  */
 export type DuracionPorEtapa = {
   etapas: {
@@ -319,7 +321,6 @@ export type DuracionPorEtapa = {
     activos: DuracionDeGrupo
     inactivos: DuracionDeGrupo
   }[]
-  minimo_casos: number
 }
 
 /**
