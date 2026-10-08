@@ -7,6 +7,7 @@ import {
   CambioDeMontoError,
   crearHito,
   type Hito,
+  refrescarNegocios,
 } from '../api/negocios'
 import CamposHito from './CamposHito'
 import {
@@ -106,9 +107,7 @@ export default function HitoFormModal({
     },
     onSuccess: () => {
       // La plata cambió: el negocio, el listado y toda la reportería que lo suma.
-      ;['negocio', 'negocios', 'resumen-negocios', 'negocios-por-mes',
-        'bandeja-negocios', 'reporte-mensual', 'reporte-semanal', 'vista-directorio',
-      ].forEach((k) => queryClient.invalidateQueries({ queryKey: [k] }))
+      refrescarNegocios(queryClient)
       onClose()
     },
   })

@@ -15,6 +15,7 @@ import { obtenerEstructuraHistorial } from '../api/estructura'
 import {
   descargarPlantillaHistorial,
   importarHistorial,
+  refrescarNegocios,
   type ResumenHistorial,
 } from '../api/negocios'
 import EstructuraArchivo from './EstructuraArchivo'
@@ -96,15 +97,7 @@ export default function HistorialEtapasModal({
       resetRef.current?.()
       // La carga mueve duraciones y fechas de inicio, así que se recargan la
       // bandeja, el listado y toda la reportería que los usa.
-      for (const key of [
-        'bandeja-negocios',
-        'negocios',
-        'resumen-negocios',
-        'reporte-mensual',
-        'vista-directorio',
-      ]) {
-        queryClient.invalidateQueries({ queryKey: [key] })
-      }
+      refrescarNegocios(queryClient)
     },
   })
 

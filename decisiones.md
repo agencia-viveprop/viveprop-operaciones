@@ -3136,3 +3136,13 @@ Mismo rol que crear un movimiento (`operaciones`) -- no hay razón para pedir m�
 
 Verificado contra `dev` (sesión fabricada, dos negocios de prueba borrados al terminar): registrado y borrado un movimiento vía la UI real, confirmado por API que la bitácora queda vacía y la etapa no se mueve sola; y por API directa, registrado un "Negocio perdido" sobre dos liquidaciones activas (las dos pasan a `PERDIDO`), borrado el movimiento, y las dos vuelven a `ACTIVO`.
 
+
+---
+
+## D-114 · Lo que guarda un negocio recarga todas las pantallas de negocios, desde una sola lista
+
+El usuario mostró que registrar un movimiento en un negocio vencido desde «Qué me toca hoy» no lo sacaba de «Vencido» hasta recargar la página; en Canjes sí se actualiza. Cada formulario de negocios llevaba su propia lista de consultas a recargar, y la de la bitácora (`NegocioPipeline`) no incluía `bandeja-negocios` -- justo la acción que mueve el reloj de la bandeja. Revisando el resto aparecieron el mismo hueco en borrar una liquidación, crear un negocio y la carga masiva, y una lista incompleta en la carga del historial de etapas.
+
+**Se agrega `refrescarNegocios(queryClient)` en `api/negocios.ts`, junto a `CLAVE_OPCIONES_NEGOCIOS`, y todos los que guardan algo de un negocio la llaman** en vez de armar su lista. Recargar de más cuesta una consulta, y React Query solo vuelve a pedir las que están en pantalla; recargar de menos deja una pantalla mostrando algo que ya no es cierto.
+
+Descartado: agregar `bandeja-negocios` solo donde faltaba. Es el arreglo mínimo, pero deja siete listas a mano que se vuelven a despegar con la próxima pantalla nueva, que es justo como se produjo este bug.

@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query'
 export type ModeloNegocio = 'MERCADO_PRIMARIO' | 'SECUNDARIO_CONCENTRADORES' | 'SECUNDARIO_AGENCIA'
 export type EstadoNegocio = 'ACTIVO' | 'CERRADO' | 'PERDIDO' | 'DESISTIDO'
 export type MonedaTipo = 'CLP' | 'UF' | 'OTRA'
@@ -197,6 +198,30 @@ export type OpcionesDeFiltroNegocios = {
  *  negocio con un corredor nuevo no lo agregaba a las sugerencias hasta recargar
  *  la página: la lista quedaba en caché y nadie la tocaba. */
 export const CLAVE_OPCIONES_NEGOCIOS = ['negocios-opciones-filtro']
+
+/** Todas las pantallas que se arman con datos de negocios.
+ *
+ *  **Quien guarda algo de un negocio invalida esta lista entera**, no la suya.
+ *  Cada formulario llevaba su propia lista y la de la bitácora no tenía la
+ *  bandeja: registrar un movimiento en un negocio vencido lo dejaba vencido en
+ *  «Qué me toca hoy» hasta recargar la página. Recargar de más cuesta una
+ *  consulta; recargar de menos deja una pantalla mintiendo. */
+const CLAVES_NEGOCIOS = [
+  'negocio',
+  'negocios',
+  'resumen-negocios',
+  'negocios-por-mes',
+  'bandeja-negocios',
+  'reporte-mensual',
+  'reporte-semanal',
+  'vista-directorio',
+]
+
+export function refrescarNegocios(queryClient: QueryClient): void {
+  for (const clave of CLAVES_NEGOCIOS) {
+    queryClient.invalidateQueries({ queryKey: [clave] })
+  }
+}
 
 export function listarOpcionesDeFiltroNegocios(): Promise<OpcionesDeFiltroNegocios> {
   return fetch('/api/negocios/filtros', { credentials: 'include' }).then(parseOrThrow)

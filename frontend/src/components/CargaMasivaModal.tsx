@@ -17,6 +17,7 @@ import {
   descargarPlantillaNegocios,
   importarNegocios,
   type ResumenCargaNegocios,
+  refrescarNegocios,
 } from '../api/negocios'
 import EstructuraArchivo from './EstructuraArchivo'
 
@@ -63,8 +64,7 @@ export default function CargaMasivaModal({
       setArchivo(null)
       resetRef.current?.()
       if (r.errores.length === 0) {
-        queryClient.invalidateQueries({ queryKey: ['negocios'] })
-        queryClient.invalidateQueries({ queryKey: ['resumen-negocios'] })
+        refrescarNegocios(queryClient)
         // Una carga masiva es justo donde entran corredores nuevos de a varios.
         queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_NEGOCIOS })
       }

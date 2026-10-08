@@ -15,7 +15,7 @@ import {
 } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
-import { buscarPropiedades, CLAVE_OPCIONES_NEGOCIOS, crearNegocio } from '../api/negocios'
+import { buscarPropiedades, CLAVE_OPCIONES_NEGOCIOS, crearNegocio, refrescarNegocios } from '../api/negocios'
 import CamposHito from './CamposHito'
 import { hitoVacio, payloadHito, validarHito } from './hitoForm'
 
@@ -101,7 +101,7 @@ export default function NegocioFormModal({
       })
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['negocios'] })
+      refrescarNegocios(queryClient)
       // El negocio nuevo puede traer un corredor que no estaba: el filtro del
       // listado tiene que ofrecerlo desde ya y no después de recargar.
       queryClient.invalidateQueries({ queryKey: CLAVE_OPCIONES_NEGOCIOS })

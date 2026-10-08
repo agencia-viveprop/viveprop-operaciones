@@ -17,7 +17,7 @@ import {
 } from '@mantine/core'
 import { IconAlertTriangle, IconCheck, IconPencil, IconPlus, IconTrash, IconX } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
-import { eliminarHito, obtenerNegocio, type Hito } from '../api/negocios'
+import { eliminarHito, obtenerNegocio, refrescarNegocios, type Hito } from '../api/negocios'
 import HitoFormModal from './HitoFormModal'
 import NegocioEditarModal from './NegocioEditarModal'
 import NegocioPipeline from './NegocioPipeline'
@@ -254,12 +254,9 @@ export default function NegocioFichaModal({
   })
   const { data: negocio } = consulta
 
-  const alBorrarHito = () => {
-    queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
-    // El listado muestra "Abierto" y el total de comisión: pueden cambiar si
-    // el hito borrado no era el más reciente o tenía plata.
-    queryClient.invalidateQueries({ queryKey: ['negocios'] })
-  }
+  // El listado, la bandeja y los reportes muestran "Abierto" y la comisión:
+  // pueden cambiar si el hito borrado no era el más reciente o tenía plata.
+  const alBorrarHito = () => refrescarNegocios(queryClient)
 
   const nombreCatalogo = (id: number | null) => {
     if (id === null || !catalogos) return '—'

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-01 (22 listos + G2 en curso; en Negocios, se puede borrar una entrada de la bitácora)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; «Qué me toca hoy» de Negocios se actualiza al guardar, sin recargar)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Negocios: «Qué me toca hoy» se actualiza al guardar
+
+Mostraste que al registrar un movimiento en un negocio vencido desde «Qué me toca hoy», la bandeja lo seguía mostrando vencido hasta recargar la página, cosa que en Canjes no pasa. La causa: la bitácora del negocio, al guardar o borrar un movimiento, recargaba la ficha y el listado pero no la bandeja. Borrar una liquidación, crear un negocio y la carga masiva tenían el mismo hueco, con la bandeja o con los reportes.
+
+Ahora todo lo que guarda algo de un negocio recarga la misma lista completa de pantallas (ficha, listado, bandeja, resumen, reportes semanal y mensual, vista directorio), definida en un solo lugar (`D-114`). Solo frontend.
+
+`npm run build` y `npm run lint` en cero errores. **No verificado contra `dev`:** este clon no tiene `.env` ni el entorno del backend, así que no hubo base a la que conectarse.
 
 ### 2026-10-01 - Negocios: se puede borrar una entrada de la bitácora
 

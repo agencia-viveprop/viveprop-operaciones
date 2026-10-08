@@ -18,7 +18,13 @@ import {
 } from '@mantine/core'
 import { IconArrowRight, IconMessage, IconTrash } from '@tabler/icons-react'
 import { obtenerCatalogos } from '../api/catalogos'
-import { crearMovimiento, eliminarMovimiento, listarMovimientos, listarTiposMovimiento } from '../api/negocios'
+import {
+  crearMovimiento,
+  eliminarMovimiento,
+  listarMovimientos,
+  listarTiposMovimiento,
+  refrescarNegocios,
+} from '../api/negocios'
 import { fecha } from './negociosFormato'
 
 /** Cuántos días hacia adelante se agenda el próximo paso cuando no se indica uno.
@@ -108,10 +114,9 @@ export default function NegocioPipeline({
       setCuando('')
       setProxima('')
       queryClient.invalidateQueries({ queryKey: ['movimientos-negocio', negocioId] })
-      // El movimiento puede haber movido la etapa y cerrado hitos, así que la
-      // ficha y el listado se recargan.
-      queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
-      queryClient.invalidateQueries({ queryKey: ['negocios'] })
+      // El movimiento puede haber movido la etapa y cerrado hitos, y reinicia el
+      // reloj de la bandeja: se recarga todo lo que se arma con negocios.
+      refrescarNegocios(queryClient)
     },
   })
 
@@ -122,8 +127,7 @@ export default function NegocioPipeline({
       queryClient.invalidateQueries({ queryKey: ['movimientos-negocio', negocioId] })
       // Un desenlace borrado puede devolver liquidaciones a activo y la etapa
       // puede recalcularse, igual que al registrar un movimiento.
-      queryClient.invalidateQueries({ queryKey: ['negocio', negocioId] })
-      queryClient.invalidateQueries({ queryKey: ['negocios'] })
+      refrescarNegocios(queryClient)
     },
   })
 
