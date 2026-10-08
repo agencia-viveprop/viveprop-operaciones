@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en Inicio, cuánto dura cada etapa de los canjes, activos e inactivos por separado)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en la duración por etapa de los canjes, la etapa en curso de los activos cuenta hasta hoy)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: la etapa en curso cuenta en la duración por etapa
+
+Al ver la tabla publicada pediste que la etapa en curso cuente, con los días desde que empezó. Ahora, en los activos, la etapa en la que está cada canje hoy se mide hasta hoy, siempre que se sepa cuándo empezó; la columna de casos dice cuántos están en curso. En los cancelados la última etapa sigue fuera, porque la cancelación no la termina y crecería para siempre (`D-116`).
+
+`pytest` completo salvo el rojo del reloj ya conocido, con 4 tests nuevos para la etapa en curso; `npm run build` y `npm run lint` en cero errores. Pantalla revisada con datos de ejemplo. Sigue sin verificarse contra una base real.
 
 ### 2026-10-08 - Canjes: cuánto dura cada etapa
 

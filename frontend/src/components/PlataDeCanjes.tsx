@@ -176,7 +176,8 @@ function CeldasDeGrupo({
         {dias(g.mediana)} d
       </Table.Td>
       <Table.Td c="dimmed">
-        {g.casos} · de {g.minimo} a {g.maximo} d
+        {g.casos}
+        {g.en_curso > 0 && ` · ${g.en_curso} en curso`} · de {g.minimo} a {g.maximo} d
       </Table.Td>
     </>
   )
@@ -195,11 +196,11 @@ function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
     <Stack gap="xs" mt="sm">
       <Title order={6}>Cuánto dura cada etapa</Title>
       <Text size="xs" c="dimmed">
-        Desde que el canje entra a una etapa hasta que pasa a otra, según la bitácora. Una
-        cancelación no termina la etapa y la etapa en curso no cuenta, así que esto mide cuánto
-        tarda cada una cuando el canje avanza. Activos e inactivos según el estado de hoy: un
-        cancelado aporta las etapas que alcanzó a terminar. Con menos de {d.minimo_casos} casos
-        no se muestra promedio.
+        Desde que el canje entra a una etapa hasta que pasa a otra, según la bitácora. En los
+        activos, la etapa en la que están hoy cuenta desde que empezó hasta hoy («en curso»), así
+        que esos casos siguen creciendo. Una cancelación no termina la etapa: un cancelado aporta
+        solo las etapas que alcanzó a terminar. Activos e inactivos según el estado de hoy. Con
+        menos de {d.minimo_casos} casos no se muestra promedio.
       </Text>
       <div className="tabla-scroll-x">
         <Table withTableBorder withColumnBorders fz="xs" className="tabla-una-linea">

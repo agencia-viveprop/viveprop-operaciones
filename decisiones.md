@@ -3168,4 +3168,19 @@ El usuario pidió el promedio de duración de cada etapa, calculado desde la fec
 
 **Bajo 3 casos no hay promedio**: la celda dice «Pocos casos (N)». El mínimo viaja en la respuesta (`minimo_casos`) para que el texto no lo escriba a mano (`D-048`). «Cierre» aparece con «— · etapa final» porque nunca termina.
 
-Descartado: medir también la etapa en curso hasta hoy. Ya existe «Llevan abiertos» para eso, y mezclarla con los tramos terminados daría un número que no es ninguna de las dos cosas.
+Descartado en esta primera versión: medir también la etapa en curso hasta hoy. **Revertido el mismo día por el usuario, ver `D-116`.**
+
+---
+
+## D-116 · La etapa en curso de un canje activo sí cuenta, hasta hoy
+
+Revierte un punto de `D-115`. Al ver la tabla publicada, el usuario pidió que la etapa en curso cuente, midiendo los días desde que empezó. La razón que dejaba fuera la etapa en curso --que sigue creciendo y baja el promedio-- es cierta, pero esconde lo que más importa: un canje que lleva 40 días en oferta es un atasco, y sin la etapa en curso la tabla no lo ve.
+
+**Cómo queda:**
+
+- **Solo para los activos.** En un cancelado, la cancelación sigue sin terminar la etapa (`D-115`), y medir su última etapa hasta hoy la haría crecer para siempre. Esa etapa no entra.
+- **Solo si se sabe cuándo empezó**, con las mismas reglas de inicio que los tramos terminados. Además, la etapa de la ficha tiene que coincidir con la última estampa de la bitácora: si no coinciden, la etapa cambió sin dejar rastro y no se sabe desde cuándo está ahí.
+- **Un activo sin ninguna estampa que sigue en «En revisión»** cuenta desde la fecha de solicitud, que es donde arranca todo canje (`D-081`).
+- **La columna de casos dice cuántos están en curso** («5 · 2 en curso · de 1 a 20 d»), porque esos van a seguir creciendo. `en_curso` viaja en la respuesta junto a `casos`.
+
+Una consecuencia visible: **«Cierre» deja de estar vacía en Activos.** Los canjes con etapa de cierre y estado activo (31 en producción a la fecha de `D-104`) ahora aportan los días que llevan en cierre.

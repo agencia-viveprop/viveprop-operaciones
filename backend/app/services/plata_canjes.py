@@ -281,7 +281,7 @@ def obtener_plata_canjes(db: Session, hoy: date | None = None) -> PlataCanjes:
             edad_max=max(edades) if edades else None,
             sin_fecha_de_termino=sin_termino,
         ),
-        duracion_por_etapa=obtener_duracion_por_etapa(db),
+        duracion_por_etapa=obtener_duracion_por_etapa(db, hoy),
         uf_de_hoy=uf_hoy,
         fecha_uf=hoy,
     )

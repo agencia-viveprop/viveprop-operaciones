@@ -10,13 +10,16 @@ estampa de la racha y termina en la primera estampa de **otra** etapa. Varias
 gestiones seguidas en la misma etapa no son transiciones: cada una estampa la
 etapa en la que ya estaba.
 
-Lo que **no** termina un tramo, y por eso no entra en ningún promedio:
+**La cancelación no termina un tramo**, por decisión del usuario. El promedio
+responde cuánto tarda una etapa cuando el canje avanza; mezclarle lo que tarda en
+caerse es la misma confusión que el panel ya evita al separar «Sobreviven antes de
+caerse». Así que la última etapa de un cancelado no entra en ningún promedio.
 
-- **La cancelación**, por decisión del usuario. El promedio responde cuánto tarda
-  una etapa cuando el canje avanza; mezclarle lo que tarda en caerse es la misma
-  confusión que el panel ya evita al separar «Sobreviven antes de caerse».
-- **La etapa en curso.** No tiene término todavía, y contarla hasta hoy bajaría
-  el promedio con duraciones que siguen creciendo.
+**La etapa en curso de un activo sí cuenta, hasta hoy** --también por decisión del
+usuario, que revirtió la primera versión--. Un canje que lleva 40 días en oferta
+es justo el dato que importa, y dejarlo fuera escondía los atascos. Solo vale si
+la etapa de la ficha coincide con la última estampa: si no, la etapa cambió sin
+dejar rastro y no se sabe desde cuándo está ahí.
 
 **El primer tramo de cada canje solo se mide si es «En revisión».** Un canje
 arranca en esa etapa (`D-081`), así que su inicio es la fecha de solicitud. Si la
@@ -46,9 +49,12 @@ MINIMO_CASOS = 3
 
 
 class DuracionDeGrupo(BaseModel):
-    """Los tramos terminados de un grupo. `None` es "no hay casos", no cero."""
+    """Los tramos de un grupo. `None` es "no hay casos", no cero."""
 
     casos: int
+    # Cuántos de `casos` son la etapa en curso de un activo, medida hasta hoy.
+    # Esos van a seguir creciendo, así que la pantalla dice cuántos son.
+    en_curso: int
     promedio: float | None
     mediana: float | None
     minimo: int | None
@@ -83,9 +89,11 @@ def _mediana(valores: list[int]) -> float | None:
     return (ordenados[n // 2 - 1] + ordenados[n // 2]) / 2
 
 
-def _grupo(dias: list[int]) -> DuracionDeGrupo:
+def _grupo(tramos: list[tuple[int, bool]]) -> DuracionDeGrupo:
+    dias = [d for d, _ in tramos]
     return DuracionDeGrupo(
         casos=len(dias),
+        en_curso=sum(1 for _, en_curso in tramos if en_curso),
         promedio=round(sum(dias) / len(dias), 1) if dias else None,
         mediana=_mediana(dias),
         minimo=min(dias) if dias else None,
@@ -94,37 +102,53 @@ def _grupo(dias: list[int]) -> DuracionDeGrupo:
 
 
 def tramos_del_canje(
-    fecha_solicitud: datetime | date, estampas: list[tuple[datetime, str]]
-) -> list[tuple[CanjeEtapa, int]]:
-    """Los tramos terminados de un canje, como `(etapa, días)`.
+    fecha_solicitud: datetime | date,
+    estampas: list[tuple[datetime, str]],
+    etapa_actual: CanjeEtapa | None = None,
+    hoy: date | None = None,
+) -> list[tuple[CanjeEtapa, int, bool]]:
+    """Los tramos de un canje, como `(etapa, días, en_curso)`.
 
     `estampas` va ordenada por fecha. Las etapas que la app ya no conoce --la
     retirada «Recepción», por ejemplo-- se saltan en vez de cortar un tramo.
+
+    Con `hoy` se agrega la etapa en curso, medida hasta hoy, siempre que coincida
+    con `etapa_actual` --la de la ficha-- y su inicio se conozca. Se pasa solo para
+    los activos: un cancelado ya no avanza y su última etapa crecería para siempre.
     """
     validas = {e.value for e in CanjeEtapa}
     secuencia = [(f, CanjeEtapa(e)) for f, e in estampas if e in validas]
+    solicitud = _dia(fecha_solicitud)
+
     if not secuencia:
+        # Sin estampas, un activo que sigue en revisión está ahí desde la
+        # solicitud: es donde arranca todo canje (`D-081`). En otra etapa no se
+        # sabe desde cuándo.
+        if hoy is not None and etapa_actual == CanjeEtapa.EN_REVISION:
+            return [(CanjeEtapa.EN_REVISION, max((hoy - solicitud).days, 0), True)]
         return []
 
-    tramos: list[tuple[CanjeEtapa, int]] = []
-    primera_fecha, actual = secuencia[0]
+    tramos: list[tuple[CanjeEtapa, int, bool]] = []
+    _, actual = secuencia[0]
     # Ver el docstring del módulo: el primer tramo solo tiene inicio conocido si
     # es «En revisión», y entonces arranca con la solicitud.
-    desde: date | None = (
-        _dia(fecha_solicitud) if actual == CanjeEtapa.EN_REVISION else None
-    )
+    desde: date | None = solicitud if actual == CanjeEtapa.EN_REVISION else None
     for fecha, etapa in secuencia[1:]:
         if etapa == actual:
             continue
         if desde is not None:
             # Un movimiento no puede ser anterior a la solicitud (lo valida el
             # registro), pero un dato viejo sí: un negativo no es una duración.
-            tramos.append((actual, max((_dia(fecha) - desde).days, 0)))
+            tramos.append((actual, max((_dia(fecha) - desde).days, 0), False))
         actual, desde = etapa, _dia(fecha)
+
+    if hoy is not None and desde is not None and actual == etapa_actual:
+        tramos.append((actual, max((hoy - desde).days, 0), True))
     return tramos
 
 
-def obtener_duracion_por_etapa(db: Session) -> DuracionPorEtapa:
+def obtener_duracion_por_etapa(db: Session, hoy: date | None = None) -> DuracionPorEtapa:
+    hoy = hoy or datetime.now(timezone.utc).date()
     canjes = {c.id: c for c in db.scalars(select(Canje)).all()}
 
     estampas: dict[int, list[tuple[datetime, str]]] = defaultdict(list)
@@ -139,14 +163,18 @@ def obtener_duracion_por_etapa(db: Session) -> DuracionPorEtapa:
     for canje_id, fecha, etapa in filas:
         estampas[canje_id].append((fecha, etapa))
 
-    dias: dict[tuple[CanjeEtapa, bool], list[int]] = defaultdict(list)
-    for canje_id, suyas in estampas.items():
-        canje = canjes.get(canje_id)
-        if canje is None:
-            continue
+    dias: dict[tuple[CanjeEtapa, bool], list[tuple[int, bool]]] = defaultdict(list)
+    # Se recorren todos los canjes y no solo los que tienen estampas: un activo
+    # sin ninguna puede estar en revisión desde la solicitud.
+    for canje in canjes.values():
         activo = canje.estado == CanjeEstado.ACTIVO
-        for etapa, d in tramos_del_canje(canje.fecha_solicitud, suyas):
-            dias[(etapa, activo)].append(d)
+        for etapa, d, en_curso in tramos_del_canje(
+            canje.fecha_solicitud,
+            estampas.get(canje.id, []),
+            canje.etapa,
+            hoy if activo else None,
+        ):
+            dias[(etapa, activo)].append((d, en_curso))
 
     return DuracionPorEtapa(
         etapas=[
