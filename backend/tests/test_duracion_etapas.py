@@ -80,13 +80,27 @@ def test_activo_sin_estampas_en_revision_cuenta_desde_la_solicitud():
     assert tramos_del_canje(_dt(1), [], CanjeEtapa.EN_OFERTA, HOY) == []
 
 
-def test_primer_tramo_que_no_es_revision_no_tiene_inicio_conocido():
-    # Llegó de Dataprop ya en oferta: no se sabe desde cuándo. Lo que sigue sí.
+def test_primer_tramo_que_no_es_revision_arranca_en_su_primera_estampa():
+    # Llegó de Dataprop ya en oferta: se usa la primera fecha registrada (D-119).
     tramos = tramos_del_canje(
         _dt(1),
         [(_dt(10), "EN_OFERTA"), (_dt(15), "EN_NEGOCIO"), (_dt(22), "CERRADO")],
     )
-    assert tramos == [(CanjeEtapa.EN_NEGOCIO, 7, False)]
+    assert tramos == [
+        (CanjeEtapa.EN_OFERTA, 5, False),
+        (CanjeEtapa.EN_NEGOCIO, 7, False),
+    ]
+
+
+def test_como_el_334_en_negocio_desde_su_primera_estampa():
+    tramos = tramos_del_canje(
+        _dt(9, 7),
+        [(_dt(11), None), (_dt(25), "EN_NEGOCIO"), (_dt(26), "EN_NEGOCIO")],
+        CanjeEtapa.EN_NEGOCIO,
+        HOY,
+    )
+    # Del 25-08 (la «Negociación») hasta hoy, el 30-08.
+    assert tramos == [(CanjeEtapa.EN_NEGOCIO, 5, True)]
 
 
 def test_etapas_retiradas_se_saltan():

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la duración por etapa de los canjes cuenta canjes y cuadra con el listado)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en la duración por etapa, cada etapa arranca en su primera fecha registrada)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: cada etapa arranca en su primera fecha registrada
+
+Mostraste que el #334, marcado «sin fecha de inicio», sí tiene «nueva etapa: En negocio» desde el 25-08-2026. La regla de `D-115` descartaba el primer tramo de un canje si no era «En revisión». Ahora cualquier etapa arranca en su primera fecha registrada, y revisión sigue arrancando en la solicitud. «Sin fecha de inicio» queda solo para un activo cuya etapa no tiene ningún registro en la bitácora (`D-119`).
+
+`pytest` completo salvo el rojo del reloj ya conocido, con un test que reproduce la bitácora del #334; sin cambios en la pantalla.
 
 ### 2026-10-08 - Canjes: la duración por etapa cuadra con el listado
 

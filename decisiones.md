@@ -3217,3 +3217,15 @@ El usuario comparó la tabla con el listado de canjes activos y no cuadraban. El
 Promedio, mediana y rango no cambian: incluyen a los que ya pasaron y a los que están hoy con inicio conocido, medidos hasta hoy (`D-116`). La pantalla tiene columnas separadas: Promedio, Mediana, Rango, Hoy en la etapa y Ya pasaron en Activos; lo mismo sin «Hoy en la etapa» en Inactivos.
 
 **Se elimina la marca «pocos casos» y `minimo_casos`.** Con los conteos a la vista, el que lee ya sabe sobre cuántos canjes está el promedio.
+
+---
+
+## D-119 · El primer tramo de un canje arranca en su primera estampa, sea cual sea la etapa
+
+Revierte la regla de inicio de `D-115`. El primer tramo de cada canje solo se medía si era «En revisión», desde la fecha de solicitud; cualquier otro se descartaba, con el argumento de que un canje que Dataprop mandó ya avanzado pudo estar en esa etapa desde antes de su primera estampa.
+
+El usuario vio el #334 marcado «sin fecha de inicio» y mostró su bitácora: tiene «nueva etapa: En negocio» desde el 25-08-2026, con varias gestiones después. La fecha existía; la regla la descartaba. Pidió usar la primera fecha que se encuentre para cada etapa.
+
+**Ahora:** «En revisión» sigue arrancando en la fecha de solicitud; cualquier otra etapa arranca en su primera estampa. La duración puede quedar algo más corta que la real si el canje ya estaba en esa etapa antes del primer registro, pero es una fecha registrada y no una ausencia.
+
+**Lo que sigue sin inicio:** un activo cuya etapa actual no tiene ninguna estampa en la bitácora --la ficha dice una etapa y ningún movimiento la registró--. Se cuenta en «Hoy en la etapa» con la marca «sin fecha de inicio» y no entra al promedio. El usuario eligió esto frente a usar la fecha de solicitud, que le cargaría a la etapa días que el canje pudo pasar en otras.

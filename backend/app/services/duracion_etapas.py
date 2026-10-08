@@ -21,12 +21,16 @@ es justo el dato que importa, y dejarlo fuera escondía los atascos. Solo vale s
 la etapa de la ficha coincide con la última estampa: si no, la etapa cambió sin
 dejar rastro y no se sabe desde cuándo está ahí.
 
-**El primer tramo de cada canje solo se mide si es «En revisión».** Un canje
-arranca en esa etapa (`D-081`), así que su inicio es la fecha de solicitud. Si la
-primera estampa es otra etapa, no se sabe cuándo entró ahí: puede ser un canje que
-Dataprop mandó ya avanzado --los 605 movimientos migrados no traen etapa-- o uno
-que pasó de revisión sin que nadie lo estampara. Medirlo desde esa primera estampa
-inventaría un inicio, así que queda fuera.
+**El primer tramo de cada canje arranca en su primera estampa** (`D-119`). Si es
+«En revisión», arranca antes: en la fecha de solicitud, porque todo canje empieza
+ahí (`D-081`). La primera versión descartaba el primer tramo cuando no era
+revisión --un canje que Dataprop mandó ya avanzado pudo estar en esa etapa desde
+antes de su primera estampa-- y eso dejaba fuera casos como el #334, en negocio
+con estampas desde el 25-08. El usuario prefirió la primera fecha registrada: la
+duración puede quedar algo corta, pero es una fecha real y no una ausencia.
+
+Un activo **sin ninguna estampa de su etapa actual** sigue sin inicio: se cuenta en
+`hoy_en_etapa` y no entra al promedio.
 
 **Activo o inactivo es el estado de hoy.** Un canje cancelado aporta las etapas
 que alcanzó a terminar antes de caerse: esas duraciones son reales aunque el canje
@@ -135,20 +139,19 @@ def tramos_del_canje(
         return []
 
     tramos: list[tuple[CanjeEtapa, int, bool]] = []
-    _, actual = secuencia[0]
-    # Ver el docstring del módulo: el primer tramo solo tiene inicio conocido si
-    # es «En revisión», y entonces arranca con la solicitud.
-    desde: date | None = solicitud if actual == CanjeEtapa.EN_REVISION else None
+    primera, actual = secuencia[0]
+    # Ver el docstring del módulo: revisión arranca con la solicitud y cualquier
+    # otra etapa con su primera estampa.
+    desde = solicitud if actual == CanjeEtapa.EN_REVISION else _dia(primera)
     for fecha, etapa in secuencia[1:]:
         if etapa == actual:
             continue
-        if desde is not None:
-            # Un movimiento no puede ser anterior a la solicitud (lo valida el
-            # registro), pero un dato viejo sí: un negativo no es una duración.
-            tramos.append((actual, max((_dia(fecha) - desde).days, 0), False))
+        # Un movimiento no puede ser anterior a la solicitud (lo valida el
+        # registro), pero un dato viejo sí: un negativo no es una duración.
+        tramos.append((actual, max((_dia(fecha) - desde).days, 0), False))
         actual, desde = etapa, _dia(fecha)
 
-    if hoy is not None and desde is not None and actual == etapa_actual:
+    if hoy is not None and actual == etapa_actual:
         tramos.append((actual, max((hoy - desde).days, 0), True))
     return tramos
 
