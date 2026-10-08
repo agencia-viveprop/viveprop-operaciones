@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en la duración por etapa, cada etapa arranca en su primera fecha registrada)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la tabla de duración por etapa con anchos de columna parejos)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: anchos parejos en la tabla de duración por etapa
+
+Pediste ajustar los anchos: cada columna tomaba el ancho de su contenido y quedaban disparejas. Ahora la tabla usa anchos fijos --la etapa con el suyo, las cifras parejas, «Hoy en la etapa» algo más ancha por la nota «sin fecha de inicio»-- y las cifras van centradas bajo su encabezado. Solo frontend.
+
+`npm run build` y `npm run lint` en cero errores; revisada con datos de ejemplo a 1650, 1100 y 375 px, sin desborde de página.
 
 ### 2026-10-08 - Canjes: cada etapa arranca en su primera fecha registrada
 

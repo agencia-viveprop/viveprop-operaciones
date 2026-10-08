@@ -151,7 +151,7 @@ function CeldasDeDias({ g }: { g: DuracionDeGrupo }) {
     return (
       <>
         {[0, 1, 2].map((i) => (
-          <Table.Td key={i} ta={i < 2 ? 'right' : undefined} c="dimmed">
+          <Table.Td key={i} ta="center" c="dimmed">
             —
           </Table.Td>
         ))}
@@ -160,13 +160,13 @@ function CeldasDeDias({ g }: { g: DuracionDeGrupo }) {
   }
   return (
     <>
-      <Table.Td ta="right" ff="monospace" fw={600}>
+      <Table.Td ta="center" ff="monospace" fw={600}>
         {dias(g.promedio)} d
       </Table.Td>
-      <Table.Td ta="right" ff="monospace">
+      <Table.Td ta="center" ff="monospace">
         {dias(g.mediana)} d
       </Table.Td>
-      <Table.Td c="dimmed">
+      <Table.Td ta="center" c="dimmed">
         {g.minimo === g.maximo ? `${g.minimo} d` : `${g.minimo} a ${g.maximo} d`}
       </Table.Td>
     </>
@@ -178,7 +178,8 @@ function CeldasDeDias({ g }: { g: DuracionDeGrupo }) {
  *  cuántos son, porque no entran al promedio. */
 function HoyEnEtapa({ g }: { g: DuracionDeGrupo }) {
   return (
-    <Table.Td ta="right">
+    // La nota puede pasar a una segunda línea en vez de invadir la celda vecina.
+    <Table.Td ta="center" style={{ whiteSpace: 'normal' }}>
       {g.hoy_en_etapa}
       {g.sin_fecha_de_inicio > 0 && (
         <Text span size="xs" c="dimmed">
@@ -205,6 +206,11 @@ function HoyEnEtapa({ g }: { g: DuracionDeGrupo }) {
  * oferta sumaba también en revisión y en acuerdo, y con siete activos la tabla
  * mostraba nueve casos.
  */
+// Etapa, luego Activos (promedio, mediana, rango, hoy en la etapa, ya pasaron) e
+// Inactivos (promedio, mediana, rango, ya pasaron). «Hoy en la etapa» es más
+// ancha porque puede llevar la nota «sin fecha de inicio».
+const ANCHOS = [150, 90, 90, 90, 130, 90, 90, 90, 90, 90]
+
 function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
   return (
     <Stack gap="xs" mt="sm">
@@ -218,7 +224,22 @@ function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
         termina la etapa: un cancelado aporta solo las que alcanzó a terminar.
       </Text>
       <div className="tabla-scroll-x">
-        <Table withTableBorder withColumnBorders fz="xs" className="tabla-una-linea">
+        {/* **Anchos fijos**: sin esto cada columna tomaba el ancho de su contenido
+            y el sobrante se repartía sin criterio, así que «Hoy en la etapa»
+            quedaba el doble de ancha que «Mediana». Con `tableLayout: fixed` las
+            proporciones de `ANCHOS` se mantienen a cualquier ancho de pantalla. */}
+        <Table
+          withTableBorder
+          withColumnBorders
+          fz="xs"
+          className="tabla-una-linea"
+          style={{ tableLayout: 'fixed' }}
+        >
+          <colgroup>
+            {ANCHOS.map((w, i) => (
+              <col key={i} style={{ width: w }} />
+            ))}
+          </colgroup>
           <Table.Thead>
             <Table.Tr>
               <Table.Th rowSpan={2}>Etapa</Table.Th>
@@ -230,15 +251,15 @@ function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
               </Table.Th>
             </Table.Tr>
             <Table.Tr>
-              <Table.Th ta="right">Promedio</Table.Th>
-              <Table.Th ta="right">Mediana</Table.Th>
-              <Table.Th>Rango</Table.Th>
-              <Table.Th ta="right">Hoy en la etapa</Table.Th>
-              <Table.Th ta="right">Ya pasaron</Table.Th>
-              <Table.Th ta="right">Promedio</Table.Th>
-              <Table.Th ta="right">Mediana</Table.Th>
-              <Table.Th>Rango</Table.Th>
-              <Table.Th ta="right">Ya pasaron</Table.Th>
+              <Table.Th ta="center">Promedio</Table.Th>
+              <Table.Th ta="center">Mediana</Table.Th>
+              <Table.Th ta="center">Rango</Table.Th>
+              <Table.Th ta="center">Hoy en la etapa</Table.Th>
+              <Table.Th ta="center">Ya pasaron</Table.Th>
+              <Table.Th ta="center">Promedio</Table.Th>
+              <Table.Th ta="center">Mediana</Table.Th>
+              <Table.Th ta="center">Rango</Table.Th>
+              <Table.Th ta="center">Ya pasaron</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -247,9 +268,9 @@ function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
                 <Table.Td fw={600}>{e.rotulo}</Table.Td>
                 <CeldasDeDias g={e.activos} />
                 <HoyEnEtapa g={e.activos} />
-                <Table.Td ta="right">{e.activos.pasaron}</Table.Td>
+                <Table.Td ta="center">{e.activos.pasaron}</Table.Td>
                 <CeldasDeDias g={e.inactivos} />
-                <Table.Td ta="right">{e.inactivos.pasaron}</Table.Td>
+                <Table.Td ta="center">{e.inactivos.pasaron}</Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
