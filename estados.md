@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; «Qué me toca hoy» de Negocios se actualiza al guardar, sin recargar)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en Inicio, cuánto dura cada etapa de los canjes, activos e inactivos por separado)
 
 ---
 
@@ -125,6 +125,14 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: cuánto dura cada etapa
+
+Pediste el promedio de duración de cada etapa en el panel «Cuánto duran los canjes» de Inicio, con todas las etapas en filas y los activos e inactivos en columnas separadas. Es el recuadro que había quedado pendiente en `D-081` por falta de datos.
+
+No hay columnas de inicio y término por etapa, así que se reconstruyen de la bitácora: una etapa empieza con el primer movimiento que deja al canje en ella y termina con el que lo pasa a otra. Por tu decisión, una cancelación no termina la etapa; la etapa en curso tampoco cuenta. Cada celda muestra promedio, mediana, casos y rango; con menos de 3 casos dice «Pocos casos» (`D-115`).
+
+`pytest` completo salvo el rojo del reloj ya conocido (no relacionado), con 7 tests nuevos en `test_duracion_etapas.py`; `npm run build` y `npm run lint` en cero errores. La pantalla se revisó con datos de ejemplo, en escritorio y a 375 px, sin desborde de página. **No verificado contra una base real:** este clon no tiene `.env`, así que las cifras de producción se verán recién al desplegar.
 
 ### 2026-10-08 - Negocios: «Qué me toca hoy» se actualiza al guardar
 

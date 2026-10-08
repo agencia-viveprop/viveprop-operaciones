@@ -3146,3 +3146,26 @@ El usuario mostró que registrar un movimiento en un negocio vencido desde «Qu�
 **Se agrega `refrescarNegocios(queryClient)` en `api/negocios.ts`, junto a `CLAVE_OPCIONES_NEGOCIOS`, y todos los que guardan algo de un negocio la llaman** en vez de armar su lista. Recargar de más cuesta una consulta, y React Query solo vuelve a pedir las que están en pantalla; recargar de menos deja una pantalla mostrando algo que ya no es cierto.
 
 Descartado: agregar `bandeja-negocios` solo donde faltaba. Es el arreglo mínimo, pero deja siete listas a mano que se vuelven a despegar con la próxima pantalla nueva, que es justo como se produjo este bug.
+
+---
+
+## D-115 · Cuánto dura cada etapa de un canje, con activos e inactivos por separado
+
+El usuario pidió el promedio de duración de cada etapa, calculado desde la fecha de inicio hasta la de término de cada una, con todas las etapas en filas y los canjes activos e inactivos en columnas separadas. Es el recuadro que originó `D-081` y que quedó pendiente porque no había datos: 5 tramos terminados en total.
+
+**Las fechas se reconstruyen de la bitácora, no se guardan.** Cada movimiento de canje estampa en `etapa_resultante` dónde quedó el canje. Un tramo es una racha de estampas con la misma etapa: empieza en la primera y termina en la primera estampa de otra etapa. Vive en `app/services/duracion_etapas.py` y viaja dentro de la respuesta de `/canjes/reportes/plata`.
+
+**Lo que no termina un tramo:**
+
+- **La cancelación**, por decisión del usuario. El promedio dice cuánto tarda una etapa cuando el canje avanza; mezclarle lo que tarda en caerse es lo que el panel ya evita al separar «Sobreviven antes de caerse».
+- **La etapa en curso**, que no tiene término. Contarla hasta hoy bajaría el promedio con duraciones que siguen creciendo.
+
+**El primer tramo de cada canje solo se mide si es «En revisión»**, y entonces arranca en la fecha de solicitud: un canje empieza en esa etapa (`D-081`). Si la primera estampa es otra etapa, no se sabe cuándo entró: puede venir de Dataprop ya avanzado --los 605 movimientos migrados no traen etapa-- o haber salido de revisión sin que nadie lo estampara. Medirlo desde esa estampa inventaría un inicio. El costo es que se pierden algunos tramos reales; se prefirió eso a promedios con inicios supuestos.
+
+**Activo o inactivo es el estado de hoy.** Inactivos son los cancelados y los cerrados. Un cancelado aporta las etapas que alcanzó a terminar: esas duraciones son reales aunque el canje se haya caído.
+
+**Promedio y mediana juntos.** El usuario pidió el promedio; la mediana va al lado porque un caso raro corre el promedio, que es la razón por la que el resto del panel usa mediana. Si se separan mucho, hay un canje que se quedó pegado.
+
+**Bajo 3 casos no hay promedio**: la celda dice «Pocos casos (N)». El mínimo viaja en la respuesta (`minimo_casos`) para que el texto no lo escriba a mano (`D-048`). «Cierre» aparece con «— · etapa final» porque nunca termina.
+
+Descartado: medir también la etapa en curso hasta hoy. Ya existe «Llevan abiertos» para eso, y mezclarla con los tramos terminados daría un número que no es ninguna de las dos cosas.

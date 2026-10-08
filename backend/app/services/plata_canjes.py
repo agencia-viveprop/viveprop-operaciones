@@ -55,6 +55,7 @@ from sqlalchemy.orm import Session
 
 from app.models.canje import Canje, CanjeEstado, CanjeEtapa
 from app.services.comisiones_canjes import ComisionCanje, calcular
+from app.services.duracion_etapas import DuracionPorEtapa, obtener_duracion_por_etapa
 from app.services.uf import UFNoDisponible, valor_uf
 
 CERO = Decimal("0")
@@ -119,6 +120,8 @@ class PlataCanjes(BaseModel):
     potencial_desde_oferta: BolsaDeCanjes
     no_concretada: BolsaDeCanjes
     plazos: PlazosCanjes
+    # Cuánto dura cada etapa, separando activos de inactivos (`D-115`).
+    duracion_por_etapa: DuracionPorEtapa
     # La UF con la que se valorizó lo potencial, para que el número sea auditable.
     uf_de_hoy: Decimal
     fecha_uf: date
@@ -278,6 +281,7 @@ def obtener_plata_canjes(db: Session, hoy: date | None = None) -> PlataCanjes:
             edad_max=max(edades) if edades else None,
             sin_fecha_de_termino=sin_termino,
         ),
+        duracion_por_etapa=obtener_duracion_por_etapa(db),
         uf_de_hoy=uf_hoy,
         fecha_uf=hoy,
     )

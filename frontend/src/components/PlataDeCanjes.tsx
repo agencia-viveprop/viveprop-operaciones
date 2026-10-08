@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Group, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { Alert, Group, Paper, SimpleGrid, Stack, Table, Text, Title } from '@mantine/core'
 import { IconInfoCircle } from '@tabler/icons-react'
-import { obtenerPlataCanjes, type BolsaDeCanjes, type PlazosCanjes } from '../api/canjes'
+import {
+  obtenerPlataCanjes,
+  type BolsaDeCanjes,
+  type DuracionDeGrupo,
+  type DuracionPorEtapa,
+  type PlazosCanjes,
+} from '../api/canjes'
 import { clp, fecha as fmtFecha } from './negociosFormato'
 import EstadoConsulta from './EstadoConsulta'
 import StatCard from './StatCard'
@@ -133,6 +139,110 @@ function FueraDeLaComision({ noConcretada }: { noConcretada: BolsaDeCanjes }) {
 }
 
 
+/** Días con un decimal a la chilena: «12,5». */
+function dias(n: number): string {
+  return n.toLocaleString('es-CL', { maximumFractionDigits: 1 })
+}
+
+/** Las tres celdas de un grupo. Bajo el mínimo de casos van fundidas en una sola,
+ *  que dice cuántos hay: un promedio de uno o dos tramos es la anécdota de ese
+ *  canje, no la duración de la etapa. */
+function CeldasDeGrupo({
+  g,
+  minimo,
+  final,
+}: {
+  g: DuracionDeGrupo
+  minimo: number
+  final: boolean
+}) {
+  if (g.casos < minimo || g.promedio === null || g.mediana === null) {
+    return (
+      <Table.Td colSpan={3} c="dimmed">
+        {g.casos === 0
+          ? final
+            ? '— · etapa final'
+            : 'Sin casos'
+          : `Pocos casos (${g.casos})`}
+      </Table.Td>
+    )
+  }
+  return (
+    <>
+      <Table.Td ta="right" ff="monospace" fw={600}>
+        {dias(g.promedio)} d
+      </Table.Td>
+      <Table.Td ta="right" ff="monospace">
+        {dias(g.mediana)} d
+      </Table.Td>
+      <Table.Td c="dimmed">
+        {g.casos} · de {g.minimo} a {g.maximo} d
+      </Table.Td>
+    </>
+  )
+}
+
+/**
+ * Cuánto dura cada etapa, con los activos y los inactivos en columnas separadas
+ * (`D-115`).
+ *
+ * **Promedio y mediana van juntos** porque el usuario pidió el promedio y el panel
+ * de arriba usa mediana por una razón que sigue valiendo: un caso raro corre el
+ * promedio. Si los dos se separan mucho, es que hay un canje que se quedó pegado.
+ */
+function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
+  return (
+    <Stack gap="xs" mt="sm">
+      <Title order={6}>Cuánto dura cada etapa</Title>
+      <Text size="xs" c="dimmed">
+        Desde que el canje entra a una etapa hasta que pasa a otra, según la bitácora. Una
+        cancelación no termina la etapa y la etapa en curso no cuenta, así que esto mide cuánto
+        tarda cada una cuando el canje avanza. Activos e inactivos según el estado de hoy: un
+        cancelado aporta las etapas que alcanzó a terminar. Con menos de {d.minimo_casos} casos
+        no se muestra promedio.
+      </Text>
+      <div className="tabla-scroll-x">
+        <Table withTableBorder withColumnBorders fz="xs" className="tabla-una-linea">
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th rowSpan={2}>Etapa</Table.Th>
+              <Table.Th colSpan={3} ta="center">
+                Activos
+              </Table.Th>
+              <Table.Th colSpan={3} ta="center">
+                Inactivos
+              </Table.Th>
+            </Table.Tr>
+            <Table.Tr>
+              {[0, 1].flatMap((i) => [
+                <Table.Th key={`p${i}`} ta="right">
+                  Promedio
+                </Table.Th>,
+                <Table.Th key={`m${i}`} ta="right">
+                  Mediana
+                </Table.Th>,
+                <Table.Th key={`c${i}`}>Casos</Table.Th>,
+              ])}
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {d.etapas.map((e) => {
+              const final = e.etapa === 'CERRADO'
+              return (
+                <Table.Tr key={e.etapa}>
+                  <Table.Td fw={600}>{e.rotulo}</Table.Td>
+                  <CeldasDeGrupo g={e.activos} minimo={d.minimo_casos} final={final} />
+                  <CeldasDeGrupo g={e.inactivos} minimo={d.minimo_casos} final={final} />
+                </Table.Tr>
+              )
+            })}
+          </Table.Tbody>
+        </Table>
+      </div>
+    </Stack>
+  )
+}
+
 function Plazos({ p }: { p: PlazosCanjes }) {
   return (
     <Stack gap="xs">
@@ -249,6 +359,8 @@ export default function PlataDeCanjes() {
       <FueraDeLaComision noConcretada={data.no_concretada} />
 
       <Plazos p={data.plazos} />
+
+      <DuracionEtapas d={data.duracion_por_etapa} />
     </Stack>
   )
 }

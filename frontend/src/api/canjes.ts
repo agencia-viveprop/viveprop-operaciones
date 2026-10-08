@@ -294,6 +294,31 @@ export type PlazosCanjes = {
   sin_fecha_de_termino: number
 }
 
+/** Los tramos terminados de un grupo. `null` es "no hay casos", no cero. */
+export type DuracionDeGrupo = {
+  casos: number
+  promedio: number | null
+  mediana: number | null
+  minimo: number | null
+  maximo: number | null
+}
+
+/**
+ * Cuánto dura cada etapa, separando los canjes activos de los inactivos
+ * (`D-115`). Se reconstruye de la bitácora: un tramo termina cuando el canje pasa
+ * a **otra** etapa, nunca cuando se cancela, y la etapa en curso no cuenta.
+ * `minimo_casos` lo manda la API: bajo eso no se muestra promedio.
+ */
+export type DuracionPorEtapa = {
+  etapas: {
+    etapa: string
+    rotulo: string
+    activos: DuracionDeGrupo
+    inactivos: DuracionDeGrupo
+  }[]
+  minimo_casos: number
+}
+
 /**
  * **Es plata de Dataprop, no de ViveProp.** ViveProp opera el Centro de Canje a
  * nombre de Dataprop y no percibe nada de él, así que estos montos nunca se suman
@@ -314,6 +339,7 @@ export type PlataCanjes = {
   potencial_desde_oferta: BolsaDeCanjes
   no_concretada: BolsaDeCanjes
   plazos: PlazosCanjes
+  duracion_por_etapa: DuracionPorEtapa
   uf_de_hoy: string
   fecha_uf: string
 }
