@@ -144,9 +144,13 @@ function dias(n: number): string {
   return n.toLocaleString('es-CL', { maximumFractionDigits: 1 })
 }
 
-/** Las tres celdas de un grupo. Bajo el mínimo de casos van fundidas en una sola,
- *  que dice cuántos hay: un promedio de uno o dos tramos es la anécdota de ese
- *  canje, no la duración de la etapa. */
+/** Las tres celdas de un grupo.
+ *
+ *  **Con pocos casos se muestran igual los números**, marcados como tales
+ *  (`D-117`). La primera versión los escondía tras «Pocos casos (2)», y el
+ *  usuario pidió verlos: con siete canjes activos, casi todas las celdas
+ *  quedaban así y la tabla no decía nada. La marca avisa que el promedio es el de
+ *  esos pocos canjes y no todavía el de la etapa. */
 function CeldasDeGrupo({
   g,
   minimo,
@@ -156,17 +160,14 @@ function CeldasDeGrupo({
   minimo: number
   final: boolean
 }) {
-  if (g.casos < minimo || g.promedio === null || g.mediana === null) {
+  if (g.casos === 0 || g.promedio === null || g.mediana === null) {
     return (
       <Table.Td colSpan={3} c="dimmed">
-        {g.casos === 0
-          ? final
-            ? '— · etapa final'
-            : 'Sin casos'
-          : `Pocos casos (${g.casos})`}
+        {final ? '— · etapa final' : 'Sin casos'}
       </Table.Td>
     )
   }
+  const pocos = g.casos < minimo
   return (
     <>
       <Table.Td ta="right" ff="monospace" fw={600}>
@@ -177,7 +178,14 @@ function CeldasDeGrupo({
       </Table.Td>
       <Table.Td c="dimmed">
         {g.casos}
-        {g.en_curso > 0 && ` · ${g.en_curso} en curso`} · de {g.minimo} a {g.maximo} d
+        {g.en_curso > 0 && ` · ${g.en_curso} en curso`}
+        {g.casos > 1 && ` · de ${g.minimo} a ${g.maximo} d`}
+        {pocos && (
+          <Text span size="xs" c="warning.7" fw={600}>
+            {' '}
+            · pocos casos
+          </Text>
+        )}
       </Table.Td>
     </>
   )
@@ -200,7 +208,8 @@ function DuracionEtapas({ d }: { d: DuracionPorEtapa }) {
         activos, la etapa en la que están hoy cuenta desde que empezó hasta hoy («en curso»), así
         que esos casos siguen creciendo. Una cancelación no termina la etapa: un cancelado aporta
         solo las etapas que alcanzó a terminar. Activos e inactivos según el estado de hoy. Con
-        menos de {d.minimo_casos} casos no se muestra promedio.
+        menos de {d.minimo_casos} casos la cifra se muestra igual, marcada «pocos casos»: es el
+        promedio de esos canjes y todavía no el de la etapa.
       </Text>
       <div className="tabla-scroll-x">
         <Table withTableBorder withColumnBorders fz="xs" className="tabla-una-linea">

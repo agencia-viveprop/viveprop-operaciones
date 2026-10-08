@@ -3184,3 +3184,13 @@ Revierte un punto de `D-115`. Al ver la tabla publicada, el usuario pidió que l
 - **La columna de casos dice cuántos están en curso** («5 · 2 en curso · de 1 a 20 d»), porque esos van a seguir creciendo. `en_curso` viaja en la respuesta junto a `casos`.
 
 Una consecuencia visible: **«Cierre» deja de estar vacía en Activos.** Los canjes con etapa de cierre y estado activo (31 en producción a la fecha de `D-104`) ahora aportan los días que llevan en cierre.
+
+---
+
+## D-117 · Con pocos casos, la duración por etapa se muestra igual, marcada
+
+Revierte otro punto de `D-115`. Con menos de 3 casos la celda decía «Pocos casos (N)» y escondía los números. Ya publicada, con solo siete canjes activos, casi toda la tabla quedaba así: 2 casos en acuerdo, 2 en oferta, 1 en acuerdo de los inactivos. El usuario pidió ver los datos aunque sean pocos.
+
+**Se muestran promedio, mediana, casos y rango siempre que haya al menos un caso**, y bajo `minimo_casos` la columna de casos agrega «pocos casos» en color de advertencia. El riesgo que motivaba esconderlos --que un promedio de dos canjes se lea como la duración de la etapa-- se cubre con la marca y con el texto del panel, que lo dice. Con un solo caso no se muestra rango: «de 6 a 6 d» no agrega nada.
+
+Sin cambios en el backend: `minimo_casos` sigue viajando en la respuesta y ahora decide la marca en vez de esconder la cifra.

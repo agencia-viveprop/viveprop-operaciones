@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; en la duración por etapa de los canjes, la etapa en curso de los activos cuenta hasta hoy)
+**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la duración por etapa de los canjes muestra las cifras aunque haya pocos casos)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-08 - Canjes: la duración por etapa se muestra aunque haya pocos casos
+
+Con la tabla en producción, casi todas las celdas decían «Pocos casos» y pediste ver los datos igual. Ahora cualquier celda con al menos un caso muestra promedio, mediana, casos y rango; bajo 3 casos se agrega la marca «pocos casos» (`D-117`). Solo frontend.
+
+`npm run build` y `npm run lint` en cero errores; pantalla revisada con datos de ejemplo que reproducen las celdas de tu captura.
 
 ### 2026-10-08 - Canjes: la etapa en curso cuenta en la duración por etapa
 
