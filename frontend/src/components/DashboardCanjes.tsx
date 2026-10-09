@@ -32,13 +32,11 @@ type Vista = (typeof VISTAS)[number]['value']
  * componentes hermanos en vez de entre dos ramas de un archivo largo.
  */
 export default function DashboardCanjes() {
-  // Arranca en «Todos», que es lo que la pantalla mostraba antes de que existiera
-  // el selector: agregar un filtro no debería cambiar lo que uno ya veía.
-  //
-  // Vale decir que «Activos» es la vista más informativa de las tres: con 293
-  // cancelados de 297, el total por etapa es casi el conteo de cancelados y no
-  // dice nada sobre lo que hay vivo.
-  const [vista, setVista] = useState<Vista>('todos')
+  // Arranca en «Activos» (`D-121`). Al principio arrancaba en «Todos», que era lo
+  // que la pantalla mostraba antes del selector, pero con 235 cancelados de 241
+  // el total por etapa es casi el conteo de cancelados y no dice nada sobre lo
+  // que hay vivo. El usuario pidió que la vista por defecto sea la de activos.
+  const [vista, setVista] = useState<Vista>('activos')
   const consulta = useQuery({
     queryKey: ['reportes-canjes-resumen'],
     queryFn: obtenerResumenCanjes,

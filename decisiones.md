@@ -3249,3 +3249,9 @@ El usuario pidió que un admin pueda entrar y ver la app como si fuera otro usua
 **Queda registro en `vistas_como`**: qué admin, a quién, cuándo empezó y cuándo terminó. Se lista en Usuarios (las últimas 50). `fin` queda nulo si la sesión venció sin que el admin volviera: no se sabe cuándo dejó de mirar, y poner la hora del vencimiento sería inventarla. Las claves foráneas son `SET NULL`, así que borrar una cuenta no borra el rastro.
 
 **En la pantalla**, una franja fija arriba en todas las pantallas («Estás viendo la app como…», con «Volver a mi usuario»), pegada bajo la cabecera del teléfono. Entrar y volver recargan la página entera: lo que hay en caché se pidió como el otro usuario, y una recarga es la forma de no dejar ni una pantalla con esos datos.
+
+---
+
+## D-121 · «Canjes por etapa» arranca en Activos
+
+En el Centro de Control, el selector de «Canjes por etapa» arrancaba en «Todos», porque eso era lo que la pantalla mostraba antes de que existiera el selector (`D-051`). El usuario pidió que arranque en «Activos». Con 235 cancelados de 241 canjes, los totales por etapa son casi el conteo de cancelados y no dicen nada de lo que está vivo; ya el comentario original reconocía que «Activos» era la vista más informativa. Los otros filtros siguen a un clic.

@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-09 (22 listos + G2 en curso; un admin puede ver la app como otro usuario, solo para mirar)
+**Última actualización:** 2026-10-09 (22 listos + G2 en curso; «Canjes por etapa» arranca en Activos)
 
 ---
 
@@ -125,6 +125,10 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-09 - Centro de Control: «Canjes por etapa» arranca en Activos
+
+Pediste que en el Centro de Control los canjes por etapa se muestren por defecto como activos y no como todos. Ahora el selector arranca en «Activos» (`D-121`). Solo frontend; `npm run build` y `npm run lint` en cero errores.
 
 ### 2026-10-09 - Usuarios: un admin puede ver la app como otro usuario
 
