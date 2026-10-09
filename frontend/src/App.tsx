@@ -43,15 +43,19 @@ function App() {
     return <CambioForzado usuario={usuario} />
   }
 
+  // Gerencia solo mira, y un admin viendo como otro también (`D-120`): la API
+  // rechaza cualquier cambio, así que los botones de editar no aparecen.
+  const puedeEditar = usuario.rol !== 'gerencia' && !usuario.vista_de_admin
+
   return (
     <AppShellLayout usuario={usuario}>
       <Routes>
         <Route path="/" element={<Home usuario={usuario} />} />
-        <Route path="/canjes" element={<Canjes puedeEditar={usuario.rol !== 'gerencia'} />} />
-        <Route path="/bandeja" element={<Bandeja puedeEditar={usuario.rol !== 'gerencia'} />} />
-        <Route path="/negocios" element={<Negocios puedeEditar={usuario.rol !== 'gerencia'} />} />
+        <Route path="/canjes" element={<Canjes puedeEditar={puedeEditar} />} />
+        <Route path="/bandeja" element={<Bandeja puedeEditar={puedeEditar} />} />
+        <Route path="/negocios" element={<Negocios puedeEditar={puedeEditar} />} />
         <Route path="/negocios/dashboard" element={<DashboardNegocios />} />
-        <Route path="/visitas" element={<Visitas puedeEditar={usuario.rol !== 'gerencia'} />} />
+        <Route path="/visitas" element={<Visitas puedeEditar={puedeEditar} />} />
         <Route path="/cobranza" element={<Cobranza />} />
         <Route path="/reportes/semanal" element={<ReporteSemanal />} />
         <Route path="/reportes/mensual" element={<ReporteMensual />} />

@@ -2,14 +2,14 @@ import secrets
 import string
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.auth import get_current_user, require_role
+from app.auth import get_current_user, iniciar_vista, require_role
 from app.db import get_db
-from app.models.usuario import RolUsuario, Sesion, Usuario
+from app.models.usuario import RolUsuario, Sesion, Usuario, VistaComo
 from app.security import hash_password
 from app.services import dominios_organizacion as servicio_dominios
 from app.services.intentos_login import ClaveDebil, validar_clave
@@ -240,3 +240,69 @@ def resetear_clave(
     return ClaveReseteada(
         usuario_id=usuario.id, email=usuario.email, clave_temporal=temporal
     )
+
+
+class VistaComoOut(BaseModel):
+    """Una fila del registro de vistas. Los nombres van resueltos y pueden ser
+    nulos si la cuenta se borró: el `SET NULL` conserva la fila sin el autor."""
+
+    id: int
+    admin: str | None
+    usuario: str | None
+    inicio: datetime
+    fin: datetime | None
+
+
+# Las últimas, no todas: el registro crece para siempre y la pantalla es para
+# revisar lo reciente. Las viejas siguen en la base.
+CUANTAS_VISTAS = 50
+
+
+@router.get("/vistas-como", response_model=list[VistaComoOut])
+def listar_vistas_como(db: Session = Depends(get_db)):
+    registros = db.scalars(
+        select(VistaComo).order_by(VistaComo.inicio.desc(), VistaComo.id.desc()).limit(CUANTAS_VISTAS)
+    ).all()
+    return [
+        VistaComoOut(
+            id=r.id,
+            admin=r.admin.nombre if r.admin else None,
+            usuario=r.usuario.nombre if r.usuario else None,
+            inicio=r.inicio,
+            fin=r.fin,
+        )
+        for r in registros
+    ]
+
+
+@router.post("/{usuario_id}/ver-como")
+def ver_como(
+    usuario_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: Usuario = Depends(get_current_user),
+):
+    """Empieza a ver la app como otro usuario, solo para mirar (`D-120`).
+
+    **No se puede ver como otro admin**: vería lo mismo que el admin ya ve, y
+    abriría la puerta a encadenar vistas. Tampoco como uno desactivado, que no
+    puede entrar, ni como uno mismo.
+
+    Para empezar una vista hay que estar en la propia: desde una vista, este
+    endpoint lo rechaza el bloqueo de solo lectura antes de llegar acá.
+    """
+    if usuario_id == admin.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ya estás viendo la app como tú.")
+    visto = db.get(Usuario, usuario_id)
+    if visto is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Usuario no encontrado")
+    if not visto.activo:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No se puede ver como un usuario desactivado.")
+    if visto.rol == RolUsuario.admin:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "No se puede ver como otro admin: verías lo mismo que ya ves.",
+        )
+    iniciar_vista(db, request.state.sesion, admin, visto)
+    db.commit()
+    return {"ok": True}

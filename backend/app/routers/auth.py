@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.auth import (
     COOKIE_NAME,
+    admin_real,
     clear_session_cookie,
     crear_sesion,
     resolver_usuario,
     set_session_cookie,
+    terminar_vista,
 )
 from app.db import get_db
 from app.models.usuario import Sesion, Usuario
@@ -49,6 +51,18 @@ class UsuarioOut(BaseModel):
     debe_cambiar_password: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class AdminDeLaVista(BaseModel):
+    id: int
+    nombre: str
+
+
+class YoOut(UsuarioOut):
+    # Presente solo cuando un admin está viendo la app como este usuario
+    # (`D-120`). El front lo usa para la franja de «Estás viendo como…» y para
+    # saber que no hay que pedir el cambio de clave del otro.
+    vista_de_admin: AdminDeLaVista | None = None
 
 
 @router.post("/login", response_model=UsuarioOut)
@@ -102,15 +116,46 @@ def logout(response: Response, db: Session = Depends(get_db), session_id: str | 
         except ValueError:
             sesion = None
         if sesion is not None:
+            # Salir con una vista abierta la cierra: el registro tiene que decir
+            # cuándo terminó.
+            terminar_vista(db, sesion)
             db.delete(sesion)
             db.commit()
     clear_session_cookie(response)
     return {"ok": True}
 
 
-@router.get("/me", response_model=UsuarioOut)
-def me(usuario: Usuario = Depends(resolver_usuario)):
-    return usuario
+def _yo(usuario: Usuario, admin: Usuario | None) -> YoOut:
+    return YoOut(
+        id=usuario.id,
+        email=usuario.email,
+        nombre=usuario.nombre,
+        rol=usuario.rol.value,
+        # En una vista, la clave temporal es del otro: el admin no la cambia.
+        debe_cambiar_password=usuario.debe_cambiar_password and admin is None,
+        vista_de_admin=AdminDeLaVista(id=admin.id, nombre=admin.nombre) if admin else None,
+    )
+
+
+@router.get("/me", response_model=YoOut)
+def me(request: Request, usuario: Usuario = Depends(resolver_usuario)):
+    return _yo(usuario, admin_real(request))
+
+
+@router.post("/dejar-de-ver-como", response_model=YoOut)
+def dejar_de_ver_como(
+    request: Request,
+    db: Session = Depends(get_db),
+    usuario: Usuario = Depends(resolver_usuario),
+):
+    """Vuelve al propio usuario. Es lo único que se puede hacer en una vista
+    además de mirar (`D-120`)."""
+    admin = admin_real(request)
+    if admin is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No estás viendo la app como otro usuario.")
+    terminar_vista(db, request.state.sesion)
+    db.commit()
+    return _yo(admin, None)
 
 
 class CambiarClaveRequest(BaseModel):

@@ -35,6 +35,7 @@ import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { Link, useLocation } from 'react-router-dom'
 import { logout, type Usuario } from '../api/auth'
 import CambiarClaveModal from './CambiarClaveModal'
+import FranjaVistaComo from './FranjaVistaComo'
 import Logo from './Logo'
 
 export default function AppShellLayout({ usuario, children }: { usuario: Usuario; children: React.ReactNode }) {
@@ -236,9 +237,13 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                <Menu.Item leftSection={<IconKey size={16} />} onClick={() => setCambiarClaveAbierto(true)}>
-                  Cambiar mi contraseña
-                </Menu.Item>
+                {/* En una vista la clave es del otro usuario, y la API igual lo
+                    rechazaría: es solo para mirar (`D-120`). */}
+                {!usuario.vista_de_admin && (
+                  <Menu.Item leftSection={<IconKey size={16} />} onClick={() => setCambiarClaveAbierto(true)}>
+                    Cambiar mi contraseña
+                  </Menu.Item>
+                )}
                 {usuario.rol === 'admin' && (
                   <Menu.Item leftSection={<IconUsers size={16} />} component={Link} to="/admin/usuarios">
                     Administrar usuarios
@@ -264,7 +269,10 @@ export default function AppShellLayout({ usuario, children }: { usuario: Usuario
         </Stack>
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main>
+        <FranjaVistaComo usuario={usuario} />
+        {children}
+      </AppShell.Main>
       <CambiarClaveModal opened={cambiarClaveAbierto} onClose={() => setCambiarClaveAbierto(false)} />
     </AppShell>
   )

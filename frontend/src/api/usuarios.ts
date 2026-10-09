@@ -114,3 +114,25 @@ export function desactivarDominio(id: number) {
     credentials: 'include',
   }).then(parseOrThrow)
 }
+
+/** Empieza a ver la app como otro usuario, solo para mirar (`D-120`). */
+export function verComo(id: number): Promise<{ ok: boolean }> {
+  return fetch(`/api/admin/usuarios/${id}/ver-como`, {
+    method: 'POST',
+    credentials: 'include',
+  }).then(parseOrThrow)
+}
+
+/** Una fila del registro de vistas. `fin` nulo: la sesión venció sin que el
+ *  admin volviera a su usuario, o la vista sigue abierta. */
+export type VistaComo = {
+  id: number
+  admin: string | null
+  usuario: string | null
+  inicio: string
+  fin: string | null
+}
+
+export function listarVistasComo(): Promise<VistaComo[]> {
+  return fetch('/api/admin/usuarios/vistas-como', { credentials: 'include' }).then(parseOrThrow)
+}

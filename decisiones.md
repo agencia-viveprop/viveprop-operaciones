@@ -3229,3 +3229,23 @@ El usuario vio el #334 marcado «sin fecha de inicio» y mostró su bitácora: t
 **Ahora:** «En revisión» sigue arrancando en la fecha de solicitud; cualquier otra etapa arranca en su primera estampa. La duración puede quedar algo más corta que la real si el canje ya estaba en esa etapa antes del primer registro, pero es una fecha registrada y no una ausencia.
 
 **Lo que sigue sin inicio:** un activo cuya etapa actual no tiene ninguna estampa en la bitácora --la ficha dice una etapa y ningún movimiento la registró--. Se cuenta en «Hoy en la etapa» con la marca «sin fecha de inicio» y no entra al promedio. El usuario eligió esto frente a usar la fecha de solicitud, que le cargaría a la etapa días que el canje pudo pasar en otras.
+
+---
+
+## D-120 · Un admin puede ver la app como otro usuario, solo para mirar
+
+El usuario pidió que un admin pueda entrar y ver la app como si fuera otro usuario, desde el módulo Usuarios. Sirve para revisar qué ve gerencia --que incluye a usuarios de Dataprop-- o para entender un reporte de alguien de operaciones sin pedirle la pantalla.
+
+**La vista vive en la sesión del admin, no en una sesión nueva.** `sesiones.viendo_como_id` guarda a quién está viendo. `resolver_usuario` devuelve ese usuario y deja al admin en `request.state.admin_real`, así que el menú, las rutas y cada permiso de la API responden exactamente como para esa persona, sin tocar ningún endpoint. Nunca existe una sesión a nombre del otro, no hace falta su contraseña, y salir o volver termina la vista.
+
+**Es solo para mirar** (decisión del usuario). La bitácora y las obligaciones guardan quién hizo cada cosa, y un cambio hecho desde la vista quedaría a nombre del otro usuario. Por eso `resolver_usuario` rechaza cualquier método que no sea de lectura, en un solo lugar, salvo `POST /auth/dejar-de-ver-como`. La pantalla además esconde los botones de editar (`puedeEditar`) y la opción de cambiar contraseña, pero la guarda es la de la API. Descartado: permitir actuar guardando también al autor real en cada registro, que pedía tocar todas las tablas con autor.
+
+**Solo como operaciones o gerencia** (decisión del usuario): ver como otro admin no muestra nada distinto, y abriría la puerta a encadenar vistas. Tampoco como un usuario desactivado ni como uno mismo. Para empezar otra vista hay que volver primero: desde una vista el bloqueo de solo lectura rechaza el intento.
+
+**Se revalida en cada request.** Si al admin le quitan el rol, o el usuario visto se desactiva o pasa a admin, la vista termina sola.
+
+**La clave temporal del visto no bloquea la vista.** Es de la otra persona: el admin no la va a cambiar por ella, así que `get_current_user` no la exige y `/me` informa `debe_cambiar_password` en falso mientras dura la vista.
+
+**Queda registro en `vistas_como`**: qué admin, a quién, cuándo empezó y cuándo terminó. Se lista en Usuarios (las últimas 50). `fin` queda nulo si la sesión venció sin que el admin volviera: no se sabe cuándo dejó de mirar, y poner la hora del vencimiento sería inventarla. Las claves foráneas son `SET NULL`, así que borrar una cuenta no borra el rastro.
+
+**En la pantalla**, una franja fija arriba en todas las pantallas («Estás viendo la app como…», con «Volver a mi usuario»), pegada bajo la cabecera del teléfono. Entrar y volver recargan la página entera: lo que hay en caché se pidió como el otro usuario, y una recarga es la forma de no dejar ni una pantalla con esos datos.

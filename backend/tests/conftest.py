@@ -26,7 +26,7 @@ from app.models.canje import Canje
 from app.models.catalogo import Catalogo, Etapa
 from app.models.movimiento import Movimiento, TipoMovimiento
 from app.models.intento_login import IntentoLogin
-from app.models.usuario import RolUsuario, Sesion, Usuario
+from app.models.usuario import RolUsuario, Sesion, Usuario, VistaComo
 from app.models.negocio import (
     Negocio,
     NegocioHito,
@@ -56,7 +56,7 @@ def db():
     for tabla in (
         Usuario, Sesion, IntentoLogin, Canje, UFDiaria, Catalogo, Etapa,
         Propiedad, Negocio, NegocioHito, Obligacion, ObligacionAvance,
-        TipoMovimiento, Movimiento, Visita,
+        TipoMovimiento, Movimiento, Visita, VistaComo,
     ):
         tabla.__table__.create(engine)
 

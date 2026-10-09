@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-08 (22 listos + G2 en curso; la tabla de duración por etapa con anchos de columna parejos)
+**Última actualización:** 2026-10-09 (22 listos + G2 en curso; un admin puede ver la app como otro usuario, solo para mirar)
 
 ---
 
@@ -125,6 +125,12 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-09 - Usuarios: un admin puede ver la app como otro usuario
+
+Pediste que un admin pueda ver la app como si fuera otro usuario, desde Usuarios. Cada fila tiene un botón «Ver como»: la sesión del admin pasa a responder como esa persona --mismo menú, mismos permisos-- con una franja fija arriba y «Volver a mi usuario». Es solo para mirar, y solo como usuarios de operaciones o gerencia, como elegiste. Queda registro de cada vista (admin, a quién, desde y hasta), visible en Usuarios (`D-120`). Incluye la migración `e3b9c1d7a4f2`, que Render aplica sola al desplegar.
+
+`pytest` completo salvo el rojo del reloj ya conocido, con 11 tests nuevos en `test_ver_como.py` que usan la cadena real de cookie y sesión; `npm run build` y `npm run lint` en cero errores; SQL de la migración revisado en modo offline contra Postgres. Flujo completo probado en el navegador contra el backend real sobre una base SQLite temporal (borrada al terminar): entrar como un usuario de gerencia, ver la franja y el menú sin Admin, volver, y ver el registro con inicio y término; también a 375 px, con la franja visible al hacer scroll. No se probó contra `dev` ni producción.
 
 ### 2026-10-08 - Canjes: anchos parejos en la tabla de duración por etapa
 

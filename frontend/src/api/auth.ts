@@ -11,6 +11,10 @@ export type Usuario = {
   /** Clave temporal puesta por un admin. Mientras sea true, la API devuelve 403
    *  en todo salvo ver quién soy, cambiar la clave y salir. */
   debe_cambiar_password: boolean
+  /** Presente cuando un admin está viendo la app como este usuario (`D-120`):
+   *  todo lo demás de este objeto es del usuario visto, y la vista es solo para
+   *  mirar. */
+  vista_de_admin: { id: number; nombre: string } | null
 }
 
 async function parseOrThrow(res: Response) {
@@ -45,4 +49,11 @@ export function cambiarClave(claveActual: string, claveNueva: string): Promise<v
     credentials: 'include',
     body: JSON.stringify({ clave_actual: claveActual, clave_nueva: claveNueva }),
   }).then(parseOrThrow)
+}
+
+/** Termina la vista como otro usuario y vuelve al propio (`D-120`). */
+export function dejarDeVerComo(): Promise<Usuario> {
+  return fetch('/api/auth/dejar-de-ver-como', { method: 'POST', credentials: 'include' }).then(
+    parseOrThrow,
+  )
 }

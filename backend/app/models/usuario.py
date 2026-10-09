@@ -57,7 +57,11 @@ class Usuario(Base):
         DateTime(timezone=True), nullable=True
     )
 
-    sesiones: Mapped[list["Sesion"]] = relationship(back_populates="usuario", cascade="all, delete-orphan")
+    # `foreign_keys` porque la sesión apunta dos veces a usuarios: a su dueño y,
+    # en una vista de admin, al usuario que está viendo (`D-120`).
+    sesiones: Mapped[list["Sesion"]] = relationship(
+        back_populates="usuario", cascade="all, delete-orphan", foreign_keys="Sesion.usuario_id"
+    )
     # `joined` porque el listado de usuarios muestra quién autorizó a cada
     # externo: sin esto son N consultas para una pantalla de una tabla.
     externo_autorizado_por: Mapped["Usuario | None"] = relationship(
@@ -81,5 +85,41 @@ class Sesion(Base):
     expira_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ip: Mapped[str | None] = mapped_column(String, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
+    # El usuario que un admin está viendo desde esta sesión, o nulo (`D-120`).
+    # Vive en la sesión del admin y no en una sesión aparte: así nunca existe una
+    # sesión a nombre del otro usuario, y cerrar la del admin termina la vista.
+    # `SET NULL`: si se borra ese usuario, la sesión del admin sigue viva y vuelve
+    # a ser suya.
+    viendo_como_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
 
-    usuario: Mapped["Usuario"] = relationship(back_populates="sesiones")
+    usuario: Mapped["Usuario"] = relationship(back_populates="sesiones", foreign_keys=[usuario_id])
+
+
+class VistaComo(Base):
+    """El registro de cada vez que un admin vio la app como otro usuario (`D-120`).
+
+    Gerencia incluye a usuarios de Dataprop, así que tiene que quedar constancia
+    de quién miró qué como ellos y cuándo. `fin` queda nulo si la sesión venció
+    sin que el admin volviera a su usuario: no se sabe cuándo dejó de mirar, y
+    poner la hora del vencimiento sería inventarla.
+    """
+
+    __tablename__ = "vistas_como"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # `SET NULL` en los dos: borrar una cuenta no puede borrar el rastro.
+    admin_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+    usuario_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios.id", ondelete="SET NULL"), nullable=True
+    )
+    # Sin clave foránea: la sesión se borra al salir, y el registro se queda.
+    sesion_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(), nullable=True)
+    inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    fin: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    admin: Mapped["Usuario | None"] = relationship(foreign_keys=[admin_id], lazy="joined")
+    usuario: Mapped["Usuario | None"] = relationship(foreign_keys=[usuario_id], lazy="joined")

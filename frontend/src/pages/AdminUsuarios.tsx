@@ -17,18 +17,20 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core'
-import { IconKey } from '@tabler/icons-react'
+import { IconEye, IconKey } from '@tabler/icons-react'
 import {
   actualizarUsuario,
   crearUsuario,
   listarDominios,
   listarUsuarios,
   resetearClave,
+  verComo,
   type ClaveReseteada,
   type RolUsuario,
 } from '../api/usuarios'
 import PageHeader from '../components/PageHeader'
 import DominiosOrganizacion from '../components/DominiosOrganizacion'
+import RegistroVistasComo from '../components/RegistroVistasComo'
 import { fecha } from '../components/negociosFormato'
 
 const ROLES: { value: RolUsuario; label: string }[] = [
@@ -88,6 +90,23 @@ export default function AdminUsuarios() {
         else throw error
       })
 
+  /** Empieza la vista y recarga la página entera desde el inicio: todo lo que
+   *  hay en caché se pidió como admin, y la vista tiene que mostrar solo lo que
+   *  ve el otro usuario (`D-120`). */
+  const empezarVista = useMutation({
+    mutationFn: verComo,
+    onSuccess: () => window.location.assign('/'),
+  })
+
+  /** Por qué no se puede ver como alguien, o `null` si se puede. Lo mismo que
+   *  exige la API, dicho antes del clic. */
+  const motivoSinVista = (u: { rol: RolUsuario; activo: boolean }) =>
+    u.rol === 'admin'
+      ? 'No se puede ver como un admin: verías lo mismo que ya ves.'
+      : !u.activo
+        ? 'No se puede ver como un usuario desactivado.'
+        : null
+
   const resetear = useMutation({
     mutationFn: resetearClave,
     onSuccess: (r) => {
@@ -113,6 +132,7 @@ export default function AdminUsuarios() {
             <Table.Th>Rol</Table.Th>
             <Table.Th>Activo</Table.Th>
             <Table.Th>Contraseña</Table.Th>
+            <Table.Th>Ver como</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -182,11 +202,40 @@ export default function AdminUsuarios() {
                     )}
                   </Group>
                 </Table.Td>
+                <Table.Td>
+                  <Tooltip
+                    label={motivoSinVista(u) ?? 'Ver la app como esta persona, solo para mirar'}
+                    multiline
+                    w={240}
+                  >
+                    {/* El `span` deja que el tooltip funcione sobre un botón
+                        deshabilitado, que no recibe eventos del mouse. */}
+                    <span>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        color="dark"
+                        leftSection={<IconEye size={14} />}
+                        disabled={motivoSinVista(u) !== null}
+                        loading={empezarVista.isPending && empezarVista.variables === u.id}
+                        onClick={() => empezarVista.mutate(u.id)}
+                      >
+                        Ver como
+                      </Button>
+                    </span>
+                  </Tooltip>
+                </Table.Td>
               </Table.Tr>
             ))}
         </Table.Tbody>
       </Table>
       </div>
+
+      {empezarVista.isError && (
+        <Alert color="critical" variant="light">
+          {(empezarVista.error as Error).message}
+        </Alert>
+      )}
 
       {resetear.isError && (
         <Alert color="critical" variant="light">
@@ -195,6 +244,8 @@ export default function AdminUsuarios() {
       )}
 
       <DominiosOrganizacion />
+
+      <RegistroVistasComo />
 
       {/* La temporal se muestra una sola vez: lo que queda guardado es su hash.
           Si se cierra sin copiarla, hay que resetear de nuevo. */}
