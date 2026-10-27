@@ -693,7 +693,7 @@ def test_la_guarda_mira_los_siete_montos_no_solo_la_comision_real(
 
 
 def test_el_listado_ordena_por_numero_y_no_alfabeticamente(cliente, base_negocios):
-    """`VVP-10` no puede ir antes de `VVP-2`.
+    """Del más nuevo al más antiguo, y por número (`D-122`).
 
     Ordenar el codigo como texto compara caracter por caracter, asi que el "1" de
     VVP-10 gana al "2" de VVP-2 y la lista sale VVP-1, VVP-10, VVP-11 ... VVP-2.
@@ -704,7 +704,7 @@ def test_el_listado_ordena_por_numero_y_no_alfabeticamente(cliente, base_negocio
 
     codigos = [n["codigo"] for n in cliente.get("/api/negocios").json()]
 
-    assert codigos == ["VVP-1", "VVP-2", "VVP-3", "VVP-10", "VVP-11"]
+    assert codigos == ["VVP-11", "VVP-10", "VVP-3", "VVP-2", "VVP-1"]
 
 
 # --------------------------------------------- el filtro por corredor

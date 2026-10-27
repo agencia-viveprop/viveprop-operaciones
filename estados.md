@@ -3,7 +3,7 @@
 Registro del avance en la ejecución de [plan_desarrollo.md](plan_desarrollo.md).
 Decisiones tomadas durante la ejecución: [decisiones.md](decisiones.md). Diseño del esquema: [diseno_modelo_datos.md](diseno_modelo_datos.md).
 
-**Última actualización:** 2026-10-09 (22 listos + G2 en curso; «Canjes por etapa» arranca en Activos)
+**Última actualización:** 2026-10-27 (22 listos + G2 en curso; el listado de Negocios va del más nuevo al más antiguo)
 
 ---
 
@@ -125,6 +125,10 @@ Entradas en orden inverso (lo más reciente arriba). Formato:
 ### AAAA-MM-DD · Sprint N (código) — <estado nuevo>
 Qué se hizo. Qué quedó verificado. Qué quedó pendiente o cambió respecto del plan.
 ```
+
+### 2026-10-27 - Negocios: el listado va del más nuevo al más antiguo
+
+Pediste ver los negocios del más nuevo al más antiguo. Ahora el listado se ordena por código de mayor a menor (VVP-20 primero), que es el criterio que elegiste frente a la fecha de inicio (`D-122`). `pytest` completo salvo el rojo del reloj ya conocido, con el test del orden actualizado.
 
 ### 2026-10-09 - Centro de Control: «Canjes por etapa» arranca en Activos
 

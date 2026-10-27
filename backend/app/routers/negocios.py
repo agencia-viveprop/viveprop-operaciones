@@ -674,7 +674,12 @@ def listar(
         consulta = consulta.where(Negocio.corredor_agente.ilike(f"%{corredor}%"))
 
     # Por número y no como texto: alfabéticamente `VVP-10` va antes de `VVP-2`.
-    negocios = sorted(db.scalars(consulta).all(), key=lambda n: clave_de_orden(n.codigo))
+    # Del más nuevo al más antiguo (`D-122`): el código se asigna al registrar el
+    # negocio, así que el número más alto es el último que entró. Se ordena por
+    # código y no por fecha de inicio porque así lo eligió el usuario.
+    negocios = sorted(
+        db.scalars(consulta).all(), key=lambda n: clave_de_orden(n.codigo), reverse=True
+    )
     if estado is not None:
         negocios = [n for n in negocios if any(h.estado == estado for h in n.hitos)]
 

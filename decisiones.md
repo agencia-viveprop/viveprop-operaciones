@@ -3255,3 +3255,11 @@ El usuario pidió que un admin pueda entrar y ver la app como si fuera otro usua
 ## D-121 · «Canjes por etapa» arranca en Activos
 
 En el Centro de Control, el selector de «Canjes por etapa» arrancaba en «Todos», porque eso era lo que la pantalla mostraba antes de que existiera el selector (`D-051`). El usuario pidió que arranque en «Activos». Con 235 cancelados de 241 canjes, los totales por etapa son casi el conteo de cancelados y no dicen nada de lo que está vivo; ya el comentario original reconocía que «Activos» era la vista más informativa. Los otros filtros siguen a un clic.
+
+---
+
+## D-122 · El listado de Negocios va del más nuevo al más antiguo, por código
+
+El listado se ordenaba por código ascendente (VVP-1 primero). El usuario pidió verlo del más nuevo al más antiguo. Había dos criterios posibles, que no siempre coinciden: la fecha de inicio (VVP-15 empezó el 06-01-2026 y VVP-14 el 29-03-2026) o el código, que se asigna al registrar el negocio. **El usuario eligió por código**, de mayor a menor. Se sigue ordenando por número y no como texto (`clave_de_orden`), así que VVP-10 va después de VVP-11 y antes de VVP-9.
+
+Solo cambia el listado (`GET /negocios`). La plantilla del historial de etapas sigue en orden ascendente, que es el natural para llenarla de arriba abajo.
